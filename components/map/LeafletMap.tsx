@@ -8,6 +8,7 @@ import { Bus, Passenger, LiveUser } from '@/lib/types';
 import { VEHICLE_TYPE_MAP, DEFAULT_LOCATION } from '@/lib/constants';
 import { subscribeToLiveUsers } from '@/lib/firebaseDb';
 import LiveUserMarker from './LiveUserMarker';
+import { useLiveLocation } from '@/hooks/useLiveLocation';
 
 // Fix for default Leaflet marker icons in Next.js (configured in an effect with cleanup).
 const DefaultIcon = L.icon({
@@ -194,6 +195,23 @@ function MapControls({
             </button>
         </div>
     );
+}
+
+function TrackingControls({ role, isTracking, onToggleTracking }: { role: string; isTracking: boolean; onToggleTracking: () => void }) {
+    if (role === 'admin') return null;
+    return (
+        <div className="absolute top-4 left-4 z-[1000]">
+            <button
+                type="button"
+                onClick={onToggleTracking}
+                className={`px-4 py-3 rounded-full shadow-lg font-bold text-sm flex items-center gap-2 transition-all ${isTracking ? 'bg-green-500 text-white' : 'bg-white text-gray-800 border-2 border-gray-200'
+                    }`}
+            >
+                <div className={`w-3 h-3 rounded-full ${isTracking ? 'bg-white animate-pulse' : 'bg-gray-400'}`}></div>
+                {isTracking ? 'ONLINE - Tracking' : 'GO ONLINE'}
+            </button>
+        </div>
+    )
 }
 
 // Error boundary
@@ -429,6 +447,25 @@ function LeafletMapInner({
 }: LeafletMapProps) {
     const [mounted, setMounted] = useState(false);
     const [liveUsers, setLiveUsers] = useState<LiveUser[]>([]);
+    const [currentPosition, setCurrentPosition] = useState<[number, number] | null>(null);
+
+    // Determine a mock uid purely for this Map component to use (assuming current login is based on 'role').
+    // In a real app we'd grab it from `useAuth()` or standard props.
+    // For demo/hackathon purposes, if driver, we'll pretend uid is 'driver-123', if passenger 'pass-123'
+    const mockUid = role === 'driver' ? 'demo-driver-001' : (role === 'passenger' ? 'demo-passenger-001' : undefined);
+
+    // Call custom hook for pushing our own location to Firebase
+    const { isTracking, toggleTracking, location: liveLocation } = useLiveLocation(
+        mockUid,
+        role === 'admin' ? undefined : role, // Admin won't broadcast
+        false // Start offline
+    );
+
+    useEffect(() => {
+        if (liveLocation) {
+            setCurrentPosition([liveLocation.lat, liveLocation.lng]);
+        }
+    }, [liveLocation]);
 
     useEffect(() => {
         let timeout: NodeJS.Timeout;
@@ -469,7 +506,7 @@ function LeafletMapInner({
         );
     }
 
-    // Calculate center: Priority = Selected Bus > User Location > Default
+    // Calculate center: Priority = Selected Bus > User Location > Current Position > Default
     let center = DEFAULT_LOCATION;
     if (selectedBus) {
         const liveLoc = busLocations[selectedBus.id];
@@ -479,9 +516,13 @@ function LeafletMapInner({
             center = selectedBus.currentLocation;
         } else if (userLocation) {
             center = userLocation;
+        } else if (currentPosition) {
+            center = { lat: currentPosition[0], lng: currentPosition[1] };
         }
     } else if (userLocation) {
         center = userLocation;
+    } else if (currentPosition) {
+        center = { lat: currentPosition[0], lng: currentPosition[1] };
     }
 
     // Fallback center if everything else fails (Butwal area)
@@ -505,6 +546,24 @@ function LeafletMapInner({
 
                 <MapUpdater center={center} selectedBusId={selectedBus?.id} userLocation={userLocation} />
                 <MapControls initialCenter={center} userLocation={userLocation} />
+
+                {/* Live GPS Debug Widget (HUD) */}
+                {currentPosition && (
+                    <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur px-3 py-2 rounded-lg shadow-md z-[1000] text-xs font-mono border border-gray-200">
+                        <span className="text-gray-500">📍 Lat:</span> {currentPosition[0].toFixed(4)} <br />
+                        <span className="text-gray-500">📍 Lng:</span> {currentPosition[1].toFixed(4)}
+                    </div>
+                )}
+
+                {/* Online/Offline Tracking Toggle UI */}
+                <TrackingControls role={role} isTracking={isTracking} onToggleTracking={toggleTracking} />
+
+                {/* Your Own Location Marker (from live GPS) */}
+                {currentPosition && (
+                    <Marker position={currentPosition} zIndexOffset={1200}>
+                        <Popup>You (Current Location)</Popup>
+                    </Marker>
+                )}
 
                 {/* User Location */}
                 {userLocation && (
