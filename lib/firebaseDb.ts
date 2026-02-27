@@ -1,6 +1,6 @@
 import { getDatabase, ref, set, update, onValue, push, get } from 'firebase/database';
 import { getFirebaseApp } from './firebase';
-import { Bus, Booking, Location } from './types';
+import { Bus, Booking, Location, LiveUser } from './types';
 
 const getDb = () => getDatabase(getFirebaseApp());
 
@@ -297,4 +297,32 @@ export const seedInitialData = async (buses: Bus[]) => {
         await update(busesRef, updates);
         console.log('Seeded initial bus data');
     }
+};
+
+// --- Live User Functions (Real-Time GPS Tracking) ---
+
+export const subscribeToLiveUsers = (callback: (users: LiveUser[]) => void) => {
+    const db = getDb();
+    const usersRef = ref(db, 'live_users');
+
+    const unsubscribe = onValue(usersRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            const usersList = Object.values(data) as LiveUser[];
+            callback(usersList);
+        } else {
+            callback([]);
+        }
+    });
+
+    return unsubscribe;
+};
+
+export const updateLiveUserStatus = async (user: LiveUser) => {
+    const db = getDb();
+    const userRef = ref(db, `live_users/${user.uid}`);
+    await set(userRef, {
+        ...user,
+        updatedAt: new Date().toISOString()
+    });
 };

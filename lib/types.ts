@@ -7,6 +7,15 @@ export interface Location {
 
 export type UserRole = 'driver' | 'passenger' | 'admin';
 
+export interface LiveUser {
+  uid: string;
+  role: 'driver' | 'passenger';
+  lat: number;
+  lng: number;
+  isOnline: boolean;
+  updatedAt: string | number;
+}
+
 export interface User {
   id: string;
   phone: string;

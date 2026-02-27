@@ -4,8 +4,10 @@ import React, { Component, ReactNode, useEffect, useState, useRef, useMemo } fro
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Circle, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Bus, Passenger } from '@/lib/types';
+import { Bus, Passenger, LiveUser } from '@/lib/types';
 import { VEHICLE_TYPE_MAP, DEFAULT_LOCATION } from '@/lib/constants';
+import { subscribeToLiveUsers } from '@/lib/firebaseDb';
+import LiveUserMarker from './LiveUserMarker';
 
 // Fix for default Leaflet marker icons in Next.js (configured in an effect with cleanup).
 const DefaultIcon = L.icon({
@@ -426,6 +428,26 @@ function LeafletMapInner({
     busLocations = {},
 }: LeafletMapProps) {
     const [mounted, setMounted] = useState(false);
+    const [liveUsers, setLiveUsers] = useState<LiveUser[]>([]);
+
+    useEffect(() => {
+        let timeout: NodeJS.Timeout;
+
+        const unsubscribe = subscribeToLiveUsers((users) => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                const visibleUsers = users.filter(
+                    u => u.role !== role && u.isOnline && u.lat && u.lng
+                );
+                setLiveUsers(visibleUsers);
+            }, 300);
+        });
+
+        return () => {
+            unsubscribe();
+            clearTimeout(timeout);
+        };
+    }, [role]);
 
     useEffect(() => {
         // Configure default marker icon with cleanup to avoid duplicated initialization across mounts
@@ -462,6 +484,11 @@ function LeafletMapInner({
         center = userLocation;
     }
 
+    // Fallback center if everything else fails (Butwal area)
+    if (!center || (center.lat === 0 && center.lng === 0)) {
+        center = { lat: 27.700769, lng: 83.448558 };
+    }
+
     return (
         <div className="relative w-full h-full min-h-[400px]">
             <MapContainer
@@ -490,15 +517,9 @@ function LeafletMapInner({
                     </Marker>
                 )}
 
-                {/* Buses with smooth animation */}
-                {buses.filter(b => role === 'admin' || b.isActive).map(bus => (
-                    <AnimatedBusMarker
-                        key={bus.id}
-                        bus={bus}
-                        onBusSelect={onBusSelect}
-                        busLocation={busLocations[bus.id]}
-                        busETA={busETAs[bus.id]}
-                    />
+                {/* Dynamic Real Users Rendered Here */}
+                {liveUsers.map((user) => (
+                    <LiveUserMarker key={`${user.uid}-${user.updatedAt}`} user={user} />
                 ))}
 
                 {/* Pickup/Dropoff Markers */}
