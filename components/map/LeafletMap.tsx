@@ -40,6 +40,7 @@ function MapUpdater({ center, selectedUserId, userLocation }: { center: { lat: n
     const map = useMap();
     const [lastUserId, setLastUserId] = useState<string | undefined>(undefined);
     const [hasCenteredOnUser, setHasCenteredOnUser] = useState(false);
+    const [lastCenteredLat, setLastCenteredLat] = useState<number | null>(null);
 
     useEffect(() => {
         if (selectedUserId && selectedUserId !== lastUserId) {
@@ -49,11 +50,19 @@ function MapUpdater({ center, selectedUserId, userLocation }: { center: { lat: n
     }, [center, selectedUserId, lastUserId, map]);
 
     useEffect(() => {
-        if (userLocation && !hasCenteredOnUser) {
+        if (!userLocation) return;
+
+        // Re-center if: (a) first time, or (b) location changed significantly
+        // (e.g. Kathmandu fallback -> real GPS, which is a big jump)
+        const movedSignificantly = lastCenteredLat !== null &&
+            Math.abs(userLocation.lat - lastCenteredLat) > 0.5;
+
+        if (!hasCenteredOnUser || movedSignificantly) {
             map.flyTo([userLocation.lat, userLocation.lng], 16);
             setHasCenteredOnUser(true);
+            setLastCenteredLat(userLocation.lat);
         }
-    }, [userLocation, hasCenteredOnUser, map]);
+    }, [userLocation, hasCenteredOnUser, lastCenteredLat, map]);
 
     return null;
 }
@@ -165,10 +174,10 @@ function MapControls({
     );
 }
 
-function TrackingControls({ role, isTracking, onToggleTracking }: { role: string; isTracking: boolean; onToggleTracking: () => void }) {
+function TrackingControls({ role, isTracking, onToggleTracking, currentPosition }: { role: string; isTracking: boolean; onToggleTracking: () => void; currentPosition: [number, number] | null }) {
     if (role === 'admin') return null;
     return (
-        <div className="absolute top-4 left-4 z-[1000]">
+        <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2">
             <button
                 type="button"
                 onClick={onToggleTracking}
@@ -177,6 +186,15 @@ function TrackingControls({ role, isTracking, onToggleTracking }: { role: string
                 <div className={`w-3 h-3 rounded-full shadow-inner ${isTracking ? 'bg-white animate-pulse shadow-[0_0_10px_rgba(255,255,255,0.8)]' : 'bg-slate-400'}`}></div>
                 {isTracking ? 'ONLINE - Tracking' : 'GO ONLINE'}
             </button>
+            {/* Lat/Lng HUD — inline next to tracking button */}
+            {currentPosition && (
+                <div className="bg-white/60 backdrop-blur-md px-3 py-2 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/40 text-xs font-mono flex gap-3 items-center">
+                    <div className="flex flex-col items-center">
+                        <span className="text-gray-400 text-[9px] uppercase font-bold tracking-widest">LNG</span>
+                        <span className="font-semibold text-gray-800">{currentPosition[1].toFixed(4)}</span>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
@@ -269,11 +287,15 @@ function LeafletMapInner({
         driverRoute
     );
 
+    // Seed currentPosition from either the live GPS hook OR the parent-supplied userLocation prop.
+    // This ensures the passenger sees their own marker immediately, even before pressing GO ONLINE.
     useEffect(() => {
         if (liveLocation) {
             setCurrentPosition([liveLocation.lat, liveLocation.lng]);
+        } else if (userLocation && !currentPosition) {
+            setCurrentPosition([userLocation.lat, userLocation.lng]);
         }
-    }, [liveLocation]);
+    }, [liveLocation, userLocation]);
 
     useEffect(() => {
         console.log("🗺 visibleUsers:", liveUsers);
@@ -387,23 +409,8 @@ function LeafletMapInner({
                 <MapUpdater center={center} selectedUserId={selectedUser?.id} userLocation={userLocation} />
                 <MapControls initialCenter={center} userLocation={userLocation} />
 
-                {/* Live GPS Debug Widget (HUD) */}
-                {currentPosition && (
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/60 backdrop-blur-md px-4 py-2 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/40 z-[1000] text-sm font-mono flex gap-4 items-center transition-all duration-300 hover:bg-white/80">
-                        <div className="flex flex-col items-center">
-                            <span className="text-gray-400 text-[10px] uppercase font-bold tracking-widest">Lat</span>
-                            <span className="font-semibold text-gray-800">{currentPosition[0].toFixed(4)}</span>
-                        </div>
-                        <div className="w-[1px] h-6 bg-gray-300/60"></div>
-                        <div className="flex flex-col items-center">
-                            <span className="text-gray-400 text-[10px] uppercase font-bold tracking-widest">Lng</span>
-                            <span className="font-semibold text-gray-800">{currentPosition[1].toFixed(4)}</span>
-                        </div>
-                    </div>
-                )}
-
-                {/* Online/Offline Tracking Toggle UI */}
-                <TrackingControls role={role} isTracking={isTracking} onToggleTracking={toggleTracking} />
+                {/* Online/Offline Tracking Toggle UI (includes inline LNG HUD) */}
+                <TrackingControls role={role} isTracking={isTracking} onToggleTracking={toggleTracking} currentPosition={currentPosition} />
 
                 {/* Your Own Location Marker (from live GPS) */}
                 {currentPosition && (
@@ -440,10 +447,12 @@ function LeafletMapInner({
                 )}
 
                 {/* Route Line (Passenger View: User -> Bus) */}
-                {role === 'passenger' && selectedUser && userLocation && (
+                {role === 'passenger' && selectedUser && (userLocation || currentPosition) && (
                     <Polyline
                         positions={[
-                            [userLocation.lat, userLocation.lng],
+                            userLocation
+                                ? [userLocation.lat, userLocation.lng]
+                                : currentPosition!,
                             [selectedUser.lat, selectedUser.lng]
                         ]}
                         pathOptions={{ color: '#3b82f6', dashArray: '10, 10', weight: 4, opacity: 0.7 }}
