@@ -5,13 +5,13 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Circle, P
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Bus, Passenger, LiveUser } from '@/lib/types';
-import { VEHICLE_TYPE_MAP, DEFAULT_LOCATION } from '@/lib/constants';
+import { DEFAULT_LOCATION } from '@/lib/constants';
 import { subscribeToLiveUsers } from '@/lib/firebaseDb';
 import LiveUserMarker from './LiveUserMarker';
 import { useLiveLocation } from '@/hooks/useLiveLocation';
 import { getRoute } from '@/lib/routing/osrm';
 
-// Fix for default Leaflet marker icons in Next.js (configured in an effect with cleanup).
+// Fix for default Leaflet marker icons in Next.js
 const DefaultIcon = L.icon({
     iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
     shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
@@ -21,7 +21,7 @@ const DefaultIcon = L.icon({
 
 interface LeafletMapProps {
     role: 'driver' | 'passenger' | 'admin';
-    buses: Bus[];
+    buses?: Bus[];
     passengers?: Passenger[];
     selectedBus?: Bus | null;
     onBusSelect?: (bus: Bus) => void;
@@ -35,22 +35,20 @@ interface LeafletMapProps {
     busLocations?: Record<string, { lat: number; lng: number; timestamp: string; heading?: number; speed?: number }>;
 }
 
-// Component to handle map center updates - only on significant changes or initial load
-function MapUpdater({ center, selectedBusId, userLocation }: { center: { lat: number; lng: number }, selectedBusId?: string, userLocation?: { lat: number; lng: number } | null }) {
+// Component to handle map center updates
+function MapUpdater({ center, selectedUserId, userLocation }: { center: { lat: number; lng: number }, selectedUserId?: string, userLocation?: { lat: number; lng: number } | null }) {
     const map = useMap();
-    const [lastBusId, setLastBusId] = useState<string | undefined>(undefined);
+    const [lastUserId, setLastUserId] = useState<string | undefined>(undefined);
     const [hasCenteredOnUser, setHasCenteredOnUser] = useState(false);
 
     useEffect(() => {
-        // Only auto-center if the selected bus changes
-        if (selectedBusId && selectedBusId !== lastBusId) {
+        if (selectedUserId && selectedUserId !== lastUserId) {
             map.flyTo([center.lat, center.lng], 16);
-            setLastBusId(selectedBusId);
+            setLastUserId(selectedUserId);
         }
-    }, [center, selectedBusId, lastBusId, map]);
+    }, [center, selectedUserId, lastUserId, map]);
 
     useEffect(() => {
-        // Auto-center on user location when it first becomes available
         if (userLocation && !hasCenteredOnUser) {
             map.flyTo([userLocation.lat, userLocation.lng], 16);
             setHasCenteredOnUser(true);
@@ -59,35 +57,6 @@ function MapUpdater({ center, selectedBusId, userLocation }: { center: { lat: nu
 
     return null;
 }
-
-// Helper to create emoji icons with pulsing animation for active buses
-const createBusIcon = (emoji: string, color: string, isActive: boolean = true, heading?: number) => {
-    const rotation = heading !== undefined ? `transform: rotate(${heading}deg);` : '';
-    const pulseClass = isActive ? 'bus-icon-pulse' : '';
-
-    return L.divIcon({
-        className: `custom-bus-icon cursor-pointer ${pulseClass}`,
-        html: `<div style="
-      background-color: ${color};
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      border: 2px solid white;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      z-index: 1000;
-      pointer-events: auto;
-      ${rotation}
-      transition: transform 0.3s ease-out;
-    ">${emoji}</div>`,
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
-        popupAnchor: [0, -20],
-    });
-};
 
 const createLocationIcon = (color: string) => {
     return L.divIcon({
@@ -107,7 +76,6 @@ const createLocationIcon = (color: string) => {
     });
 };
 
-// Component to handle map events
 function MapEvents({
     onLocationSelect,
     role,
@@ -125,7 +93,6 @@ function MapEvents({
     return null;
 }
 
-// Touch friendly map controls
 function MapControls({
     initialCenter,
     userLocation,
@@ -205,8 +172,7 @@ function TrackingControls({ role, isTracking, onToggleTracking }: { role: string
             <button
                 type="button"
                 onClick={onToggleTracking}
-                className={`px-5 py-3 rounded-full shadow-xl font-bold text-sm flex items-center gap-3 transition-all duration-300 hover:scale-105 active:scale-95 backdrop-blur-md border border-white/20 ${isTracking ? 'bg-emerald-500/90 text-white shadow-emerald-500/30' : 'bg-slate-800/90 text-white shadow-slate-900/20'
-                    }`}
+                className={`px-5 py-3 rounded-full shadow-xl font-bold text-sm flex items-center gap-3 transition-all duration-300 hover:scale-105 active:scale-95 backdrop-blur-md border border-white/20 ${isTracking ? 'bg-emerald-500/90 text-white shadow-emerald-500/30' : 'bg-slate-800/90 text-white shadow-slate-900/20'}`}
             >
                 <div className={`w-3 h-3 rounded-full shadow-inner ${isTracking ? 'bg-white animate-pulse shadow-[0_0_10px_rgba(255,255,255,0.8)]' : 'bg-slate-400'}`}></div>
                 {isTracking ? 'ONLINE - Tracking' : 'GO ONLINE'}
@@ -234,7 +200,6 @@ class MapErrorBoundary extends Component<MapErrorBoundaryProps, MapErrorBoundary
     }
 
     componentDidCatch(error: Error, info: any) {
-        // eslint-disable-next-line no-console
         console.error('Leaflet map error:', error, info);
     }
 
@@ -263,188 +228,16 @@ class MapErrorBoundary extends Component<MapErrorBoundaryProps, MapErrorBoundary
                 </div>
             );
         }
-
         return this.props.children;
     }
 }
 
-// Component to handle smooth marker updates
-function AnimatedBusMarker({
-    bus,
-    onBusSelect,
-    busLocation,
-    busETA
-}: {
-    bus: Bus;
-    onBusSelect?: (bus: Bus) => void;
-    busLocation?: { lat: number; lng: number; timestamp: string; heading?: number; speed?: number };
-    busETA?: number | null;
-}) {
-    const markerRef = useRef<L.Marker>(null);
-    const iconRef = useRef<L.DivIcon | null>(null);
-
-    const [isInitialized, setIsInitialized] = useState(false);
-
-    useEffect(() => {
-        if (markerRef.current && busLocation) {
-            const newLatLng = L.latLng(busLocation.lat, busLocation.lng);
-
-            if (!isInitialized) {
-                // First render - set position without animation
-                markerRef.current.setLatLng(newLatLng);
-                setIsInitialized(true);
-            } else {
-                // Subsequent updates - animate if position changed
-                const currentLatLng = markerRef.current.getLatLng();
-                const distance = currentLatLng.distanceTo(newLatLng);
-
-                // Only animate if moved more than 1 meter
-                if (distance > 1) {
-                    // Manual smooth animation
-                    const startLat = currentLatLng.lat;
-                    const startLng = currentLatLng.lng;
-                    const endLat = newLatLng.lat;
-                    const endLng = newLatLng.lng;
-                    const duration = 1000; // 1 second
-                    const startTime = Date.now();
-
-                    const animate = () => {
-                        const elapsed = Date.now() - startTime;
-                        const progress = Math.min(elapsed / duration, 1);
-
-                        // Easing function (ease-out)
-                        const easeOut = 1 - Math.pow(1 - progress, 3);
-
-                        const currentLat = startLat + (endLat - startLat) * easeOut;
-                        const currentLng = startLng + (endLng - startLng) * easeOut;
-
-                        markerRef.current?.setLatLng([currentLat, currentLng]);
-
-                        if (progress < 1) {
-                            requestAnimationFrame(animate);
-                        } else {
-                            // Ensure final position is exact
-                            markerRef.current?.setLatLng(newLatLng);
-                        }
-                    };
-
-                    requestAnimationFrame(animate);
-                } else {
-                    // Small movement - just update directly
-                    markerRef.current.setLatLng(newLatLng);
-                }
-            }
-
-            // Update icon rotation if heading changed
-            if (busLocation.heading !== undefined) {
-                const newIcon = createBusIcon(
-                    bus.emoji,
-                    VEHICLE_TYPE_MAP[bus.vehicleType]?.color || '#2563eb',
-                    bus.isActive,
-                    busLocation.heading
-                );
-                if (markerRef.current) {
-                    markerRef.current.setIcon(newIcon);
-                }
-                iconRef.current = newIcon;
-            }
-        }
-    }, [busLocation, bus, isInitialized]);
-
-    const icon = useMemo(() => {
-        // Check if this bus has an active accident alert
-        const hasAccident = bus.currentLocation && (bus as any).hasAccident;
-
-        let color = bus.isActive ? (VEHICLE_TYPE_MAP[bus.vehicleType]?.color || '#2563eb') : '#64748b';
-
-        // Override with red if accident detected
-        if (hasAccident) {
-            color = '#ef4444'; // Red for accident
-        }
-
-        const createdIcon = createBusIcon(
-            bus.emoji,
-            color,
-            bus.isActive,
-            busLocation?.heading
-        );
-        iconRef.current = createdIcon;
-        return createdIcon;
-    }, [bus.emoji, bus.vehicleType, bus.isActive, busLocation?.heading, (bus as any).hasAccident]);
-
-    const position = busLocation
-        ? [busLocation.lat, busLocation.lng] as [number, number]
-        : (bus.currentLocation ? [bus.currentLocation.lat, bus.currentLocation.lng] as [number, number] : null);
-
-    if (!position) return null;
-
-    const getLastUpdateText = () => {
-        if (!busLocation?.timestamp) return '';
-        const updateTime = new Date(busLocation.timestamp).getTime();
-        const secondsAgo = Math.floor((Date.now() - updateTime) / 1000);
-        if (secondsAgo < 10) return `Updated ${secondsAgo}s ago`;
-        if (secondsAgo < 60) return `Updated ${secondsAgo}s ago`;
-        return `Updated ${Math.floor(secondsAgo / 60)}m ago`;
-    };
-
-    return (
-        <Marker
-            ref={markerRef}
-            position={position}
-            icon={icon}
-            eventHandlers={{
-                click: () => onBusSelect?.(bus),
-            }}
-            zIndexOffset={1000}
-        >
-            <Popup>
-                <div className="p-2">
-                    <h3 className="font-bold flex items-center gap-1.5">
-                        {bus.busNumber}
-                        {(bus as any).verificationBadge && (
-                            <span title="Solana Verified Driver" className="flex items-center text-emerald-500 bg-emerald-500/10 rounded-full p-0.5">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /><path d="m9 12 2 2 4-4" /></svg>
-                            </span>
-                        )}
-                    </h3>
-                    <p>{bus.driverName}</p>
-                    <p className="text-sm text-gray-500">{bus.route}</p>
-                    <div className="mt-2 text-xs">
-                        Seats: {bus.availableSeats}/{bus.capacity}
-                    </div>
-                    {busLocation && (
-                        <div className="mt-2 text-xs text-green-600">
-                            🟢 Live
-                        </div>
-                    )}
-                    {busLocation && getLastUpdateText() && (
-                        <div className="text-xs text-gray-400">
-                            {getLastUpdateText()}
-                        </div>
-                    )}
-                    {busETA !== null && busETA !== undefined && (
-                        <div className="mt-1 text-xs font-semibold text-blue-600">
-                            {busETA === 0 ? 'Arriving now' : `ETA: ${busETA} min${busETA > 1 ? 's' : ''}`}
-                        </div>
-                    )}
-                </div>
-            </Popup>
-        </Marker>
-    );
-}
-
 function LeafletMapInner({
     role,
-    buses,
-    passengers = [],
-    selectedBus,
-    onBusSelect,
     onLocationSelect,
     pickupLocation,
     dropoffLocation,
     userLocation,
-    busETAs = {},
-    busLocations = {},
 }: LeafletMapProps) {
     const [mounted, setMounted] = useState(false);
     const [liveUsers, setLiveUsers] = useState<LiveUser[]>([]);
@@ -464,8 +257,6 @@ function LeafletMapInner({
         role,
         isOnline: true
     };
-
-    console.log("👤 CURRENT USER:", currentUser);
 
     // Call custom hook for pushing our own location to Firebase
     const { isTracking, toggleTracking, location: liveLocation } = useLiveLocation(
@@ -505,7 +296,6 @@ function LeafletMapInner({
 
                     return false;
                 });
-                console.log("🗺 FILTERED USERS:", visibleUsers);
                 setLiveUsers(visibleUsers);
             }, 300);
         });
@@ -520,9 +310,8 @@ function LeafletMapInner({
         // Configure default marker icon with cleanup to avoid duplicated initialization across mounts
         const previousDefaultIcon = (L.Marker.prototype as any).options.icon;
         (L.Marker.prototype as any).options.icon = DefaultIcon;
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setMounted(true);
-
+        console.log("👤 CURRENT SESSION:", currentUser);
         return () => {
             (L.Marker.prototype as any).options.icon = previousDefaultIcon;
         };
@@ -567,28 +356,14 @@ function LeafletMapInner({
         );
     }
 
-    // Calculate center: Priority = Selected Bus > User Location > Current Position > Default
+    // Calculate center
     let center = DEFAULT_LOCATION;
-    if (selectedBus) {
-        const liveLoc = busLocations[selectedBus.id];
-        if (liveLoc) {
-            center = liveLoc;
-        } else if (selectedBus.currentLocation) {
-            center = selectedBus.currentLocation;
-        } else if (userLocation) {
-            center = userLocation;
-        } else if (currentPosition) {
-            center = { lat: currentPosition[0], lng: currentPosition[1] };
-        }
+    if (selectedUser) {
+        center = { lat: selectedUser.lat, lng: selectedUser.lng };
     } else if (userLocation) {
         center = userLocation;
     } else if (currentPosition) {
         center = { lat: currentPosition[0], lng: currentPosition[1] };
-    }
-
-    // Fallback center if everything else fails (Butwal area)
-    if (!center || (center.lat === 0 && center.lng === 0)) {
-        center = { lat: 27.700769, lng: 83.448558 };
     }
 
     return (
@@ -605,7 +380,7 @@ function LeafletMapInner({
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
 
-                <MapUpdater center={center} selectedBusId={selectedBus?.id} userLocation={userLocation} />
+                <MapUpdater center={center} selectedUserId={selectedUser?.uid} userLocation={userLocation} />
                 <MapControls initialCenter={center} userLocation={userLocation} />
 
                 {/* Live GPS Debug Widget (HUD) */}
@@ -660,40 +435,38 @@ function LeafletMapInner({
                     <GeoJSON data={routeGeoJSON} style={{ color: "blue", weight: 5, opacity: 0.7 }} />
                 )}
 
+                {/* Route Line (Passenger View: User -> Bus) */}
+                {role === 'passenger' && selectedUser && userLocation && (
+                    <Polyline
+                        positions={[
+                            [userLocation.lat, userLocation.lng],
+                            [selectedUser.lat, selectedUser.lng]
+                        ]}
+                        pathOptions={{ color: '#3b82f6', dashArray: '10, 10', weight: 4, opacity: 0.7 }}
+                    />
+                )}
+
                 {/* Pickup/Dropoff Markers */}
                 {pickupLocation && (
                     <>
-                        {/* Proximity circles: 500m (green), 200m (yellow), 50m (red) */}
                         <Circle
                             center={[pickupLocation.lat, pickupLocation.lng]}
                             radius={500}
-                            pathOptions={{
-                                color: '#22c55e',
-                                fillColor: '#22c55e',
-                                fillOpacity: 0.05,
-                            }}
+                            pathOptions={{ color: '#22c55e', fillColor: '#22c55e', fillOpacity: 0.05 }}
                         />
                         <Circle
                             center={[pickupLocation.lat, pickupLocation.lng]}
                             radius={200}
-                            pathOptions={{
-                                color: '#eab308',
-                                fillColor: '#eab308',
-                                fillOpacity: 0.08,
-                            }}
+                            pathOptions={{ color: '#eab308', fillColor: '#eab308', fillOpacity: 0.08 }}
                         />
                         <Circle
                             center={[pickupLocation.lat, pickupLocation.lng]}
                             radius={50}
-                            pathOptions={{
-                                color: '#ef4444',
-                                fillColor: '#ef4444',
-                                fillOpacity: 0.12,
-                            }}
+                            pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.12 }}
                         />
                         <Marker
                             position={[pickupLocation.lat, pickupLocation.lng]}
-                            icon={createLocationIcon('#10b981')} // Green
+                            icon={createLocationIcon('#10b981')}
                             zIndexOffset={950}
                         >
                             <Popup>Pickup Location</Popup>
@@ -704,49 +477,13 @@ function LeafletMapInner({
                 {dropoffLocation && (
                     <Marker
                         position={[dropoffLocation.lat, dropoffLocation.lng]}
-                        icon={createLocationIcon('#ef4444')} // Red
+                        icon={createLocationIcon('#ef4444')}
                         zIndexOffset={950}
                     >
                         <Popup>Dropoff Location</Popup>
                     </Marker>
                 )}
 
-                {/* Passengers (Driver View) */}
-                {role === 'driver' && passengers.map(p => (
-                    <React.Fragment key={p.id}>
-                        <Marker
-                            position={[p.pickupLocation.lat, p.pickupLocation.lng]}
-                            icon={createLocationIcon('#f59e0b')} // Amber
-                            zIndexOffset={900}
-                        >
-                            <Popup>
-                                <div className="font-bold">{p.name}</div>
-                                <div>Status: {p.status}</div>
-                            </Popup>
-                        </Marker>
-                        {/* Line from Bus to Passenger */}
-                        {selectedBus && (busLocations[selectedBus.id] || selectedBus.currentLocation) && (
-                            <Polyline
-                                positions={[
-                                    [(busLocations[selectedBus.id] || selectedBus.currentLocation)!.lat, (busLocations[selectedBus.id] || selectedBus.currentLocation)!.lng],
-                                    [p.pickupLocation.lat, p.pickupLocation.lng]
-                                ]}
-                                pathOptions={{ color: '#f59e0b', dashArray: '10, 10', weight: 3, opacity: 0.6 }}
-                            />
-                        )}
-                    </React.Fragment>
-                ))}
-
-                {/* Route Line (Passenger View: User -> Bus) */}
-                {role === 'passenger' && selectedBus && userLocation && (busLocations[selectedBus.id] || selectedBus.currentLocation) && (
-                    <Polyline
-                        positions={[
-                            [userLocation.lat, userLocation.lng],
-                            [(busLocations[selectedBus.id] || selectedBus.currentLocation)!.lat, (busLocations[selectedBus.id] || selectedBus.currentLocation)!.lng]
-                        ]}
-                        pathOptions={{ color: '#3b82f6', dashArray: '10, 10', weight: 4, opacity: 0.7 }}
-                    />
-                )}
             </MapContainer>
         </div>
     );
@@ -756,7 +493,6 @@ export default function LeafletMap(props: LeafletMapProps) {
     const [retryKey, setRetryKey] = useState(0);
 
     const handleRetry = () => {
-        // Force remount of the inner map to avoid "container already initialized" from stale Leaflet instances
         setRetryKey(k => k + 1);
     };
 
