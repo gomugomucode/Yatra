@@ -3,6 +3,7 @@ import { getFirebaseApp } from './firebase';
 import { Bus, Booking, Location, LiveUser } from './types';
 
 const getDb = () => getDatabase(getFirebaseApp());
+const getActiveDriverRef = (driverId: string) => ref(getDb(), `drivers/active/${driverId}`);
 
 // --- Bus Functions ---
 
@@ -43,17 +44,21 @@ export const subscribeToBuses = (callback: (buses: Bus[]) => void) => {
 
 export const updateBusLocation = async (
     busId: string,
+    walletAddress: string,
     location: { lat: number; lng: number; heading?: number; speed?: number }
 ) => {
     const db = getDb();
-    // Write high-frequency updates to separate 'locations' node
-    const locationRef = ref(db, `locations/${busId}`);
+    // Canonical real-time driver location path (keyed by driverId / busId).
+    const locationRef = getActiveDriverRef(busId);
 
     // Serialize location with timestamp as ISO string for Firebase
     const locationData = {
-        id: busId,           // ✅ Required: subscribeToLiveUsers reads entry.id
-        role: 'driver',      // ✅ Required: filter checks entry.role
-        isOnline: true,      // ✅ Required: filter checks entry.isOnline
+        id: busId,
+        driverId: busId,
+        walletAddress: walletAddress || null,
+        role: 'driver',
+        status: 'online',
+        isOnline: true,
         lat: location.lat,
         lng: location.lng,
         timestamp: new Date().toISOString(),
@@ -67,21 +72,25 @@ export const updateBusLocation = async (
     // We do NOT write location here anymore to save bandwidth
     const busMainRef = ref(db, `buses/${busId}`);
     await update(busMainRef, {
+        driverWalletAddress: walletAddress,
         locationSharingEnabled: true,
         isActive: true,
     });
 };
 
-export const setDriverOffline = async (driverId: string) => {
+export const setDriverOffline = async (driverId: string, walletAddress: string) => {
     const db = getDb();
     const nowIso = new Date().toISOString();
-    const locationRef = ref(db, `locations/${driverId}`);
+    const locationRef = getActiveDriverRef(driverId);
     const busRef = ref(db, `buses/${driverId}`);
 
     await Promise.all([
         update(locationRef, {
             id: driverId,
+            driverId,
+            walletAddress: walletAddress || null,
             role: 'driver',
+            status: 'offline',
             isOnline: false,
             timestamp: nowIso,
         }),
@@ -98,10 +107,10 @@ export const setDriverOffline = async (driverId: string) => {
  *
  * Return value is an async cleanup function that cancels onDisconnect hooks.
  */
-export const attachDriverPresence = (driverId: string) => {
+export const attachDriverPresence = (driverId: string, walletAddress: string) => {
     const db = getDb();
     const connectedRef = ref(db, '.info/connected');
-    const locationRef = ref(db, `locations/${driverId}`);
+    const locationRef = getActiveDriverRef(driverId);
     const busRef = ref(db, `buses/${driverId}`);
 
     const unsubscribe = onValue(connectedRef, async (snapshot) => {
@@ -111,7 +120,10 @@ export const attachDriverPresence = (driverId: string) => {
             await Promise.all([
                 onDisconnect(locationRef).update({
                     id: driverId,
+                    driverId,
+                    walletAddress: walletAddress || null,
                     role: 'driver',
+                    status: 'offline',
                     isOnline: false,
                 }),
                 onDisconnect(busRef).update({
@@ -142,7 +154,7 @@ export const attachDriverPresence = (driverId: string) => {
  * @param busId - Bus ID
  * @param enabled - Whether location sharing is enabled
  */
-export const updateLocationSharingStatus = async (busId: string, enabled: boolean) => {
+export const updateLocationSharingStatus = async (busId: string, enabled: boolean, walletAddress?: string) => {
     const db = getDb();
     const busRef = ref(db, `buses/${busId}`);
     const updates: Record<string, boolean> = {
@@ -153,10 +165,13 @@ export const updateLocationSharingStatus = async (busId: string, enabled: boolea
     await update(busRef, updates);
 
     if (!enabled) {
-        const locationRef = ref(db, `locations/${busId}`);
+        const locationRef = getActiveDriverRef(busId);
         await update(locationRef, {
             id: busId,
+            driverId: busId,
+            walletAddress: walletAddress || null,
             role: 'driver',
+            status: 'offline',
             isOnline: false,
             timestamp: new Date().toISOString(),
         });
@@ -165,11 +180,16 @@ export const updateLocationSharingStatus = async (busId: string, enabled: boolea
 
 export interface TripRequest {
     id: string;
+    tripId: string;
     busId: string;
+    driverId: string;
     passengerId: string;
     passengerName: string;
-    status: 'pending' | 'accepted' | 'rejected' | 'expired';
+    status: 'requested' | 'accepted' | 'arrived' | 'completed' | 'cancelled' | 'pending' | 'rejected' | 'expired';
+    lat: number;
+    lng: number;
     createdAt: string;
+    updatedAt: string;
     pickupLocation?: { lat: number; lng: number; address?: string };
     dropoffLocation?: { lat: number; lng: number; address?: string };
 }
@@ -179,7 +199,7 @@ export const subscribeToTripRequests = (
     callback: (requests: TripRequest[]) => void
 ) => {
     const db = getDb();
-    const tripRequestsRef = ref(db, `tripRequests/${busId}`);
+    const tripRequestsRef = ref(db, 'trips');
 
     const unsubscribe = onValue(tripRequestsRef, (snapshot) => {
         const data = snapshot.val();
@@ -188,7 +208,25 @@ export const subscribeToTripRequests = (
             return;
         }
 
-        const requests = Object.values(data) as TripRequest[];
+        const requests = Object.values(data)
+            .map((entry: any) => ({
+                id: entry.id || entry.tripId,
+                tripId: entry.tripId || entry.id,
+                busId: entry.busId || entry.driverId,
+                driverId: entry.driverId || entry.busId,
+                passengerId: entry.passengerId,
+                passengerName: entry.passengerName || 'Passenger',
+                status: entry.status || 'requested',
+                lat: entry.lat ?? entry.pickupLocation?.lat,
+                lng: entry.lng ?? entry.pickupLocation?.lng,
+                createdAt: entry.createdAt || new Date().toISOString(),
+                updatedAt: entry.updatedAt || entry.createdAt || new Date().toISOString(),
+                pickupLocation: entry.pickupLocation || (entry.lat !== undefined && entry.lng !== undefined
+                    ? { lat: entry.lat, lng: entry.lng }
+                    : undefined),
+                dropoffLocation: entry.dropoffLocation,
+            }))
+            .filter((entry: TripRequest) => entry.driverId === busId && Number.isFinite(entry.lat) && Number.isFinite(entry.lng)) as TripRequest[];
         requests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         callback(requests);
     });
@@ -196,36 +234,69 @@ export const subscribeToTripRequests = (
     return unsubscribe;
 };
 
+export const subscribeToTrip = (
+    tripId: string,
+    callback: (trip: TripRequest | null) => void
+) => {
+    const db = getDb();
+    const tripRef = ref(db, `trips/${tripId}`);
+
+    const unsubscribe = onValue(tripRef, (snapshot) => {
+        const entry = snapshot.val();
+        if (!entry) {
+            callback(null);
+            return;
+        }
+
+        callback({
+            id: entry.id || entry.tripId || tripId,
+            tripId: entry.tripId || entry.id || tripId,
+            busId: entry.busId || entry.driverId,
+            driverId: entry.driverId || entry.busId,
+            passengerId: entry.passengerId,
+            passengerName: entry.passengerName || 'Passenger',
+            status: entry.status || 'requested',
+            lat: entry.lat ?? entry.pickupLocation?.lat,
+            lng: entry.lng ?? entry.pickupLocation?.lng,
+            createdAt: entry.createdAt || new Date().toISOString(),
+            updatedAt: entry.updatedAt || entry.createdAt || new Date().toISOString(),
+            pickupLocation: entry.pickupLocation || (entry.lat !== undefined && entry.lng !== undefined
+                ? { lat: entry.lat, lng: entry.lng }
+                : undefined),
+            dropoffLocation: entry.dropoffLocation,
+        });
+    });
+
+    return unsubscribe;
+};
+
 /**
- * Subscribe to real-time location updates for a specific bus
- * @param busId - Bus ID to listen to
+ * Subscribe to real-time location updates for a specific driver.
+ * Uses canonical `drivers/active/{driverId}` path.
+ * @param driverLocator - Driver uid / busId
  * @param callback - Callback function that receives location updates
  * @returns Unsubscribe function
  */
 export const subscribeToBusLocation = (
-    busId: string,
+    driverLocator: string,
     callback: (location: { lat: number; lng: number; timestamp: string; heading?: number; speed?: number } | null) => void
 ) => {
-    const db = getDb();
-    // Listen to separate 'locations' node
-    const locationRef = ref(db, `locations/${busId}`);
-
-    const unsubscribe = onValue(locationRef, (snapshot) => {
+    const locationRef = getActiveDriverRef(driverLocator);
+    return onValue(locationRef, (snapshot) => {
         const data = snapshot.val();
-        if (data) {
-            callback({
-                lat: data.lat,
-                lng: data.lng,
-                timestamp: data.timestamp || new Date().toISOString(),
-                heading: data.heading,
-                speed: data.speed,
-            });
-        } else {
+        if (!data) {
             callback(null);
+            return;
         }
-    });
 
-    return unsubscribe;
+        callback({
+            lat: data.lat,
+            lng: data.lng,
+            timestamp: data.timestamp || new Date().toISOString(),
+            heading: data.heading,
+            speed: data.speed,
+        });
+    });
 };
 
 export const updateBusSeatStatus = async (busId: string, online: number, offline: number) => {
@@ -427,36 +498,56 @@ export const seedInitialData = async (buses: Bus[]) => {
 };
 
 // --- Live User Functions (Real-Time GPS Tracking) ---
-// All real-time GPS updates are stored under `locations/{id}` to align with
-// the existing bus-tracking architecture. The `role` field allows map-side
-// role-based visibility filtering.
+// Active drivers are stored under `drivers/active/{driverId}`.
+// Passenger live updates remain in `locations/{id}`.
 
 export const subscribeToLiveUsers = (callback: (users: LiveUser[]) => void) => {
     const db = getDb();
-    // Listen to `locations` node — the canonical real-time GPS store
-    const locationsRef = ref(db, 'locations');
+    const activeDriversRef = ref(db, 'drivers/active');
+    const passengerLocationsRef = ref(db, 'locations');
 
-    const unsubscribe = onValue(locationsRef, async (snapshot) => {
-        const data = snapshot.val() || {};
-        console.log('🔥 LOCATIONS SNAPSHOT:', data);
+    let driverData: Record<string, any> = {};
+    let passengerData: Record<string, any> = {};
+    let cancelled = false;
 
-        // Build base LiveUser list from location entries that have a role
-        const rawList = (Object.values(data) as any[])
-            .filter((entry) => entry.role && entry.lat && entry.lng)
-            .map((entry) => ({
-                id: entry.id,
-                role: entry.role as 'driver' | 'passenger',
+    const emit = async () => {
+        const rawDrivers = Object.entries(driverData)
+            .map(([driverId, entry]: [string, any]) => ({
+                id: entry.id || driverId,
+                role: 'driver' as const,
+                lat: entry.lat,
+                lng: entry.lng,
+                isOnline: entry.isOnline ?? entry.status === 'online',
+                timestamp: entry.timestamp,
+                route: entry.route,
+                vehicleType: entry.vehicleType,
+                requestStatus: entry.requestStatus,
+            }))
+            .filter((entry) => Number.isFinite(entry.lat) && Number.isFinite(entry.lng));
+
+        const rawPassengers = Object.entries(passengerData)
+            .map(([passengerId, entry]: [string, any]) => ({
+                id: entry.id || passengerId,
+                role: 'passenger' as const,
                 lat: entry.lat,
                 lng: entry.lng,
                 isOnline: entry.isOnline ?? true,
                 timestamp: entry.timestamp,
                 route: entry.route,
-                vehicleType: entry.vehicleType,          // ✅ needed for driver markers
-                requestStatus: entry.requestStatus,      // ✅ needed for visibility filter
-            })) as LiveUser[];
+                vehicleType: entry.vehicleType,
+                requestStatus: entry.requestStatus,
+                sourceRole: entry.role,
+            }))
+            .filter((entry) =>
+                Number.isFinite(entry.lat) &&
+                Number.isFinite(entry.lng) &&
+                (entry.sourceRole === 'passenger' || entry.sourceRole === undefined)
+            )
+            .map(({ sourceRole, ...entry }) => entry);
+
+        const rawList = [...rawDrivers, ...rawPassengers] as LiveUser[];
 
         // For drivers, fetch their user profile to attach verificationBadge.
-        // One-shot get() per driver so the badge shows in the passenger popup.
         const list = await Promise.all(
             rawList.map(async (user) => {
                 if (user.role !== 'driver') return user;
@@ -476,10 +567,24 @@ export const subscribeToLiveUsers = (callback: (users: LiveUser[]) => void) => {
             })
         );
 
-        callback(list);
+        if (!cancelled) callback(list);
+    };
+
+    const unsubscribeDrivers = onValue(activeDriversRef, (snapshot) => {
+        driverData = snapshot.val() || {};
+        emit().catch((error) => console.error('[LiveUsers] driver emit failed:', error));
     });
 
-    return unsubscribe;
+    const unsubscribePassengers = onValue(passengerLocationsRef, (snapshot) => {
+        passengerData = snapshot.val() || {};
+        emit().catch((error) => console.error('[LiveUsers] passenger emit failed:', error));
+    });
+
+    return () => {
+        cancelled = true;
+        unsubscribeDrivers();
+        unsubscribePassengers();
+    };
 };
 
 export const updateLiveUserStatus = async (user: LiveUser) => {
@@ -500,9 +605,14 @@ export const updateLiveUserStatus = async (user: LiveUser) => {
         ...(user.requestStatus ? { requestStatus: user.requestStatus } : {}),
     };
 
-    // Write to `locations` node — read by subscribeToLiveUsers on the map
-    const locationRef = ref(db, `locations/${user.id}`);
-    await set(locationRef, locationPayload);
+    const locationRef = user.role === 'driver'
+        ? ref(db, `drivers/active/${user.id}`)
+        : ref(db, `locations/${user.id}`);
+
+    await set(locationRef, {
+        ...locationPayload,
+        status: user.isOnline ? 'online' : 'offline',
+    });
     console.log('📡 LOCATION WRITTEN:', locationPayload);
 
     // If this is a driver, also keep `buses/{id}/currentLocation` up to date

@@ -67,8 +67,13 @@ setInterval(async () => {
         if (Math.abs(bus.lat - CENTER_LAT) > RADIUS) bus.heading += 180;
         if (Math.abs(bus.lng - CENTER_LNG) > RADIUS) bus.heading += 180;
 
-        // Prepare update for 'locations' node
-        updates[`locations/${bus.id}`] = {
+        // Write to the canonical active drivers path
+        updates[`drivers/active/${bus.id}`] = {
+            id: bus.id,
+            driverId: bus.id,
+            role: 'driver',
+            status: 'online',
+            isOnline: true,
             lat: bus.lat,
             lng: bus.lng,
             heading: bus.heading,

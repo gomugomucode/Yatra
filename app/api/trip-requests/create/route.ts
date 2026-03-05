@@ -47,14 +47,23 @@ export async function POST(request: Request) {
     const passengerData = passengerSnap.exists() ? passengerSnap.val() as { name?: string } : {};
     const passengerName = passengerData.name || 'Passenger';
 
-    const tripRequestRef = adminDb.ref(`tripRequests/${busId}`).push();
+    if (!pickupLocation || !Number.isFinite(pickupLocation.lat) || !Number.isFinite(pickupLocation.lng)) {
+      return NextResponse.json({ error: 'Missing pickupLocation coordinates' }, { status: 400 });
+    }
+
+    const tripRequestRef = adminDb.ref('trips').push();
     const tripRequest = {
       id: tripRequestRef.key!,
+      tripId: tripRequestRef.key!,
       busId,
+      driverId: busId,
       passengerId,
       passengerName,
-      status: 'pending' as const,
+      status: 'requested' as const,
+      lat: pickupLocation.lat,
+      lng: pickupLocation.lng,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       ...(pickupLocation ? { pickupLocation } : {}),
       ...(dropoffLocation ? { dropoffLocation } : {}),
     };

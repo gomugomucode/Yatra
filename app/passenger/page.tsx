@@ -21,17 +21,17 @@ import {
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import MapWrapper from '@/components/map/MapWrapper';
-import { subscribeToBuses, subscribeToBookings, updateBusLocation } from '@/lib/firebaseDb';
+import { subscribeToBuses, subscribeToBookings, subscribeToBusLocation, subscribeToTrip } from '@/lib/firebaseDb';
 import { canAccommodateBooking } from '@/lib/seatManagement';
 import { useToast } from '@/components/ui/use-toast';
 import { checkProximity, haversineDistance, ProximityLevel } from '@/lib/utils/geofencing';
 import { toast as sonnerToast } from 'sonner';
 import { NotificationToast } from '@/components/shared/NotificationToast';
 import DetailedBookingModal from '@/components/passenger/DetailedBookingModal';
-import { subscribeToBusLocation } from '@/lib/firebaseDb';
-import { calculateETA, formatETA, formatDistance } from '@/lib/utils/etaCalculator';
+import { calculateETA } from '@/lib/utils/etaCalculator';
 import LocationSearch from '@/components/map/LocationSearch';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useProximityHandshake } from '@/hooks/useProximityHandshake';
 
 export default function PassengerDashboard() {
   const router = useRouter();
@@ -63,6 +63,10 @@ export default function PassengerDashboard() {
 
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [requestStatus, setRequestStatus] = useState<'idle' | 'requesting' | 'on-trip'>('idle');
+  const [hailedDriverId, setHailedDriverId] = useState<string | null>(null);
+  const [activeTripId, setActiveTripId] = useState<string | null>(null);
+  const [activeTripPickup, setActiveTripPickup] = useState<{ lat: number; lng: number; status: string } | null>(null);
+  const [showRideHereAlert, setShowRideHereAlert] = useState(false);
   const lastTripRequestAtRef = useRef<Record<string, number>>({});
   const [busLocations, setBusLocations] = useState<Record<string, {
     lat: number;
@@ -72,6 +76,28 @@ export default function PassengerDashboard() {
     speed?: number;
   }>>({});
   const [busETAs, setBusETAs] = useState<Record<string, number | null>>({});
+
+  // ── Centralised proximity handshake ──
+  const {
+    arrived: rideArrived,
+    resetArrived,
+  } = useProximityHandshake({
+    driverId: hailedDriverId,
+    pickupLat: activeTripPickup?.lat ?? null,
+    pickupLng: activeTripPickup?.lng ?? null,
+    enabled: requestStatus === 'requesting' && !!hailedDriverId,
+  });
+
+  useEffect(() => {
+    if (rideArrived) setShowRideHereAlert(true);
+  }, [rideArrived]);
+
+  // Reset when trip changes
+  useEffect(() => {
+    resetArrived();
+    setShowRideHereAlert(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTripId]);
 
   // Get user's current location
   useEffect(() => {
@@ -158,8 +184,18 @@ export default function PassengerDashboard() {
     console.log('[PASSENGER] Setting up location listeners for active buses');
 
     const unsubscribes: (() => void)[] = [];
+    const targetBuses = hailedDriverId
+      ? buses.filter((bus) => bus.id === hailedDriverId && bus.isActive)
+      : buses.filter((bus) => bus.isActive);
 
-    buses.forEach(bus => {
+    if (hailedDriverId) {
+      setBusLocations((prev) => {
+        const focused = prev[hailedDriverId];
+        return focused ? { [hailedDriverId]: focused } : {};
+      });
+    }
+
+    targetBuses.forEach(bus => {
       if (bus.isActive) {
         // eslint-disable-next-line no-console
         console.log('[PASSENGER] Subscribing to bus location:', bus.id);
@@ -196,7 +232,7 @@ export default function PassengerDashboard() {
     };
     // Only re-subscribe if the set of active buses changes, or if userLocation/selectedBus changes (for ETA)
     // We intentionally omit 'buses' to avoid the infinite loop caused by setBuses updating the dependency
-  }, [activeBusIds, userLocation, selectedBus?.id]);
+  }, [activeBusIds, userLocation, selectedBus?.id, hailedDriverId]);
 
   // Update bus locations in buses array when real-time updates arrive
   useEffect(() => {
@@ -227,6 +263,36 @@ export default function PassengerDashboard() {
       return updated;
     });
   }, [busLocations]);
+
+  useEffect(() => {
+    if (!activeTripId) {
+      setActiveTripPickup(null);
+      return;
+    }
+
+    return subscribeToTrip(activeTripId, (trip) => {
+      if (!trip) {
+        setActiveTripPickup(null);
+        return;
+      }
+
+      if (['completed', 'cancelled', 'rejected', 'expired'].includes(trip.status)) {
+        setRequestStatus('idle');
+        setHailedDriverId(null);
+        setActiveTripId(null);
+        setActiveTripPickup(null);
+        return;
+      }
+
+      setActiveTripPickup({
+        lat: trip.lat,
+        lng: trip.lng,
+        status: trip.status,
+      });
+    });
+  }, [activeTripId]);
+
+  // Proximity alarm is now handled by useProximityHandshake above.
 
   // Subscribe to this passenger's bookings in real-time
   useEffect(() => {
@@ -446,11 +512,24 @@ export default function PassengerDashboard() {
       const data = await response.json();
       throw new Error(data?.error || 'Failed to send trip request');
     }
+
+    const data = await response.json();
+    const trip = data?.tripRequest;
+    if (trip?.id) {
+      setActiveTripId(trip.id);
+      setActiveTripPickup({
+        lat: trip.lat,
+        lng: trip.lng,
+        status: trip.status,
+      });
+      setHailedDriverId(bus.id);
+    }
   };
 
   const handleBusSelect = (bus: Bus) => {
     setSelectedBus(bus);
     setRequestStatus('requesting');
+    setHailedDriverId(bus.id);
 
     sendTripRequest(bus)
       .then(() => {
@@ -586,6 +665,9 @@ export default function PassengerDashboard() {
     setPickupLocation(null);
     setDropoffLocation(null);
     setRequestStatus('idle');
+    setHailedDriverId(null);
+    setActiveTripId(null);
+    setActiveTripPickup(null);
   };
 
   const filteredBuses = buses.filter((bus) =>
@@ -645,6 +727,19 @@ export default function PassengerDashboard() {
   // --- UI Render ---
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col">
+      {showRideHereAlert && (
+        <div className="fixed inset-0 z-[1200] bg-emerald-600/95 flex flex-col items-center justify-center text-white px-6 text-center">
+          <p className="text-4xl font-extrabold tracking-wide">YOUR RIDE IS HERE</p>
+          <p className="mt-3 text-sm opacity-90">Your driver is within 10 meters.</p>
+          <Button
+            className="mt-8 bg-white text-emerald-700 hover:bg-white/90 font-bold"
+            onClick={() => setShowRideHereAlert(false)}
+          >
+            Dismiss
+          </Button>
+        </div>
+      )}
+
       {/* 1. Header (Sticky Top) */}
       <div className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-md border-b border-slate-800/60 px-4 pt-4 pb-3">
         <div className="flex items-center justify-between gap-4">
@@ -805,6 +900,8 @@ export default function PassengerDashboard() {
           busETAs={busETAs}
           busLocations={busLocations}
           requestStatus={requestStatus}
+          hailedDriverId={hailedDriverId}
+          activeTripId={activeTripId}
         />
 
         {/* Floating Action Button for Hailing (Overlaid on Map) */}

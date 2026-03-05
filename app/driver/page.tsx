@@ -46,6 +46,7 @@ import { AlertTriangle, Car, Wrench } from 'lucide-react';
 import { useAccidentDetection } from '@/hooks/useAccidentDetection';
 import AccidentAlert from '@/components/driver/AccidentAlert';
 import { getPushTokenFromBrowser } from '@/lib/push';
+import { useProximityHandshake } from '@/hooks/useProximityHandshake';
 
 export default function DriverDashboard() {
   const router = useRouter();
@@ -63,10 +64,15 @@ export default function DriverDashboard() {
   const [lastFirebaseUpdate, setLastFirebaseUpdate] = useState<Date | null>(null);
   const [notificationPermissionRequested, setNotificationPermissionRequested] = useState(false);
   const [currentSpeed, setCurrentSpeed] = useState(0);
+  const [activeTripRequest, setActiveTripRequest] = useState<{ id: string; lat: number; lng: number; status: string } | null>(null);
+  const [showPassengerReachedAlert, setShowPassengerReachedAlert] = useState(false);
+  const driverWalletAddress =
+    typeof userData?.solanaWallet === 'string' ? userData.solanaWallet.trim() : '';
   const lastKnownLocationRef = useRef<{ lat: number; lng: number; heading?: number; speed?: number } | null>(null);
   const lastFlushRef = useRef<number>(0);
   const lastTripRequestSeenRef = useRef<string | null>(null);
-
+  const proximityAudioRef = useRef<HTMLAudioElement | null>(null);
+  const hasPlayedPassengerReachedRef = useRef(false);
   // Automated Accident Detection
   const { isAccidentDetected, resetDetection, triggerManualTest } = useAccidentDetection({
     currentLocation: userLocation ? { ...userLocation, timestamp: new Date() } : null,
@@ -87,6 +93,22 @@ export default function DriverDashboard() {
       description: 'Accident alert was cancelled.',
     });
   };
+
+  // ── Centralised proximity handshake (driver side) ──
+  const {
+    arrived: passengerReached,
+    resetArrived: resetPassengerReached,
+  } = useProximityHandshake({
+    // Driver watches their own GPS against the active trip's pickup pin.
+    // We pass null as driverId to disable the Firebase subscription —
+    // the driver's position is already tracked locally via geolocation.
+    // Instead we compute from userLocation vs activeTripRequest directly.
+    driverId: null, // driver has local GPS, no need to subscribe
+    pickupLat: activeTripRequest?.lat ?? null,
+    pickupLng: activeTripRequest?.lng ?? null,
+    enabled: false, // local override below handles it
+  });
+
 
   // Request notification permission on mount
   useEffect(() => {
@@ -221,14 +243,33 @@ export default function DriverDashboard() {
     return () => unsubscribe();
   }, [selectedBus, toast]);
 
-  // Real-time passenger-driver handshake notifications from `tripRequests/{busId}`.
+  // Real-time passenger-driver handshake notifications from `trips/{tripId}`.
   useEffect(() => {
     if (!selectedBus) return;
     lastTripRequestSeenRef.current = null;
+    hasPlayedPassengerReachedRef.current = false;
+    setShowPassengerReachedAlert(false);
 
     const unsubscribe = subscribeToTripRequests(selectedBus.id, (requests) => {
-      if (requests.length === 0) return;
-      const newest = requests[0];
+      if (requests.length === 0) {
+        setActiveTripRequest(null);
+        return;
+      }
+
+      const newest = requests.find((request) =>
+        ['requested', 'accepted', 'arrived', 'pending'].includes(request.status)
+      );
+      if (!newest) {
+        setActiveTripRequest(null);
+        return;
+      }
+
+      setActiveTripRequest({
+        id: newest.id,
+        lat: newest.lat,
+        lng: newest.lng,
+        status: newest.status,
+      });
 
       if (!lastTripRequestSeenRef.current) {
         lastTripRequestSeenRef.current = newest.id;
@@ -270,9 +311,34 @@ export default function DriverDashboard() {
     return () => unsubscribe();
   }, [selectedBus, toast]);
 
+  // Proximity alarm: driver approaches passenger pickup pin
+  useEffect(() => {
+    if (!userLocation || !activeTripRequest) return;
+
+    const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+    const dLat = toRadians(activeTripRequest.lat - userLocation.lat);
+    const dLng = toRadians(activeTripRequest.lng - userLocation.lng);
+    const lat1 = toRadians(userLocation.lat);
+    const lat2 = toRadians(activeTripRequest.lat);
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distanceMeters = 6371000 * c;
+
+    if (distanceMeters <= 10 && !hasPlayedPassengerReachedRef.current) {
+      hasPlayedPassengerReachedRef.current = true;
+      setShowPassengerReachedAlert(true);
+
+      const audio = new Audio('/alert.mp3');
+      audio.volume = 1;
+      proximityAudioRef.current = audio;
+      audio.play().catch(() => undefined);
+    }
+  }, [userLocation, activeTripRequest]);
   // Driver foreground tracking with strict 5s heartbeat flush.
   useEffect(() => {
-    if (!locationEnabled || !selectedBus?.id || !isOnline) return;
+    if (!locationEnabled || !selectedBus?.id || !isOnline || !driverWalletAddress) return;
 
     if (!navigator.geolocation) {
       if (!hasGeolocationError) {
@@ -292,7 +358,7 @@ export default function DriverDashboard() {
       const payload = lastKnownLocationRef.current;
       if (!payload) return;
       try {
-        await updateBusLocation(busId, payload);
+        await updateBusLocation(busId, driverWalletAddress, payload);
         lastFlushRef.current = Date.now();
         setLastFirebaseUpdate(new Date());
         setLocationUpdateCount((prev) => prev + 1);
@@ -358,19 +424,19 @@ export default function DriverDashboard() {
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('pagehide', handleVisibility);
     };
-  }, [locationEnabled, selectedBus?.id, isOnline, toast, hasGeolocationError]);
+  }, [locationEnabled, selectedBus?.id, isOnline, toast, hasGeolocationError, driverWalletAddress]);
 
   // RTDB presence hooks: offline state is written immediately on disconnect.
   useEffect(() => {
-    if (!locationEnabled || !selectedBus?.id || !isOnline) return;
+    if (!locationEnabled || !selectedBus?.id || !isOnline || !driverWalletAddress) return;
 
-    const cleanup = attachDriverPresence(selectedBus.id);
+    const cleanup = attachDriverPresence(selectedBus.id, driverWalletAddress);
     return () => {
       cleanup().catch((error) => {
         console.warn('[Presence] cleanup failed:', error);
       });
     };
-  }, [locationEnabled, selectedBus?.id, isOnline]);
+  }, [locationEnabled, selectedBus?.id, isOnline, driverWalletAddress]);
 
   // Keep screen awake while tracking to maximize background reliability in installed mode.
   useEffect(() => {
@@ -409,6 +475,15 @@ export default function DriverDashboard() {
   }, [locationEnabled, isOnline]);
 
   const handleLocationToggle = async (enabled: boolean) => {
+    if (enabled && !driverWalletAddress) {
+      toast({
+        title: 'Wallet required',
+        description: 'Link and verify your Solana wallet before going online.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (!enabled && selectedBus) {
       // Check for active passengers (online or offline)
       const hasActivePassengers = passengers.some(p => p.status === 'waiting' || p.status === 'picked');
@@ -433,9 +508,9 @@ export default function DriverDashboard() {
 
       // Update Firebase with location sharing status
       try {
-        await updateLocationSharingStatus(selectedBus.id, enabled);
+        await updateLocationSharingStatus(selectedBus.id, enabled, driverWalletAddress);
         if (!enabled) {
-          await setDriverOffline(selectedBus.id);
+          await setDriverOffline(selectedBus.id, driverWalletAddress);
         }
         // eslint-disable-next-line no-console
         console.log('[Driver] Location sharing', enabled ? 'enabled' : 'disabled');
@@ -656,6 +731,19 @@ export default function DriverDashboard() {
       className="min-h-screen flex flex-col overflow-y-auto"
       style={{ background: '#0B0E14', WebkitOverflowScrolling: 'touch' }}
     >
+      {showPassengerReachedAlert && (
+        <div className="fixed inset-0 z-[1200] bg-blue-700/95 flex flex-col items-center justify-center text-white px-6 text-center">
+          <p className="text-4xl font-extrabold tracking-wide">PASSENGER REACHED</p>
+          <p className="mt-3 text-sm opacity-90">Pickup point is within 10 meters.</p>
+          <Button
+            className="mt-8 bg-white text-blue-700 hover:bg-white/90 font-bold"
+            onClick={() => setShowPassengerReachedAlert(false)}
+          >
+            Dismiss
+          </Button>
+        </div>
+      )}
+
       {/* ── 1. Cockpit Header ── */}
       <div className="sticky top-0 z-50 border-b border-slate-800/60 overflow-hidden"
         style={{ background: 'rgba(11,14,20,0.92)', backdropFilter: 'blur(20px)' }}
@@ -800,6 +888,8 @@ export default function DriverDashboard() {
           onBusSelect={setSelectedBus}
           showRoute={true}
           userLocation={userLocation}
+          hailedDriverId={selectedBus?.id || null}
+          activeTripId={activeTripRequest?.id || null}
         />
       </div>
 

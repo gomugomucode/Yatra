@@ -32,6 +32,8 @@ interface MapWrapperProps {
     busETAs?: Record<string, number | null>;
     busLocations?: Record<string, { lat: number; lng: number; timestamp: string; heading?: number; speed?: number }>;
     requestStatus?: 'idle' | 'requesting' | 'on-trip';
+    hailedDriverId?: string | null;
+    activeTripId?: string | null;
 }
 
 export default function MapWrapper(props: MapWrapperProps) {

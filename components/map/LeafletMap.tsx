@@ -1,12 +1,12 @@
 'use client';
 
 import React, { Component, ReactNode, useEffect, useState, useRef, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Circle, Polyline, GeoJSON } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Circle, GeoJSON } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Bus, Passenger, LiveUser, VehicleTypeId } from '@/lib/types';
 import { DEFAULT_LOCATION } from '@/lib/constants';
-import { subscribeToLiveUsers } from '@/lib/firebaseDb';
+import { subscribeToBusLocation, subscribeToLiveUsers, subscribeToTrip, TripRequest } from '@/lib/firebaseDb';
 import LiveUserMarker from './LiveUserMarker';
 import { useLiveLocation } from '@/hooks/useLiveLocation';
 import { getRoute } from '@/lib/routing/osrm';
@@ -36,6 +36,8 @@ interface LeafletMapProps {
     busETAs?: Record<string, number | null>;
     busLocations?: Record<string, { lat: number; lng: number; timestamp: string; heading?: number; speed?: number }>;
     requestStatus?: 'idle' | 'requesting' | 'on-trip';
+    hailedDriverId?: string | null;
+    activeTripId?: string | null;
 }
 
 function MapUpdater({ center, selectedUserId, userLocation }: { center: { lat: number; lng: number }, selectedUserId?: string, userLocation?: { lat: number; lng: number } | null }) {
@@ -216,11 +218,12 @@ function LeafletMapInner({
     role,
     onLocationSelect,
     pickupLocation,
-    dropoffLocation,
     userLocation,
     buses = [],
     onBusSelect,
-    requestStatus
+    requestStatus,
+    hailedDriverId,
+    activeTripId,
 }: LeafletMapProps) {
     const { currentUser } = useAuth(); // FIX: Access real UID
     const [mounted, setMounted] = useState(false);
@@ -233,6 +236,8 @@ function LeafletMapInner({
     const [selectedUser, setSelectedUser] = useState<LiveUser | null>(null);
     const [routeGeoJSON, setRouteGeoJSON] = useState<GeoJSON.LineString | null>(null);
     const [routeInfo, setRouteInfo] = useState<{ distance: number; duration: number } | null>(null);
+    const [handshakeDriverLocation, setHandshakeDriverLocation] = useState<{ lat: number; lng: number } | null>(null);
+    const [handshakeTrip, setHandshakeTrip] = useState<TripRequest | null>(null);
 
     // FIX: STABLE ID from Auth UID
     const stableId = useMemo(() => {
@@ -275,12 +280,14 @@ function LeafletMapInner({
             clearTimeout(timeout);
             timeout = setTimeout(() => {
                 const visibleUsers = users.filter((u: any) => {
-                    if (!u.lat || !u.lng) return false;
+                    if (!Number.isFinite(u.lat) || !Number.isFinite(u.lng)) return false;
                     if (!u.isOnline) return false;
                     if (u.id === stableId) return false; // Hide self
                     if (role === 'admin') return true;
-                    // Passengers see all online drivers
-                    if (role === 'passenger' && u.role === 'driver') return true;
+                    // Passenger map focuses to the hailed driver once handshake starts.
+                    if (role === 'passenger' && u.role === 'driver') {
+                        return hailedDriverId ? u.id === hailedDriverId : true;
+                    }
                     // Drivers ONLY see passengers who are actively requesting a ride
                     if (role === 'driver' && u.role === 'passenger') {
                         return u.requestStatus === 'requesting';
@@ -291,7 +298,33 @@ function LeafletMapInner({
             }, 300);
         });
         return () => { unsubscribe(); clearTimeout(timeout); };
-    }, [role, stableId]);
+    }, [role, stableId, hailedDriverId]);
+
+    useEffect(() => {
+        if (!hailedDriverId) {
+            setHandshakeDriverLocation(null);
+            return;
+        }
+
+        return subscribeToBusLocation(hailedDriverId, (location) => {
+            if (!location) {
+                setHandshakeDriverLocation(null);
+                return;
+            }
+            setHandshakeDriverLocation({ lat: location.lat, lng: location.lng });
+        });
+    }, [hailedDriverId]);
+
+    useEffect(() => {
+        if (!activeTripId) {
+            setHandshakeTrip(null);
+            return;
+        }
+
+        return subscribeToTrip(activeTripId, (trip) => {
+            setHandshakeTrip(trip);
+        });
+    }, [activeTripId]);
 
     useEffect(() => {
         const prev = (L.Marker.prototype as any).options.icon;
@@ -302,20 +335,39 @@ function LeafletMapInner({
 
     useEffect(() => {
         let isMounted = true;
-        if (!selectedUser) {
-            setRouteGeoJSON(null); setRouteInfo(null); return;
+
+        const driverPoint = handshakeDriverLocation
+            ? [handshakeDriverLocation.lat, handshakeDriverLocation.lng] as [number, number]
+            : null;
+
+        const passengerPoint = handshakeTrip
+            ? [handshakeTrip.lat, handshakeTrip.lng] as [number, number]
+            : null;
+
+        const fallbackTarget = selectedUser
+            ? [selectedUser.lat, selectedUser.lng] as [number, number]
+            : null;
+
+        const startPoint = driverPoint || currentPosition;
+        const endPoint = passengerPoint || fallbackTarget;
+
+        if (!startPoint || !endPoint) {
+            setRouteGeoJSON(null);
+            setRouteInfo(null);
+            return;
         }
-        if (currentPosition && selectedUser) {
-            getRoute(currentPosition[0], currentPosition[1], selectedUser.lat, selectedUser.lng)
-                .then((res) => {
-                    if (isMounted && res) {
-                        setRouteGeoJSON(res.geometry);
-                        setRouteInfo({ distance: res.distance, duration: res.duration });
-                    }
-                });
-        }
-        return () => { isMounted = false; };
-    }, [selectedUser, currentPosition]);
+
+        getRoute(startPoint[0], startPoint[1], endPoint[0], endPoint[1])
+            .then((res) => {
+                if (!isMounted || !res) return;
+                setRouteGeoJSON(res.geometry);
+                setRouteInfo({ distance: res.distance, duration: res.duration });
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, [selectedUser, currentPosition, handshakeDriverLocation, handshakeTrip]);
 
     if (!mounted) return <div className="w-full h-full min-h-[300px] bg-gray-100 flex items-center justify-center"><div className="animate-pulse w-11/12 h-64 bg-gray-200 rounded-lg" /></div>;
 
@@ -383,7 +435,31 @@ function LeafletMapInner({
                     />
                 ))}
 
-                {routeGeoJSON && <GeoJSON data={routeGeoJSON} style={{ color: "blue", weight: 5, opacity: 0.7 }} />}
+                {routeGeoJSON && (
+                    <>
+                        {/* Glow underlay */}
+                        <GeoJSON
+                            key={`route-glow-${JSON.stringify(routeGeoJSON.coordinates[0])}`}
+                            data={routeGeoJSON}
+                            style={{ color: '#ffffff', weight: 9, opacity: 0.18 }}
+                        />
+                        {/* Primary vivid line */}
+                        <GeoJSON
+                            key={`route-primary-${JSON.stringify(routeGeoJSON.coordinates[0])}`}
+                            data={routeGeoJSON}
+                            style={{ color: '#2563eb', weight: 5, opacity: 0.85, dashArray: undefined }}
+                        />
+                    </>
+                )}
+
+                {handshakeTrip && (
+                    <>
+                        <Circle center={[handshakeTrip.lat, handshakeTrip.lng]} radius={80} pathOptions={{ color: '#3b82f6' }} />
+                        <Marker position={[handshakeTrip.lat, handshakeTrip.lng]} icon={createLocationIcon('#2563eb')}>
+                            <Popup>Passenger Pickup Pin</Popup>
+                        </Marker>
+                    </>
+                )}
 
                 {pickupLocation && (
                     <>
@@ -392,6 +468,14 @@ function LeafletMapInner({
                     </>
                 )}
             </MapContainer>
+
+            {routeInfo && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1100] flex flex-col items-center px-5 py-2 rounded-2xl text-white text-xs font-semibold shadow-xl"
+                    style={{ background: 'rgba(37,99,235,0.88)', backdropFilter: 'blur(8px)', border: '1px solid rgba(147,197,253,0.25)' }}>
+                    <span className="text-sm font-bold">🕒 ETA {Math.max(1, Math.round(routeInfo.duration))} min</span>
+                    <span className="opacity-75">{routeInfo.distance.toFixed(2)} km away</span>
+                </div>
+            )}
         </div>
     );
 }

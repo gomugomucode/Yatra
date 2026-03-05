@@ -128,7 +128,13 @@ export async function POST(request: Request) {
 
         await adminDb.ref(`users/${driverId}`).update({
             verificationBadge: badgeData,
+            solanaWallet: driverWalletAddress,
             isApproved: true,
+            updatedAt: new Date().toISOString(),
+        });
+
+        await adminDb.ref(`buses/${driverId}`).update({
+            driverWalletAddress: driverWalletAddress,
             updatedAt: new Date().toISOString(),
         });
 

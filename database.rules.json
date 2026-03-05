@@ -15,6 +15,14 @@
         ".write": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin')"
       }
     },
+    "drivers": {
+      "active": {
+        ".read": true,
+        "$driverId": {
+          ".write": "auth != null && (auth.uid === $driverId || root.child('users').child(auth.uid).child('role').val() === 'admin')"
+        }
+      }
+    },
     "bookings": {
       ".read": "auth != null",
       ".write": "auth != null",
@@ -26,6 +34,11 @@
       "$busId": {
         ".indexOn": ["createdAt", "status"]
       }
+    },
+    "trips": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      ".indexOn": ["driverId", "passengerId", "status", "createdAt"]
     },
     "users": {
       "$uid": {
