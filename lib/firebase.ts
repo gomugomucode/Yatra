@@ -12,6 +12,7 @@ import {
   GoogleAuthProvider,
   type UserCredential,
 } from 'firebase/auth';
+
 // Client-side Firebase
 let firebaseApp: FirebaseApp | undefined;
 let firebaseAuth: Auth | undefined;
@@ -36,12 +37,16 @@ export const getFirebaseApp = (): FirebaseApp => {
       appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '',
     };
 
-    // Add databaseURL if provided, or use regional URL for asia-southeast1
+    /**
+     * FIX: Regional Mismatch
+     * The warning indicates your DB lives in europe-west1.
+     * We check the environment variable first, otherwise we default to the European URL.
+     */
     if (process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL) {
       clientConfig.databaseURL = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL;
     } else if (clientConfig.projectId) {
-      // Default to asia-southeast1 region based on the warning
-      clientConfig.databaseURL = `https://${clientConfig.projectId}-default-rtdb.asia-southeast1.firebasedatabase.app`;
+      // Changed from asia-southeast1 to europe-west1 to match your Firebase warning
+      clientConfig.databaseURL = `https://${clientConfig.projectId}-default-rtdb.europe-west1.firebasedatabase.app`;
     }
 
     if (!clientConfig.apiKey) {
@@ -54,6 +59,7 @@ export const getFirebaseApp = (): FirebaseApp => {
   return firebaseApp;
 };
 
+// ... rest of your existing exports (getFirebaseAuth, getRecaptchaVerifier, etc.)
 export const getFirebaseAuth = (): Auth => {
   if (!firebaseAuth) {
     const app = getFirebaseApp();
@@ -67,8 +73,6 @@ export const getRecaptchaVerifier = async (containerId: string) => {
   const auth = getFirebaseAuth();
 
   if (!recaptchaVerifier) {
-    // Modular SDK v9+ signature: new RecaptchaVerifier(auth, container, parameters)
-    // We stick to this shape to avoid touching internal auth.settings.
     recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
       size: 'invisible',
     });
@@ -107,7 +111,6 @@ export const signInWithPhone = async (
   }
 };
 
-// Email/Password Authentication
 export const signInWithEmail = async (
   email: string,
   password: string
@@ -129,7 +132,6 @@ export const sendPasswordReset = async (email: string): Promise<void> => {
   return await firebaseSendPasswordReset(auth, email);
 };
 
-// Google Sign-In
 export const signInWithGoogle = async (): Promise<UserCredential> => {
   const auth = getFirebaseAuth();
   const provider = new GoogleAuthProvider();
