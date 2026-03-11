@@ -50,13 +50,18 @@ const mapFirebaseError = (err: unknown): string => {
   return 'Something went wrong. Please try again.';
 };
 
-/** After Firebase login: if user exists in Realtime DB users/{uid} and profile complete → dashboard; else → profile. */
+/**
+ * After Firebase login: resolves where to send the user.
+ * - isSignIn=true + passenger role → always go to /passenger dashboard directly (skip profile setup).
+ * - Sign-up or driver → check profile completion and redirect accordingly.
+ */
 async function resolvePostLoginRedirect(
   uid: string,
   selectedRole: Role,
   idToken: string,
   setRole: (r: Role | null) => void,
-  router: ReturnType<typeof useRouter>
+  router: ReturnType<typeof useRouter>,
+  isSignIn: boolean = false
 ): Promise<'dashboard' | 'profile'> {
   let userData: any = null;
   try {
@@ -80,6 +85,13 @@ async function resolvePostLoginRedirect(
   }
 
   setRole(role);
+
+  // On sign-in, go directly to dashboard for both roles — no profile setup required.
+  if (isSignIn) {
+    const path = selectedRole === 'driver' ? '/driver' : '/passenger';
+    router.replace(path);
+    return 'dashboard';
+  }
 
   if (hasProfile) {
     const path = role === 'driver' ? '/driver' : '/passenger';
@@ -147,7 +159,8 @@ function AuthContent() {
       const cred = await signInWithGoogle();
       const user = cred.user;
       const idToken = await user.getIdToken(true);
-      await resolvePostLoginRedirect(user.uid, selectedRole, idToken, setRole, router);
+      // Google sign-in: passengers go directly to dashboard (isSignIn=true)
+      await resolvePostLoginRedirect(user.uid, selectedRole, idToken, setRole, router, true);
       toast({ title: 'Welcome to Yatra', description: 'You’re signed in.' });
     } catch (err: unknown) {
       toast({ variant: 'destructive', title: 'Sign-in failed', description: mapFirebaseError(err) });
@@ -166,13 +179,15 @@ function AuthContent() {
     try {
       let userCredential;
       if (isSignUp) {
+        // Sign-up: create account then go through profile setup
         userCredential = await createUserWithEmail(email, password);
         const idToken = await userCredential.user.getIdToken();
-        await resolvePostLoginRedirect(userCredential.user.uid, selectedRole, idToken, setRole, router);
+        await resolvePostLoginRedirect(userCredential.user.uid, selectedRole, idToken, setRole, router, false);
       } else {
+        // Sign-in: passengers go directly to dashboard, drivers check profile
         userCredential = await signInWithEmail(email, password);
         const idToken = await userCredential.user.getIdToken();
-        await resolvePostLoginRedirect(userCredential.user.uid, selectedRole, idToken, setRole, router);
+        await resolvePostLoginRedirect(userCredential.user.uid, selectedRole, idToken, setRole, router, true);
       }
     } catch (err: unknown) {
       if (isSignUp && err instanceof FirebaseError && err.code === 'auth/email-already-in-use') {
@@ -258,8 +273,8 @@ function AuthContent() {
               type="button"
               onClick={() => { setSelectedRole('passenger'); setRoleInUrl('passenger'); }}
               className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${selectedRole === 'passenger'
-                  ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25'
-                  : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25'
+                : 'text-slate-400 hover:text-slate-200'
                 }`}
             >
               <User2 className="w-4 h-4" /> Passenger
@@ -268,8 +283,8 @@ function AuthContent() {
               type="button"
               onClick={() => { setSelectedRole('driver'); setRoleInUrl('driver'); }}
               className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${selectedRole === 'driver'
-                  ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25'
-                  : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25'
+                : 'text-slate-400 hover:text-slate-200'
                 }`}
             >
               <Bus className="w-4 h-4" /> Driver
