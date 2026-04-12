@@ -1,3 +1,4 @@
+// name=components/sections/ScrollReveal.tsx
 'use client'
 
 import { motion, useInView } from 'framer-motion'
@@ -9,13 +10,17 @@ interface ScrollRevealProps {
   direction?: 'up' | 'left' | 'right'
 }
 
-export function ScrollReveal({ children, delay = 0, direction = 'up' }: ScrollRevealProps) {
+export function ScrollReveal({ 
+  children, 
+  delay = 0, 
+  direction = 'up' 
+}: ScrollRevealProps) {
   const ref = useRef<HTMLDivElement>(null)
   const inView = useInView(ref, { once: true, margin: '-80px' })
 
   const initial = {
-    up:    { opacity: 0, y: 32, filter: 'blur(6px)' },
-    left:  { opacity: 0, x: -24, filter: 'blur(4px)' },
+    up: { opacity: 0, y: 32, filter: 'blur(6px)' },
+    left: { opacity: 0, x: -24, filter: 'blur(4px)' },
     right: { opacity: 0, x: 24, filter: 'blur(4px)' },
   }[direction]
 

@@ -1,8 +1,8 @@
 // name=components/hero/SplineBackground.tsx
 'use client'
-
+s
 import dynamic from 'next/dynamic'
-import { Suspense } from 'react'
+import { Suspense, useState } from 'react'
 
 const Spline = dynamic(
   () => import('@splinetool/react-spline/next'),
@@ -16,30 +16,41 @@ const Spline = dynamic(
   }
 )
 
-// ✅ USE THIS URL - Dark theme, fast loading
+// ✅ Dark theme, optimized for performance
 const SPLINE_SCENE_URL = "https://prod.spline.design/6Wq1Q7YGyM-iab9i/scene.splinecode"
 
 export function SplineBackground() {
-
-  const [loadError, setLoadError] = React.useState(false)
+  const [loadError, setLoadError] = useState(false)
 
   return (
     <div className="absolute inset-0 z-0 overflow-hidden">
       <Suspense fallback={<div className="w-full h-full bg-[#050505]" />}>
-        <Spline
-          scene={SPLINE_SCENE_URL}
-          className="w-full h-full opacity-60"
-          onLoad={() => console.log('Spline scene loaded')}
+        <div className="w-full h-full">
+          <Spline
+            scene={SPLINE_SCENE_URL}
+            className="w-full h-full opacity-60"
+            onLoad={() => {
+              console.log('✓ Spline scene loaded successfully')
+              setLoadError(false)
+            }}
             onError={() => {
-            console.error(' Spline failed to load')
-            setLoadError(true)
-          }}
-        />
+              console.error('✗ Spline failed to load')
+              setLoadError(true)
+            }}
+          />
+        </div>
       </Suspense>
 
-      {/* Vignette overlays */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#050505]" />
-      <div className="absolute inset-0 bg-gradient-to-r from-[#050505]/70 via-transparent to-[#050505]/70" />
+      {/* Vignette overlays - Creates smooth fade to dark background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#050505]/80 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#050505]/50 via-transparent to-[#050505]/50 pointer-events-none" />
+
+      {/* Fallback if Spline fails */}
+      {loadError && (
+        <div className="absolute inset-0 bg-gradient-to-br from-[rgba(0,194,255,0.05)] via-[#050505] to-[#050505] flex items-center justify-center">
+          <p className="text-white/40 text-sm">Loading scene...</p>
+        </div>
+      )}
     </div>
   )
 }
