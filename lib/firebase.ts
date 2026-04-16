@@ -14,7 +14,7 @@ import {
 } from 'firebase/auth';
 
 // Client-side Firebase
-let firebaseApp: FirebaseApp | undefined;
+let firebaseApp: FirebaseApp | undefined; 
 let firebaseAuth: Auth | undefined;
 let recaptchaVerifier: RecaptchaVerifier | null = null;
 
