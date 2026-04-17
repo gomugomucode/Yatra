@@ -87,19 +87,18 @@ async function resolvePostLoginRedirect(
   setRole(role);
 
   // On sign-in, go directly to dashboard for both roles — no profile setup required.
+  // Use window.location.assign (hard nav) so the auth-page useEffect can't race and override.
   if (isSignIn) {
-    const path = selectedRole === 'driver' ? '/driver' : '/passenger';
-    router.replace(path);
+    window.location.assign(selectedRole === 'driver' ? '/driver' : '/passenger');
     return 'dashboard';
   }
 
   if (hasProfile) {
-    const path = role === 'driver' ? '/driver' : '/passenger';
-    router.replace(path);
+    window.location.assign(role === 'driver' ? '/driver' : '/passenger');
     return 'dashboard';
   }
 
-  router.replace(`/auth/profile?role=${selectedRole}`);
+  window.location.assign(`/auth/profile?role=${selectedRole}`);
   return 'profile';
 }
 
@@ -159,8 +158,8 @@ function AuthContent() {
       const cred = await signInWithGoogle();
       const user = cred.user;
       const idToken = await user.getIdToken(true);
-      // Google sign-in: passengers go directly to dashboard (isSignIn=true)
-      await resolvePostLoginRedirect(user.uid, selectedRole, idToken, setRole, router, true);
+      const isNewUser = user.metadata.creationTime === user.metadata.lastSignInTime;
+      await resolvePostLoginRedirect(user.uid, selectedRole, idToken, setRole, router, !isNewUser);
       toast({ title: 'Welcome to Yatra', description: 'You’re signed in.' });
     } catch (err: unknown) {
       toast({ variant: 'destructive', title: 'Sign-in failed', description: mapFirebaseError(err) });

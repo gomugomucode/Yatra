@@ -17,7 +17,7 @@ import {
   Clock,
   Smartphone,
   Users,
-  UserCircle,
+  CircleUser,
   LogOut,
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';

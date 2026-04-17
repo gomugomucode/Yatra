@@ -278,6 +278,11 @@ function ProfilePageContent() {
         }),
       });
 
+      if (!registerRes.ok) {
+        const errorData = await registerRes.json().catch(() => ({}));
+        throw new Error((errorData as { error?: string }).error || 'Registration API failed');
+      }
+
       // Refresh token to get 'passenger' claim
       const freshToken = await currentUser.getIdToken(true);
 

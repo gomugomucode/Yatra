@@ -25,13 +25,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [role, setRoleState] = useState<Role>(() => {
-    // Initialize from cookie if available
-    if (typeof window !== 'undefined') {
-      return Cookies.get('role') as Role || null;
-    }
-    return null;
-  });
+  const [role, setRoleState] = useState<Role>(null);
   const [loading, setLoading] = useState(true);
 
   // ...
@@ -73,7 +67,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setUserData(data);
               if (data.role) {
                 setRoleState(data.role);
-                Cookies.set('role', data.role, { expires: 7 });
               }
             } else {
               // Profile doesn't exist yet
@@ -83,10 +76,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
         } catch (err: any) {
           clearTimeout(safetyTimeout);
-          // Gracefully handle Permission denied - this can happen during initial sign-in
-          // before the server sets up the user profile
           if (err?.message?.includes('Permission denied') || err?.message?.includes('PERMISSION_DENIED')) {
-            console.warn('[Auth] Permission denied reading profile, will retry after profile creation');
+            console.warn('[Auth] Permission denied reading profile — user authenticated but no RTDB record yet');
+            setUserData({ uid: user.uid, role: null } as any);
           } else {
             console.error('[Auth] Failed to subscribe to user profile', err);
           }
@@ -110,11 +102,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setRole = (newRole: Role) => {
     setRoleState(newRole);
-    if (newRole) {
-      Cookies.set('role', newRole, { expires: 7 });
-    } else {
-      Cookies.remove('role');
-    }
   };
 
   const handleSignInWithPhone = async (phone: string, userRole: Role): Promise<ConfirmationResult> => {

@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       });
 
       response.cookies.set('role', role, {
-        httpOnly: false,
+        httpOnly: true,
         secure: false,
         path: '/',
         sameSite: 'lax',
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     });
 
     response.cookies.set('role', role, {
-      httpOnly: false,
+      httpOnly: true,
       secure: isProd,
       path: '/',
       sameSite: 'lax',

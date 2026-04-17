@@ -171,11 +171,5 @@ export interface Alert {
 
 export const checkProfileCompletion = (data: any): boolean => {
   if (!data || !data.role) return false;
-  if (data.role === 'driver') {
-    return !!(data.name && data.vehicleNumber && data.licenseNumber);
-  }
-  if (data.role === 'passenger') {
-    return !!(data.name);
-  }
-  return false;
+  return !!(data.name && data.name.trim());
 };
