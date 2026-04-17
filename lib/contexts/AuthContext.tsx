@@ -14,6 +14,7 @@ interface AuthContextValue {
   currentUser: User | null;
   role: Role;
   loading: boolean;
+  profileReady: boolean;
   setRole: (role: Role) => void;
   signInWithPhone: (phone: string, role: Role) => Promise<ConfirmationResult>;
   verifyOTP: (confirmationResult: ConfirmationResult, code: string, role: Role) => Promise<void>;
@@ -33,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   });
   const [loading, setLoading] = useState(true);
+  const [profileReady, setProfileReady] = useState(false);
 
   // ...
 
@@ -52,10 +54,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (user) {
+        setProfileReady(false);
         // Safety timeout: If profile doesn't load in 5s, stop loading anyway
         const safetyTimeout = setTimeout(() => {
           console.warn('[Auth] Profile load timed out, forcing app load');
           setLoading(false);
+          setProfileReady(true);
         }, 5000);
 
         try {
@@ -80,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setUserData(null);
             }
             setLoading(false);
+            setProfileReady(true);
           });
         } catch (err: any) {
           clearTimeout(safetyTimeout);
@@ -91,12 +96,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.error('[Auth] Failed to subscribe to user profile', err);
           }
           setLoading(false);
+          setProfileReady(true);
         }
       } else {
         setUserData(null);
         setRoleState(null);
         Cookies.remove('role');
         setLoading(false);
+        setProfileReady(true);
       }
     });
 
@@ -166,11 +173,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return; // Let the auth page handle redirect to profile
     }
 
-    // Existing user - create session and set role
+    const resolvedRole = (userData?.role as Role) || userRole;
+
+    // Existing user - create session and set role using the profile's actual role
     const response = await fetch('/api/sessionLogin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idToken, role: userRole }),
+      body: JSON.stringify({ idToken, role: resolvedRole }),
     });
 
     if (!response.ok) {
@@ -178,7 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error(errorPayload?.error || 'Failed to create session');
     }
 
-    setRole(userData?.role || userRole);
+    setRole(resolvedRole);
     setUserData(userData || null);
   };
 
@@ -201,6 +210,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         currentUser,
         role,
         loading,
+        profileReady,
         setRole,
         signInWithPhone: handleSignInWithPhone,
         verifyOTP: handleVerifyOTP,

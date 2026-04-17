@@ -266,7 +266,7 @@ function LeafletMapInner({
     const driverRoute = role === 'driver' ? (buses?.[0]?.route || 'Route 1') : undefined;
 
     // Call custom hook for pushing our own location to Firebase
-    const { isTracking, toggleTracking, location: liveLocation } = useLiveLocation(
+    const { isTracking, toggleTracking, location: liveLocation, error: liveLocationError } = useLiveLocation(
         stableId,
         role === 'admin' ? undefined : (role as 'driver' | 'passenger'),
         false,
@@ -415,6 +415,12 @@ function LeafletMapInner({
 
     return (
         <div className="relative w-full h-full min-h-[400px]">
+            {liveLocationError && (
+                <div className="absolute top-4 right-4 z-[1200] rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 shadow-lg shadow-black/20 backdrop-blur-md">
+                    <p className="font-semibold">Location issue</p>
+                    <p className="mt-1 text-xs text-amber-100/90">{liveLocationError}</p>
+                </div>
+            )}
             <MapContainer
                 center={[center.lat, center.lng]}
                 zoom={15}

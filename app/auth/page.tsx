@@ -109,7 +109,7 @@ function AuthContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { setRole, currentUser, loading: authLoading, userData } = useAuth();
+  const { setRole, currentUser, loading: authLoading, profileReady, userData } = useAuth();
   const { toast } = useToast();
 
   const [selectedRole, setSelectedRole] = useState<Role>('passenger');
@@ -130,7 +130,7 @@ function AuthContent() {
 
   // Handle automatic redirection if already logged in
   useEffect(() => {
-    if (authLoading || !currentUser || pathname !== '/auth') return;
+    if (authLoading || !profileReady || !currentUser || pathname !== '/auth') return;
     if (userData && checkProfileCompletion(userData)) {
       const finalRedirect = redirectTo && ['/driver', '/passenger'].includes(redirectTo) ? redirectTo : userData.role === 'driver' ? '/driver' : '/passenger';
       router.replace(finalRedirect);
@@ -140,7 +140,7 @@ function AuthContent() {
     if (userData === null) {
       router.replace(`/auth/profile?role=${selectedRole}${redirectTo ? `&redirect=${encodeURIComponent(redirectTo)}` : ''}`);
     }
-  }, [authLoading, currentUser, userData, pathname, redirectTo, router, selectedRole]);
+  }, [authLoading, profileReady, currentUser, userData, pathname, redirectTo, router, selectedRole]);
 
   const setRoleInUrl = (role: Role) => {
     const params = new URLSearchParams(Array.from(searchParams.entries()));

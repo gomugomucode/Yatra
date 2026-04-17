@@ -14,17 +14,22 @@ import {
   LogOut,
   ExternalLink,
   Ticket,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetDescription,
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { subscribeToBookings } from '@/lib/firebaseDb';
+import { subscribeToBookings, updateUserProfile } from '@/lib/firebaseDb';
 import { Booking } from '@/lib/types';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -55,6 +60,14 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
   const { toast } = useToast();
   const [internalOpen, setInternalOpen] = useState(false);
   const [bookingsWithReceipts, setBookingsWithReceipts] = useState<Booking[]>([]);
+  const [editMode, setEditMode] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    wallet: '',
+  });
 
   const isControlled = controlledOpen !== undefined && onOpenChange !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
@@ -63,6 +76,44 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
   const wallet = userData?.solanaWallet;
   const displayName = userData?.name || currentUser?.email?.split('@')[0] || 'Rider';
   const initial = displayName.charAt(0).toUpperCase();
+
+  useEffect(() => {
+    setProfileForm({
+      name: userData?.name || currentUser?.email?.split('@')[0] || '',
+      email: currentUser?.email || '',
+      phone: userData?.phone || '',
+      wallet: userData?.solanaWallet || '',
+    });
+    if (!open) {
+      setEditMode(false);
+    }
+  }, [currentUser, userData, open]);
+
+  const handleProfileChange = (field: keyof typeof profileForm, value: string) => {
+    setProfileForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveProfile = async () => {
+    if (!currentUser) return;
+    setSavingProfile(true);
+    try {
+      await updateUserProfile(currentUser.uid, {
+        name: profileForm.name,
+        phone: profileForm.phone,
+      });
+      toast({ title: 'Profile saved', description: 'Your profile has been updated.' });
+      setEditMode(false);
+    } catch (err) {
+      console.error('[Profile] Save failed', err);
+      toast({
+        title: 'Unable to save',
+        description: 'There was an error updating your profile. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   useEffect(() => {
     if (!currentUser || !open) return;
@@ -110,18 +161,99 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
       <SheetContent
         side="right"
         /* z-[10000] makes it sit on top of any Map, Zoom buttons, or popups */
-        className="w-full max-w-md border-l border-cyan-500/30 bg-[#0f172a] p-0 flex flex-col overflow-hidden z-[10000] shadow-[0_0_50px_rgba(0,0,0,1)]"
+        className="w-full max-w-[min(100vw,560px)] md:max-w-[620px] md:rounded-l-[2rem] border-l border-slate-800/70 bg-slate-950/95 p-0 flex flex-col overflow-hidden z-[10000] shadow-[0_0_50px_rgba(0,0,0,0.9)]"
       >
-        <SheetHeader className="sr-only">
+        <SheetHeader>
           <SheetTitle>Yatra Profile</SheetTitle>
+          <SheetDescription>
+            View and manage your passenger account details, wallet info, and trip receipts.
+          </SheetDescription>
         </SheetHeader>
 
         <motion.div
           initial={{ x: 80, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.35, ease: "easeOut" }}
-          className="flex flex-col h-full max-h-screen overflow-y-auto custom-scrollbar"
+          className="flex flex-col min-h-full max-h-screen overflow-y-auto custom-scrollbar"
         >
+          <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4 border-b border-slate-800">
+            <div>
+              <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Passenger profile</p>
+              <p className="mt-2 text-2xl font-bold text-white">Account details</p>
+            </div>
+            <SheetClose asChild>
+              <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white">
+                <X className="w-4 h-4" />
+              </Button>
+            </SheetClose>
+          </div>
+
+          <div className="px-6 py-5 border-b border-slate-800 bg-slate-950/80">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-slate-400">Your account info</p>
+                <p className="text-sm text-slate-300">Edit your passenger name and phone number here.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {!editMode ? (
+                  <Button size="sm" onClick={() => setEditMode(true)}>
+                    Edit profile
+                  </Button>
+                ) : (
+                  <>
+                    <Button size="sm" variant="secondary" onClick={() => setEditMode(false)}>
+                      Cancel
+                    </Button>
+                    <Button size="sm" onClick={handleSaveProfile} disabled={savingProfile}>
+                      {savingProfile ? 'Saving...' : 'Save changes'}
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="profile-name">Name</Label>
+                <Input
+                  id="profile-name"
+                  value={profileForm.name}
+                  disabled={!editMode}
+                  onChange={(event) => handleProfileChange('name', event.target.value)}
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="profile-email">Email</Label>
+                <Input
+                  id="profile-email"
+                  value={profileForm.email}
+                  disabled
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="profile-phone">Phone</Label>
+                <Input
+                  id="profile-phone"
+                  value={profileForm.phone}
+                  disabled={!editMode}
+                  onChange={(event) => handleProfileChange('phone', event.target.value)}
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="profile-wallet">Wallet</Label>
+                <Input
+                  id="profile-wallet"
+                  value={profileForm.wallet}
+                  disabled
+                  className="mt-2"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Profile Card - Using a much lighter background for contrast */}
           <div className="p-6 bg-slate-800/40 border-b border-slate-700/50">
             <div className="flex items-center gap-4">

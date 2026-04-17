@@ -3,6 +3,7 @@
 import { getFirebaseApp } from './firebase';
 
 export async function getPushTokenFromBrowser(): Promise<string | null> {
+  if (process.env.NODE_ENV !== 'production') return null;
   if (typeof window === 'undefined') return null;
   if (!('Notification' in window) || !('serviceWorker' in navigator)) return null;
 

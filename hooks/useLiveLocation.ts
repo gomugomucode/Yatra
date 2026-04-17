@@ -16,6 +16,7 @@ export function useLiveLocation(
 
     const lastPushRef = useRef<{ lat: number; lng: number; time: number } | null>(null);
     const watchIdRef = useRef<number | null>(null);
+    const timeoutErrorLoggedRef = useRef(false);
 
     const toggleTracking = () => {
         setIsTracking((prev) => !prev);
@@ -107,13 +108,27 @@ export function useLiveLocation(
                 }
             },
             (err) => {
-                setError(err.message);
-                console.error('Geolocation watch error:', err);
+                const errObj = err as { message?: string; code?: number | string };
+                const message = errObj && typeof errObj === 'object'
+                    ? errObj.message || String(errObj.code) || JSON.stringify(errObj)
+                    : String(err);
+
+                if (errObj?.code === 3 || message.toLowerCase().includes('timeout')) {
+                    const friendly = 'Location timed out. Waiting for a stronger signal...';
+                    setError(friendly);
+                    if (!timeoutErrorLoggedRef.current) {
+                        console.warn('Geolocation timeout:', message);
+                        timeoutErrorLoggedRef.current = true;
+                    }
+                } else {
+                    setError(message);
+                    console.error('Geolocation watch error:', message);
+                }
             },
             {
-                enableHighAccuracy: true,
-                maximumAge: 0,
-                timeout: 10000
+                enableHighAccuracy: false,
+                maximumAge: 15000,
+                timeout: 20000,
             }
         );
 

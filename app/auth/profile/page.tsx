@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Bus, User2, Loader2, Upload, Camera, MapPin, Shield, Phone, Mail, CreditCard, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Bus, User2, Loader2, Upload, Camera, MapPin, Shield, Phone, Mail, CreditCard, CheckCircle2, ArrowRight, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -96,6 +96,7 @@ function ProfilePageContent() {
   // ── 1. ALL HOOKS MUST BE AT THE TOP ──
   // These must run every single time, regardless of auth state.
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [profilePreview, setProfilePreview] = useState<string | null>(null);
   const [vehiclePreview, setVehiclePreview] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
@@ -140,11 +141,10 @@ function ProfilePageContent() {
   useEffect(() => {
     if (!loading && currentUser && userData && !isSubmitting) {
       if (checkProfileCompletion(userData)) {
-        // Use window.location.assign for a clean break from the auth flow
-        window.location.assign(userData.role === 'driver' ? '/driver' : '/passenger');
+        router.replace(userData.role === 'driver' ? '/driver' : '/passenger');
       }
     }
-  }, [currentUser, userData, loading, isSubmitting]);
+  }, [currentUser, userData, loading, isSubmitting, router]);
 
   // ── 4. CONDITIONAL RENDERING (Only after all hooks are declared) ──
 
@@ -189,6 +189,7 @@ function ProfilePageContent() {
 
   const handleDriverSubmit = async (data: DriverFormData) => {
     if (!currentUser) return;
+    setSubmitError(null);
     try {
       setIsSubmitting(true);
 
@@ -218,11 +219,15 @@ function ProfilePageContent() {
       if (!registerRes.ok) throw new Error(registerJson?.error || 'Registration API failed');
 
       const freshToken = await currentUser.getIdToken(true);
-      await fetch('/api/sessionLogin', {
+      const sessionRes = await fetch('/api/sessionLogin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken: freshToken, role: 'driver' }),
       });
+      if (!sessionRes.ok) {
+        const sessionJson = await sessionRes.json().catch(() => ({}));
+        throw new Error(sessionJson?.error || 'Session creation failed');
+      }
 
       setRole('driver');
 
@@ -257,10 +262,12 @@ function ProfilePageContent() {
       });
 
       toast({ title: 'Success!', description: 'Profile created.' });
-      router.replace('/driver');
+      router.replace(searchParams.get('redirect') || '/driver');
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create profile.';
+      setSubmitError(message);
       console.error(error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to create profile.' });
+      toast({ variant: 'destructive', title: 'Error', description: message });
     } finally {
       setIsSubmitting(false);
     }
@@ -270,6 +277,7 @@ function ProfilePageContent() {
 
   const handlePassengerSubmit = async (data: PassengerFormData) => {
     if (!currentUser) return;
+    setSubmitError(null);
 
     try {
       setIsSubmitting(true);
@@ -289,11 +297,15 @@ function ProfilePageContent() {
       if (!registerRes.ok) throw new Error(registerJson?.error || 'Registration API failed');
 
       const freshToken = await currentUser.getIdToken(true);
-      await fetch('/api/sessionLogin', {
+      const sessionRes = await fetch('/api/sessionLogin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken: freshToken, role: 'passenger' }),
       });
+      if (!sessionRes.ok) {
+        const sessionJson = await sessionRes.json().catch(() => ({}));
+        throw new Error(sessionJson?.error || 'Session creation failed');
+      }
 
       setRole('passenger');
 
@@ -309,10 +321,12 @@ function ProfilePageContent() {
       }
 
       toast({ title: 'Success!', description: 'Profile created.' });
-      router.replace('/passenger');
+      router.replace(searchParams.get('redirect') || '/passenger');
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create profile.';
+      setSubmitError(message);
       console.error('Error:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to create profile.' });
+      toast({ variant: 'destructive', title: 'Error', description: message });
     } finally {
       setIsSubmitting(false);
     }
@@ -477,6 +491,17 @@ function ProfilePageContent() {
             /* Step 2 & 3: Profile Form */
             <Card className="bg-slate-900/80 backdrop-blur-xl border-slate-700/50 shadow-2xl">
               <CardContent className="p-8 md:p-12">
+                {submitError && (
+                  <div className="rounded-3xl border border-red-500/25 bg-red-500/10 p-4 mb-6 text-sm text-red-100">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 text-red-300 mt-0.5" />
+                      <div>
+                        <p className="font-semibold">Submission failed</p>
+                        <p className="mt-1 text-slate-200">{submitError}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {isDriver ? (
                   <form onSubmit={driverForm.handleSubmit(handleDriverSubmit)} className="space-y-8">
                     {/* Personal Information */}
