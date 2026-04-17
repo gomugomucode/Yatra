@@ -398,7 +398,7 @@ export default function Home() {
 
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
             {/* We wrap everything in isClient to prevent the Hydration Error.
-      The server will render 'null' initially, and the client will fill it in 
+      The server will render 'null' initially, and the client will fill it in
       once the browser is ready, ensuring the URLs match perfectly.
   */}
             {isClient ? (
