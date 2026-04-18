@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 const PROTECTED_PREFIXES = ['/driver', '/passenger'];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isProtected = PROTECTED_PREFIXES.some((prefix) =>
@@ -32,12 +32,10 @@ export function middleware(request: NextRequest) {
   if (pathname === '/auth' && session && role) {
     const switchRole = request.nextUrl.searchParams.get('switch_role');
 
-    // If switch_role parameter is present, allow access to auth page
     if (switchRole === 'true') {
       return NextResponse.next();
     }
 
-    // Otherwise, redirect authenticated users to their dashboard
     const target = role === 'driver' ? '/driver' : '/passenger';
     return NextResponse.redirect(new URL(target, request.url));
   }
@@ -48,5 +46,3 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: ['/auth', '/driver/:path*', '/passenger/:path*'],
 };
-
-
