@@ -57,6 +57,216 @@ Yatra is built on a three-layer hybrid stack:
 
 ---
 
+## Ride Flow
+
+### Passenger Flow
+
+```
+[Open App]
+    │
+    ▼
+[Grant Location Permission]
+    │  userLocation acquired → filteredBuses computed (10km radius)
+    ▼
+[See Nearby Drivers on Map]
+    │  Only active drivers within 10km shown
+    ▼
+[Tap a Driver Pin]
+    │  selectedBus set, pickup guide shown
+    ▼
+[Set Pickup Point]
+    │  Tap map  ──or──  "Use my location"
+    ▼
+[Tap HAIL NOW]
+    │  POST /api/trip-requests/create
+    │  trip.status = "requested"
+    │  requestStatus = "requesting" (after API succeeds)
+    ▼
+[Waiting for Driver...]        ──────────────────► [5-min timeout → "expired"]
+    │  driver gets FCM push + in-app toast
+    │
+    ├─► Driver Rejects → toast, requestStatus = "idle"
+    │
+    └─► Driver Accepts
+            │  trip.status = "accepted"
+            │  requestStatus = "accepted"
+            │  Passenger starts publishing location to
+            │    tripLocations/{tripId}/passenger every 3s
+            │  Cyan ETA card appears: "X min to pickup"
+            │  Cyan polyline drawn: driver → pickup pin
+            ▼
+        [Driver En Route to Pickup]
+            │  ETA updates every 30s via OSRM
+            │
+            └─► Driver within 50m → trip.status = "arrived"
+                    │  Full-screen arrival alert on both sides
+                    ▼
+                [Passenger Boards]
+                    │  Driver taps "Passenger Boarded"
+                    │  trip.status = "active"
+                    │  requestStatus = "on-trip"
+                    │  Blue ETA card: "X min to destination"
+                    │  Blue polyline: driver → dropoff
+                    ▼
+                [Trip Underway]
+                    │
+                    └─► Driver taps "Complete Trip"
+                            │  trip.status = "completed"
+                            │  tripLocations/{tripId} deleted
+                            │  NFT minted on Solana (Soulbound receipt)
+                            │  SMS sent to passenger
+                            ▼
+                        [Trip Complete · NFT in Wallet]
+```
+
+---
+
+### Driver Flow
+
+```
+[Open Driver Dashboard]
+    │
+    ▼
+[Select Your Bus · Go Online]
+    │  Location sharing enabled
+    │  drivers/active/{driverId} updated every 5s
+    │  onDisconnect presence hook attached
+    ▼
+[Waiting for Requests...]
+    │  subscribeToTripRequests watches trips/{tripId}
+    │  where driverId matches
+    ▼
+[Trip Request Arrives]
+    │  FCM push notification + in-app toast
+    │  TripRequestPanel slides up from bottom
+    │  90-second countdown starts
+    │
+    ├─► Timer hits 0 → auto-reject → trip.status = "rejected"
+    │
+    ├─► Tap "Reject" → trip.status = "rejected"
+    │
+    └─► Tap "Accept"
+            │  trip.status = "accepted"
+            │  Panel shows: "Trip accepted — navigate to pickup"
+            │  Green "P" marker appears on map (passenger location)
+            │    (via tripLocations/{tripId}/passenger)
+            ▼
+        [Navigate to Pickup Pin]
+            │  Within 50m → proximity alert fires
+            │  Driver dismisses → trip.status = "arrived"
+            ▼
+        [Passenger at Door]
+            │  Tap "Passenger Boarded →"
+            │  trip.status = "active"
+            │  Panel shows: "Trip underway"
+            ▼
+        [Navigate to Destination]
+            │
+            └─► Tap "Complete Trip ✓"
+                    │  trip.status = "completed"
+                    │  handlePassengerDropoff called
+                    │    → NFT minted, SMS sent
+                    │  tripLocations/{tripId} cleaned up
+                    ▼
+                [Ready for Next Request]
+```
+
+---
+
+## System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         CLIENT LAYER                            │
+│                                                                 │
+│  ┌──────────────────┐              ┌──────────────────────────┐ │
+│  │  Passenger App   │              │      Driver App          │ │
+│  │  /passenger      │              │      /driver             │ │
+│  │                  │              │                          │ │
+│  │ • LeafletMap     │              │ • LeafletMap             │ │
+│  │ • filteredBuses  │              │ • TripRequestPanel       │ │
+│  │   (10km radius)  │              │   (Accept/Reject/Board)  │ │
+│  │ • ETA card       │              │ • Passenger "P" marker   │ │
+│  │ • Route polyline │              │ • Route polyline         │ │
+│  └────────┬─────────┘              └──────────┬───────────────┘ │
+│           │                                   │                 │
+└───────────┼───────────────────────────────────┼─────────────────┘
+            │                                   │
+            ▼                                   ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      FIREBASE RTDB                              │
+│                                                                 │
+│  buses/{id}                   ← driver location every 5s       │
+│  drivers/active/{id}          ← presence + heading/speed       │
+│  trips/{tripId}               ← trip status state machine      │
+│    .status: requested → accepted → arrived → active → completed │
+│  tripLocations/{tripId}/      ← participant-only read/write     │
+│    driver                     ← driver position (5s)           │
+│    passenger                  ← passenger position (3s, post-  │
+│                                  accept only)                   │
+│  users/{uid}                  ← profile + role                 │
+│  bookings/                    ← seat reservation records       │
+│  alerts/                      ← SOS / emergency events         │
+└─────────────────────────────────────────────────────────────────┘
+            │
+            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                       API LAYER (Next.js)                       │
+│                                                                 │
+│  POST /api/auth/register        → set custom role claim        │
+│  POST /api/sessionLogin         → issue httpOnly session cookie │
+│  POST /api/trip-requests/create → write trip + send FCM push   │
+│  POST /api/sessionLogout        → clear session + role cookies  │
+└─────────────────────────────────────────────────────────────────┘
+            │
+            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     SETTLEMENT LAYER                            │
+│                                                                 │
+│  Solana Devnet                                                  │
+│  • Token-2022 Soulbound NFT minted on trip completion          │
+│  • ZK-Civic Groth16 proof anchored via on-chain Memo tx        │
+│  • Driver identity committed without raw credential exposure    │
+└─────────────────────────────────────────────────────────────────┘
+            │
+            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    ROUTING LAYER                                 │
+│                                                                 │
+│  OSRM (project-osrm.org)                                       │
+│  • Phase 1: driver → pickup pin ETA (updates every 30s)        │
+│  • Phase 2: driver → destination ETA (after boarding)          │
+│  • GeoJSON LineString polyline rendered on passenger map        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Trip Status State Machine
+
+```
+  idle ──► requested ──► accepted ──► arrived ──► active ──► completed
+                │                                              │
+                └──► rejected                                  └──► NFT minted
+                │                                                   SMS sent
+                └──► cancelled
+                │
+                └──► expired  (5-min passenger timeout /
+                               90-sec driver countdown)
+```
+
+### Security Model
+
+| Path | Read | Write |
+|---|---|---|
+| `buses/` | Public | Driver only (own record) |
+| `drivers/active/` | Public | Driver only (own record) |
+| `trips/{id}` | Participant only (driver or passenger) | Any authenticated user |
+| `tripLocations/{id}/driver` | Participant only | Driver only |
+| `tripLocations/{id}/passenger` | Participant only | Passenger only |
+| `locations/{uid}` | Owner only | Owner only |
+| `users/{uid}` | Any authenticated | Owner only |
+
+---
+
 ## Technical Stack
 
 | Category | Technology |
