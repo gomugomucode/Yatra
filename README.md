@@ -2,7 +2,7 @@
 
 <img src="https://img.shields.io/badge/STATUS-LIVE%20BETA-10b981?style=for-the-badge" alt="Status: Live Beta" />
 
-# यात्री · YATRA
+# · YATRA
 
 ### The DePIN Transport Protocol for South Asia
 
@@ -12,7 +12,7 @@ Every journey, verified. Every driver, accountable. Every rupee, traceable.
 
 <br />
 
-[Launch App](https://yatra-chi.vercel.app) · [Documentation](#architecture) · [Grant Application](#grant--hackathon) · [Contributing](#contributing)
+[Launch App](https://yatra-chi.vercel.app) · [Documentation](#architecture)  · [Contributing](#contributing)
 
 <br />
 
@@ -455,17 +455,6 @@ yatra/
 
 ---
 
-## Grant & Hackathon
-
-Yatra is submitted to:
-
-- **Solana Frontier Hackathon** (April 6 – May 11, 2026) — Colosseum
-- **Superteam Agentic Engineering Grant** — Superteam Nepal
-
-The protocol is designed for the Colosseum accelerator track: $250,000 pre-seed funding for teams building full-time on Solana.
-
----
-
 ## Contributing
 
 Yatra is open source. Contributions are welcome.
@@ -499,7 +488,7 @@ MIT — see [LICENSE](LICENSE) for details.
 
 <br />
 
-**Built in Butwal, Nepal 🇳🇵**
+**Built in Butwal, Nepal 🇳🇵by Team Aparicchit**
 
 **Powered by Solana ◎**
 
