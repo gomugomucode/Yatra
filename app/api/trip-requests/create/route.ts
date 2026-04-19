@@ -9,6 +9,15 @@ interface TripRequestBody {
   dropoffLocation?: { lat: number; lng: number; address?: string };
 }
 
+function isValidCoord(lat: unknown, lng: unknown): boolean {
+  return (
+    typeof lat === 'number' && typeof lng === 'number' &&
+    isFinite(lat) && isFinite(lng) &&
+    lat >= -90 && lat <= 90 &&
+    lng >= -180 && lng <= 180
+  );
+}
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as TripRequestBody;
@@ -16,6 +25,14 @@ export async function POST(request: Request) {
 
     if (!busId) {
       return NextResponse.json({ error: 'Missing required field: busId' }, { status: 400 });
+    }
+
+    if (pickupLocation && !isValidCoord(pickupLocation.lat, pickupLocation.lng)) {
+      return NextResponse.json({ error: 'Invalid pickup coordinates' }, { status: 400 });
+    }
+
+    if (dropoffLocation && !isValidCoord(dropoffLocation.lat, dropoffLocation.lng)) {
+      return NextResponse.json({ error: 'Invalid dropoff coordinates' }, { status: 400 });
     }
 
     const cookieStore = await cookies();

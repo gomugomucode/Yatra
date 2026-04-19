@@ -6,7 +6,17 @@ export interface Location {
 }
 
 export type UserRole = 'driver' | 'passenger' | 'admin';
-export type RequestStatus = 'idle' | 'requesting' | 'on-trip';
+export type TripStatus =
+  | 'requested'
+  | 'accepted'
+  | 'arrived'
+  | 'active'
+  | 'completed'
+  | 'cancelled'
+  | 'rejected'
+  | 'expired';
+
+export type RequestStatus = 'idle' | 'requesting' | 'accepted' | 'on-trip';
 
 export interface LiveUser {
   id: string;

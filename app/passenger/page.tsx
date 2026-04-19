@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import BookingPanel from '@/components/passenger/BookingPanel';
 import SeatVisualizer from '@/components/passenger/SeatVisualizer';
 import WalletSettings from '@/components/passenger/WalletSettings';
@@ -8,7 +8,9 @@ import TripHistory from '@/components/passenger/TripHistory';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Bus, Booking, VehicleTypeId } from '@/lib/types';
+import { Bus, Booking, VehicleTypeId, RequestStatus } from '@/lib/types';
+
+const NEARBY_DRIVER_RADIUS_KM = 10;
 import { VEHICLE_TYPES, DEFAULT_LOCATION } from '@/lib/constants';
 import {
   MapPin,
@@ -23,7 +25,9 @@ import {
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import MapWrapper from '@/components/map/MapWrapper';
-import { subscribeToBuses, subscribeToBookings, subscribeToBusLocation, subscribeToTrip } from '@/lib/firebaseDb';
+import { subscribeToBuses, subscribeToBookings, subscribeToBusLocation, subscribeToTrip, updateTripStatus, publishTripLocation, cleanupTripLocation, submitTripRating } from '@/lib/firebaseDb';
+import TripRatingModal from '@/components/shared/TripRatingModal';
+import { isWithinRadius } from '@/lib/utils/geofencing';
 import { canAccommodateBooking } from '@/lib/seatManagement';
 import { useToast } from '@/components/ui/use-toast';
 import { checkProximity, haversineDistance, ProximityLevel } from '@/lib/utils/geofencing';
@@ -66,11 +70,21 @@ export default function PassengerDashboard() {
     useState(false);
 
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [requestStatus, setRequestStatus] = useState<'idle' | 'requesting' | 'on-trip'>('idle');
+  const [requestStatus, setRequestStatus] = useState<RequestStatus>('idle');
+  const [etaToPickup, setEtaToPickup] = useState<number | null>(null);
+  const [etaToDestination, setEtaToDestination] = useState<number | null>(null);
+  const [activeRoute, setActiveRoute] = useState<GeoJSON.LineString | null>(null);
+  const lastEtaFetchRef = useRef<{ lat: number; lng: number } | null>(null);
+  const locationPublishIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const userLocationRef = useRef<{ lat: number; lng: number } | null>(null);
+  const requestTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hailedDriverId, setHailedDriverId] = useState<string | null>(null);
   const [activeTripId, setActiveTripId] = useState<string | null>(null);
   const [activeTripPickup, setActiveTripPickup] = useState<{ lat: number; lng: number; status: string } | null>(null);
   const [showRideHereAlert, setShowRideHereAlert] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [ratingTripId, setRatingTripId] = useState<string | null>(null);
+  const [ratingDriverName, setRatingDriverName] = useState<string>('');
   const lastTripRequestAtRef = useRef<Record<string, number>>({});
   const [busLocations, setBusLocations] = useState<Record<string, {
     lat: number;
@@ -109,10 +123,9 @@ export default function PassengerDashboard() {
 
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
-        setUserLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        });
+        const loc = { lat: position.coords.latitude, lng: position.coords.longitude };
+        userLocationRef.current = loc;
+        setUserLocation(loc);
 
         // Auto-set pickup to current location if not set
         setPickupLocation(prev => prev ? prev : {
@@ -281,12 +294,22 @@ export default function PassengerDashboard() {
       }
 
       if (['completed', 'cancelled', 'rejected', 'expired'].includes(trip.status)) {
+        if (trip.status === 'completed' && selectedBus?.driverName) {
+          setRatingTripId(activeTripId);
+          setRatingDriverName(selectedBus.driverName);
+          setShowRatingModal(true);
+        }
         setRequestStatus('idle');
         setHailedDriverId(null);
         setActiveTripId(null);
         setActiveTripPickup(null);
         return;
       }
+
+      if (trip.status === 'accepted') {
+        setRequestStatus('accepted');
+        toast({ title: 'Driver accepted!', description: 'Your driver is on the way.' });
+      } else if (trip.status === 'active') setRequestStatus('on-trip');
 
       setActiveTripPickup({
         lat: trip.lat,
@@ -295,6 +318,118 @@ export default function PassengerDashboard() {
       });
     });
   }, [activeTripId]);
+
+  // Publish passenger location to tripLocations only after driver accepts
+  useEffect(() => {
+    const status = activeTripPickup?.status;
+    const tripId = activeTripId;
+    if (!tripId || !['accepted', 'arrived', 'active'].includes(status ?? '')) {
+      if (locationPublishIntervalRef.current) {
+        clearInterval(locationPublishIntervalRef.current);
+        locationPublishIntervalRef.current = null;
+      }
+      return;
+    }
+    locationPublishIntervalRef.current = setInterval(() => {
+      const loc = userLocationRef.current;
+      if (loc) {
+        publishTripLocation(tripId, 'passenger', loc.lat, loc.lng)
+          .catch((err) => console.warn('[passenger publish location]', err));
+      }
+    }, 3000);
+    return () => {
+      if (locationPublishIntervalRef.current) {
+        clearInterval(locationPublishIntervalRef.current);
+        locationPublishIntervalRef.current = null;
+      }
+    };
+  }, [activeTripPickup?.status, activeTripId]);
+
+  // Cleanup tripLocations when trip ends
+  useEffect(() => {
+    const status = activeTripPickup?.status;
+    if (activeTripId && ['completed', 'cancelled', 'rejected', 'expired'].includes(status ?? '')) {
+      cleanupTripLocation(activeTripId).catch(console.warn);
+      setEtaToPickup(null);
+      setEtaToDestination(null);
+      setActiveRoute(null);
+      lastEtaFetchRef.current = null;
+    }
+  }, [activeTripPickup?.status, activeTripId]);
+
+  // 5-minute passenger-side request timeout
+  useEffect(() => {
+    if (requestStatus === 'requesting' && activeTripId) {
+      requestTimeoutRef.current = setTimeout(async () => {
+        await updateTripStatus(activeTripId, 'expired');
+        setRequestStatus('idle');
+        setSelectedBus(null);
+        setHailedDriverId(null);
+        setActiveTripId(null);
+        toast({ variant: 'destructive', title: 'Request timed out', description: 'No driver responded.' });
+      }, 5 * 60 * 1000);
+    } else {
+      if (requestTimeoutRef.current) {
+        clearTimeout(requestTimeoutRef.current);
+        requestTimeoutRef.current = null;
+      }
+    }
+    return () => {
+      if (requestTimeoutRef.current) clearTimeout(requestTimeoutRef.current);
+    };
+  }, [requestStatus, activeTripId]);
+
+  // Two-phase ETA: fetch OSRM route from driver position to pickup/destination
+  useEffect(() => {
+    const trip = activeTripPickup;
+    if (!trip || !hailedDriverId) {
+      setEtaToPickup(null);
+      setEtaToDestination(null);
+      setActiveRoute(null);
+      return;
+    }
+    if (!['accepted', 'arrived', 'active'].includes(trip.status)) return;
+
+    const driverPos = busLocations[hailedDriverId];
+    if (!driverPos) return;
+
+    const last = lastEtaFetchRef.current;
+    if (
+      last &&
+      Math.abs(last.lat - driverPos.lat) < 0.0001 &&
+      Math.abs(last.lng - driverPos.lng) < 0.0001
+    ) return;
+
+    lastEtaFetchRef.current = { lat: driverPos.lat, lng: driverPos.lng };
+
+    const fetchEta = async () => {
+      try {
+        const { getRoute } = await import('@/lib/routing/osrm');
+        const isActive = trip.status === 'active';
+        const target = isActive ? dropoffLocation : pickupLocation;
+        if (!target) return;
+
+        const result = await getRoute(driverPos.lat, driverPos.lng, target.lat, target.lng);
+
+        if (result) {
+          if (isActive) {
+            setEtaToDestination(Math.ceil(result.duration));
+            setEtaToPickup(null);
+          } else {
+            setEtaToPickup(Math.ceil(result.duration));
+            setEtaToDestination(null);
+          }
+          if (result.geometry) setActiveRoute(result.geometry);
+        }
+      } catch (err) {
+        console.warn('[ETA fetch failed]', err);
+      }
+    };
+
+    fetchEta();
+    const interval = setInterval(fetchEta, 30_000);
+    return () => clearInterval(interval);
+  }, [activeTripPickup?.status, busLocations, hailedDriverId, pickupLocation, dropoffLocation]);
 
   // Proximity alarm is now handled by useProximityHandshake above.
 
@@ -530,23 +665,31 @@ export default function PassengerDashboard() {
     }
   };
 
-  const handleBusSelect = (bus: Bus) => {
+  // HAILING FLOW (on-demand)
+  const handleBusSelect = async (bus: Bus) => {
+    if (!userLocation) {
+      toast({ variant: 'destructive', title: 'Enable location', description: 'Grant location permission to request a ride.' });
+      return;
+    }
+    if (!pickupLocation) {
+      setSelectedBus(bus);
+      toast({ title: 'Set your pickup point', description: 'Tap the map to set your pickup point, or use your current location.' });
+      return;
+    }
     setSelectedBus(bus);
-    setRequestStatus('requesting');
-    setHailedDriverId(bus.id);
-
-    sendTripRequest(bus)
-      .then(() => {
-        toast({
-          title: 'Trip request sent',
-          description: `Driver of ${bus.busNumber} has been notified.`,
-        });
-      })
-      .catch((error) => {
-        console.warn('[Passenger] Trip request failed:', error);
-      });
+    try {
+      await sendTripRequest(bus);
+      setHailedDriverId(bus.id);
+      setRequestStatus('requesting');
+      toast({ title: 'Trip request sent', description: `Driver of ${bus.busNumber} has been notified.` });
+    } catch (error) {
+      console.warn('[Passenger] Trip request failed:', error);
+      toast({ variant: 'destructive', title: 'Request failed', description: 'Please try again.' });
+      setSelectedBus(null);
+    }
   };
 
+  // BOOKING FLOW (seat reservation)
   const handleBookBus = async (bus: Bus, bookingData?: any) => {
     if (!pickupLocation) {
       toast({
@@ -674,9 +817,28 @@ export default function PassengerDashboard() {
     setActiveTripPickup(null);
   };
 
-  const filteredBuses = buses.filter((bus) =>
-    vehicleFilter === 'all' ? bus.isActive : (bus.isActive && bus.vehicleType === vehicleFilter)
-  );
+  const handleCancelRequest = async () => {
+    if (!activeTripId) return;
+    await updateTripStatus(activeTripId, 'cancelled');
+    setRequestStatus('idle');
+    setSelectedBus(null);
+    setHailedDriverId(null);
+    setActiveTripId(null);
+    setActiveTripPickup(null);
+    toast({ title: 'Request cancelled' });
+  };
+
+  const locationPending = !userLocation;
+
+  const filteredBuses = useMemo(() => {
+    if (!userLocation) return [];
+    return buses.filter((bus) => {
+      if (!bus.isActive) return false;
+      if (vehicleFilter !== 'all' && bus.vehicleType !== vehicleFilter) return false;
+      if (!bus.currentLocation) return false;
+      return isWithinRadius(bus.currentLocation, userLocation, NEARBY_DRIVER_RADIUS_KM);
+    });
+  }, [buses, userLocation, vehicleFilter]);
 
   // Auth guard
   useEffect(() => {
@@ -898,6 +1060,19 @@ export default function PassengerDashboard() {
         </div>
       </div>
 
+      {/* Visually-hidden live region — announces trip status to screen readers */}
+      <div
+        role="status"
+        aria-live="assertive"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {requestStatus === 'requesting' && 'Waiting for driver to accept your request.'}
+        {requestStatus === 'accepted' && 'Driver accepted. Your driver is on the way.'}
+        {requestStatus === 'on-trip' && 'Trip in progress. Navigating to your destination.'}
+        {requestStatus === 'idle' && activeTripPickup === null && ''}
+      </div>
+
       {/* 2. Map Section (Priority View) */}
       <div className="relative w-full h-[65vh] shrink-0 border-b border-slate-800">
         <MapWrapper
@@ -916,85 +1091,238 @@ export default function PassengerDashboard() {
           requestStatus={requestStatus}
           hailedDriverId={hailedDriverId}
           activeTripId={activeTripId}
+          activeRoute={activeRoute}
+          routePhase={etaToDestination !== null ? 'trip' : etaToPickup !== null ? 'pickup' : null}
         />
 
-        {/* Floating Action Button for Hailing (Overlaid on Map) */}
-        {selectedBus && !pickupLocation && (
+        {/* ETA overlay card */}
+        {(etaToPickup !== null || etaToDestination !== null) && (
+          <div
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className="absolute top-4 left-1/2 -translate-x-1/2 z-[400] flex items-center gap-2 px-4 py-2 rounded-full shadow-lg backdrop-blur-sm"
+            style={{ background: etaToDestination !== null ? '#1d4ed8cc' : '#059669cc' }}
+          >
+            <span className="text-lg" aria-hidden="true">{etaToDestination !== null ? '🏁' : '🚗'}</span>
+            <span className="text-white text-sm font-medium">
+              {etaToDestination !== null
+                ? `${etaToDestination} min to destination`
+                : `${etaToPickup} min to pickup`}
+            </span>
+          </div>
+        )}
+
+        {/* Pickup guide — shown when a driver is selected but no pickup set */}
+        {selectedBus && !pickupLocation && requestStatus === 'idle' && (
+          <div className="absolute bottom-4 left-4 right-4 z-[400] bg-slate-900 border border-slate-700 rounded-xl p-4 flex items-center gap-3 text-sm shadow-lg animate-in slide-in-from-bottom-4 fade-in duration-300">
+            <MapPin className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+            <span className="text-slate-300 flex-1">Tap the map to set your pickup point, or use your current location</span>
+            <Button size="sm" variant="outline" className="text-xs shrink-0"
+              onClick={() => {
+                if (userLocation) {
+                  setPickupLocation({ lat: userLocation.lat, lng: userLocation.lng, address: 'Current Location' });
+                } else {
+                  toast({ title: 'Waiting for location...' });
+                }
+              }}>
+              Use my location
+            </Button>
+          </div>
+        )}
+
+        {/* HAIL button — only shown when driver AND pickup are both set */}
+        {selectedBus && pickupLocation && requestStatus === 'idle' && (
           <div className="absolute bottom-4 left-4 right-4 z-[400] animate-in slide-in-from-bottom-4 fade-in duration-300">
             <Button
               className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2"
-              onClick={() => {
-                if (userLocation) {
-                  setPickupLocation({
-                    lat: userLocation.lat,
-                    lng: userLocation.lng,
-                    address: 'Current Location'
-                  });
-                  setRequestStatus('requesting'); // 🚀 Flip to requesting so driver sees us
-                } else {
-                  toast({ title: "Waiting for location...", variant: "default" });
-                }
-              }}
+              onClick={() => handleBusSelect(selectedBus)}
             >
               <Navigation className="w-5 h-5 fill-current" />
               HAIL {selectedBus.busNumber} NOW
             </Button>
           </div>
         )}
+
+        {/* Waiting banner — shown while request is pending, with cancel button */}
+        {requestStatus === 'requesting' && (
+          <div className="absolute bottom-4 left-4 right-4 z-[400] bg-slate-900/95 border border-amber-500/30 rounded-xl px-4 py-3 flex items-center gap-3 shadow-lg animate-in slide-in-from-bottom-4 fade-in duration-300">
+            <div className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin shrink-0" />
+            <span className="text-amber-200 text-sm font-medium flex-1">Waiting for driver to accept…</span>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 shrink-0 px-2"
+              onClick={handleCancelRequest}
+            >
+              Cancel
+            </Button>
+          </div>
+        )}
       </div>
+
+      <TripRatingModal
+        open={showRatingModal}
+        role="passenger"
+        targetName={ratingDriverName}
+        onSubmit={async (stars, comment) => {
+          if (ratingTripId) {
+            await submitTripRating(ratingTripId, 'passenger', stars, comment);
+          }
+          setShowRatingModal(false);
+          setRatingTripId(null);
+        }}
+        onSkip={() => {
+          setShowRatingModal(false);
+          setRatingTripId(null);
+        }}
+      />
 
       {/* 3. Scrollable Content (Below Map) */}
       <div className="flex-1 bg-slate-950 p-4 space-y-6">
-        {/* Wallet Settings */}
-        <WalletSettings />
 
-        {/* Booking Panel */}
-        <div className="space-y-2">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Ticket className="w-5 h-5 text-blue-400" />
-            Ride Details
-          </h2>
-          <BookingPanel
-            pickupLocation={pickupLocation}
-            dropoffLocation={dropoffLocation}
-            selectedBus={selectedBus}
-            onBook={handleBookBus}
-            onReset={handleResetLocations}
-            loading={bookingLoading}
-          />
-        </div>
-
-        {/* Trip History & NFT Receipts */}
-        <div id="trip-history">
-          <TripHistory />
-        </div>
-
-        {/* Instructions / Tips */}
-        {!selectedBus && (
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-slate-900/50 border border-slate-800 p-3 rounded-xl flex flex-col items-center text-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
-                <MapPin className="w-4 h-4 text-blue-400" />
+        {/* Active Trip Card — replaces all other content during an active trip */}
+        {requestStatus !== 'idle' ? (
+          <div className="space-y-3">
+            {/* Status header */}
+            <div className={`rounded-2xl border p-4 space-y-3 ${
+              requestStatus === 'requesting'
+                ? 'bg-amber-500/5 border-amber-500/20'
+                : requestStatus === 'accepted'
+                  ? 'bg-emerald-500/5 border-emerald-500/20'
+                  : 'bg-blue-500/5 border-blue-500/20'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full animate-pulse ${
+                    requestStatus === 'requesting' ? 'bg-amber-400'
+                    : requestStatus === 'accepted' ? 'bg-emerald-400'
+                    : 'bg-blue-400'
+                  }`} />
+                  <span className={`text-sm font-bold ${
+                    requestStatus === 'requesting' ? 'text-amber-300'
+                    : requestStatus === 'accepted' ? 'text-emerald-300'
+                    : 'text-blue-300'
+                  }`}>
+                    {requestStatus === 'requesting' && 'Waiting for driver…'}
+                    {requestStatus === 'accepted' && 'Driver on the way'}
+                    {requestStatus === 'on-trip' && 'Trip in progress'}
+                  </span>
+                </div>
+                {(etaToPickup !== null || etaToDestination !== null) && (
+                  <span className="text-xs font-semibold text-white bg-slate-700/60 px-2.5 py-1 rounded-full">
+                    {etaToPickup !== null ? `${etaToPickup} min` : `${etaToDestination} min`}
+                  </span>
+                )}
               </div>
-              <span className="text-xs font-medium text-slate-400">1. Tap Bus</span>
+
+              {selectedBus && (
+                <div className="flex items-center gap-3 pt-1 border-t border-slate-700/40">
+                  <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-base">
+                    {selectedBus.emoji}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{selectedBus.driverName}</p>
+                    <p className="text-xs text-slate-400">{selectedBus.busNumber} · {selectedBus.vehicleType}</p>
+                  </div>
+                  {requestStatus === 'requesting' && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 shrink-0"
+                      onClick={handleCancelRequest}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {pickupLocation && (
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span className="truncate">{pickupLocation.address ?? `${pickupLocation.lat.toFixed(4)}, ${pickupLocation.lng.toFixed(4)}`}</span>
+                </div>
+              )}
+              {dropoffLocation && (
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  <Navigation className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <span className="truncate">{dropoffLocation.address ?? `${dropoffLocation.lat.toFixed(4)}, ${dropoffLocation.lng.toFixed(4)}`}</span>
+                </div>
+              )}
             </div>
-            <div className="bg-slate-900/50 border border-slate-800 p-3 rounded-xl flex flex-col items-center text-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                <Navigation className="w-4 h-4 text-emerald-400" />
-              </div>
-              <span className="text-xs font-medium text-slate-400">2. Hail</span>
-            </div>
-            <div className="bg-slate-900/50 border border-slate-800 p-3 rounded-xl flex flex-col items-center text-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
-                <Clock className="w-4 h-4 text-purple-400" />
-              </div>
-              <span className="text-xs font-medium text-slate-400">3. Ride</span>
+
+            {/* Trip history still accessible during trip */}
+            <div id="trip-history">
+              <TripHistory />
             </div>
           </div>
-        )}
+        ) : (
+          <>
+            {/* Location / nearby driver status */}
+            {locationPending ? (
+              <div className="flex flex-col items-center justify-center h-16 gap-2 text-muted-foreground">
+                <MapPin className="w-5 h-5 animate-pulse text-slate-500" />
+                <p className="text-xs text-center text-slate-500">Grant location permission to see nearby drivers</p>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500">
+                {filteredBuses.length} driver{filteredBuses.length !== 1 ? 's' : ''} within {NEARBY_DRIVER_RADIUS_KM}km
+              </p>
+            )}
 
-        {/* Bottom Padding for scrolling */}
-        <div className="h-8"></div>
+            {/* Wallet Settings */}
+            <WalletSettings />
+
+            {/* Booking Panel */}
+            <div className="space-y-2">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <Ticket className="w-5 h-5 text-blue-400" />
+                Ride Details
+              </h2>
+              <BookingPanel
+                pickupLocation={pickupLocation}
+                dropoffLocation={dropoffLocation}
+                selectedBus={selectedBus}
+                onBook={handleBookBus}
+                onReset={handleResetLocations}
+                loading={bookingLoading}
+              />
+            </div>
+
+            {/* Trip History & NFT Receipts */}
+            <div id="trip-history">
+              <TripHistory />
+            </div>
+
+            {/* Instructions / Tips */}
+            {!selectedBus && (
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-slate-900/50 border border-slate-800 p-3 rounded-xl flex flex-col items-center text-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                    <MapPin className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <span className="text-xs font-medium text-slate-400">1. Tap Bus</span>
+                </div>
+                <div className="bg-slate-900/50 border border-slate-800 p-3 rounded-xl flex flex-col items-center text-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                    <Navigation className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <span className="text-xs font-medium text-slate-400">2. Hail</span>
+                </div>
+                <div className="bg-slate-900/50 border border-slate-800 p-3 rounded-xl flex flex-col items-center text-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
+                    <Clock className="w-4 h-4 text-purple-400" />
+                  </div>
+                  <span className="text-xs font-medium text-slate-400">3. Ride</span>
+                </div>
+              </div>
+            )}
+
+            {/* Bottom Padding for scrolling */}
+            <div className="h-8" />
+          </>
+        )}
       </div>
     </div>
   );

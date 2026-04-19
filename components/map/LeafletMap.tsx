@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Component, ReactNode, useEffect, useState, useRef, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Circle, GeoJSON } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Circle, GeoJSON, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Bus, Passenger, LiveUser, VehicleTypeId } from '@/lib/types';
@@ -35,9 +35,26 @@ interface LeafletMapProps {
     pickupProximityLevel?: 'far' | 'approaching' | 'nearby' | 'arrived' | null;
     busETAs?: Record<string, number | null>;
     busLocations?: Record<string, { lat: number; lng: number; timestamp: string; heading?: number; speed?: number }>;
-    requestStatus?: 'idle' | 'requesting' | 'on-trip';
+    requestStatus?: 'idle' | 'requesting' | 'accepted' | 'on-trip';
     hailedDriverId?: string | null;
     activeTripId?: string | null;
+    passengerLocation?: { lat: number; lng: number } | null;
+    activeRoute?: GeoJSON.LineString | null;
+    routePhase?: 'pickup' | 'trip' | null;
+    focusLocation?: { lat: number; lng: number } | null;
+}
+
+function FocusUpdater({ focusLocation }: { focusLocation?: { lat: number; lng: number } | null }) {
+    const map = useMap();
+    const prevKey = useRef<string | null>(null);
+    useEffect(() => {
+        if (!focusLocation) return;
+        const key = `${focusLocation.lat.toFixed(4)},${focusLocation.lng.toFixed(4)}`;
+        if (key === prevKey.current) return;
+        prevKey.current = key;
+        map.flyTo([focusLocation.lat, focusLocation.lng], 15, { duration: 1.2 });
+    }, [focusLocation, map]);
+    return null;
 }
 
 function MapUpdater({ center, selectedUserId, currentPosition }: { center: { lat: number; lng: number }, selectedUserId?: string, currentPosition?: [number, number] | null }) {
@@ -223,8 +240,8 @@ class MapErrorBoundary extends Component<{ children: ReactNode, onRetry?: () => 
     static getDerivedStateFromError(error: Error) { return { hasError: true, message: error.message }; }
     render() {
         if (this.state.hasError) return (
-            <div className="w-full h-full min-h-[300px] flex items-center justify-center bg-gray-50 text-center">
-                <div><p className="text-red-600 font-medium">Unable to load map.</p><button onClick={() => { this.setState({ hasError: false }); this.props.onRetry?.(); }} className="mt-2 bg-blue-600 text-white px-4 py-1 rounded">Retry</button></div>
+            <div className="w-full h-full min-h-[300px] flex items-center justify-center bg-slate-900 text-center">
+                <div><p className="text-red-400 font-medium text-sm">Unable to load map.</p><button onClick={() => { this.setState({ hasError: false }); this.props.onRetry?.(); }} className="mt-2 bg-slate-700 text-white px-4 py-1 rounded text-sm">Retry</button></div>
             </div>
         );
         return this.props.children;
@@ -241,6 +258,10 @@ function LeafletMapInner({
     requestStatus,
     hailedDriverId,
     activeTripId,
+    passengerLocation,
+    activeRoute,
+    routePhase,
+    focusLocation,
 }: LeafletMapProps) {
     const { currentUser } = useAuth(); // FIX: Access real UID
     const [mounted, setMounted] = useState(false);
@@ -427,6 +448,7 @@ function LeafletMapInner({
                 <MapEvents onLocationSelect={onLocationSelect} role={role} />
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                 <MapUpdater center={center} selectedUserId={selectedUser?.id} currentPosition={currentPosition} />
+                {focusLocation && <FocusUpdater focusLocation={focusLocation} />}
                 <MapControls initialCenter={center} userLocation={userLocation} />
                 <TrackingControls role={role} isTracking={isTracking} onToggleTracking={toggleTracking} currentPosition={currentPosition} />
 
@@ -490,9 +512,34 @@ function LeafletMapInner({
                         <Marker position={[pickupLocation.lat, pickupLocation.lng]} icon={createLocationIcon('#10b981')}><Popup>Pickup</Popup></Marker>
                     </>
                 )}
+
+                {passengerLocation && (
+                    <Marker
+                        position={[passengerLocation.lat, passengerLocation.lng]}
+                        icon={L.divIcon({
+                            html: `<div style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;background:#10b981;border-radius:50%;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4);color:white;font-size:13px;font-weight:bold;">P</div>`,
+                            className: '',
+                            iconSize: [32, 32],
+                            iconAnchor: [16, 16],
+                        })}
+                    >
+                        <Popup>Passenger</Popup>
+                    </Marker>
+                )}
+
+                {activeRoute && (
+                    <Polyline
+                        positions={activeRoute.coordinates.map(([lng, lat]) => [lat, lng] as [number, number])}
+                        pathOptions={{
+                            color: routePhase === 'trip' ? '#3b82f6' : '#22d3ee',
+                            weight: 4,
+                            opacity: 0.85,
+                        }}
+                    />
+                )}
             </MapContainer>
 
-            {routeInfo && (
+            {routeInfo && !activeRoute && (
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1100] flex flex-col items-center px-5 py-2 rounded-2xl text-white text-xs font-semibold shadow-xl"
                     style={{ background: 'rgba(37,99,235,0.88)', backdropFilter: 'blur(8px)', border: '1px solid rgba(147,197,253,0.25)' }}>
                     <span className="text-sm font-bold">🕒 ETA {Math.max(1, Math.round(routeInfo.duration))} min</span>

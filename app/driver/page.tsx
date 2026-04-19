@@ -28,8 +28,14 @@ import {
   attachDriverPresence,
   setDriverOffline,
   registerPushToken,
-  createAlert
+  createAlert,
+  updateTripStatus,
+  subscribeTripLocation,
+  submitTripRating,
 } from '@/lib/firebaseDb';
+import TripRatingModal from '@/components/shared/TripRatingModal';
+import TripRequestPanel from '@/components/driver/TripRequestPanel';
+import { TripStatus } from '@/lib/types';
 import { addOfflinePassenger, removeOfflinePassenger } from '@/lib/seatManagement';
 import { useToast } from '@/components/ui/use-toast';
 import {
@@ -64,9 +70,16 @@ export default function DriverDashboard() {
   const [lastFirebaseUpdate, setLastFirebaseUpdate] = useState<Date | null>(null);
   const [notificationPermissionRequested, setNotificationPermissionRequested] = useState(false);
   const [currentSpeed, setCurrentSpeed] = useState(0);
-  const [activeTripRequest, setActiveTripRequest] = useState<{ id: string; lat: number; lng: number; status: string } | null>(null);
+  const [activeTripRequest, setActiveTripRequest] = useState<{ id: string; lat: number; lng: number; status: string; passengerName: string; pickupLocation?: { lat: number; lng: number; address?: string } } | null>(null);
+  const [passengerLocation, setPassengerLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [driverActiveRoute, setDriverActiveRoute] = useState<GeoJSON.LineString | null>(null);
+  const driverLastEtaFetchRef = useRef<{ lat: number; lng: number } | null>(null);
   const [showPassengerReachedAlert, setShowPassengerReachedAlert] = useState(false);
-  const [showZKPanel, setShowZKPanel] = useState(false);
+  const [driverEta, setDriverEta] = useState<number | null>(null);
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [ratingTripId, setRatingTripId] = useState<string | null>(null);
+  const [ratingPassengerName, setRatingPassengerName] = useState<string>('');
   const driverWalletAddress =
     typeof userData?.solanaWallet === 'string' ? userData.solanaWallet.trim() : '';
   const lastKnownLocationRef = useRef<{ lat: number; lng: number; heading?: number; speed?: number } | null>(null);
@@ -258,7 +271,7 @@ export default function DriverDashboard() {
       }
 
       const newest = requests.find((request) =>
-        ['requested', 'accepted', 'arrived', 'pending'].includes(request.status)
+        ['requested', 'accepted', 'arrived', 'active', 'pending'].includes(request.status)
       );
       if (!newest) {
         setActiveTripRequest(null);
@@ -270,6 +283,8 @@ export default function DriverDashboard() {
         lat: newest.lat,
         lng: newest.lng,
         status: newest.status,
+        passengerName: newest.passengerName || 'Passenger',
+        pickupLocation: newest.pickupLocation,
       });
 
       if (!lastTripRequestSeenRef.current) {
@@ -337,6 +352,108 @@ export default function DriverDashboard() {
       audio.play().catch(() => undefined);
     }
   }, [userLocation, activeTripRequest]);
+  // Subscribe to passenger location during active trip
+  useEffect(() => {
+    if (!activeTripRequest?.id || !['accepted', 'arrived', 'active'].includes(activeTripRequest.status)) {
+      setPassengerLocation(null);
+      return;
+    }
+    const unsubscribe = subscribeTripLocation(activeTripRequest.id, 'passenger', (loc) => setPassengerLocation(loc));
+    return unsubscribe;
+  }, [activeTripRequest?.id, activeTripRequest?.status]);
+
+  // Fetch OSRM route from driver → pickup (accepted/arrived) or driver → passenger (active)
+  useEffect(() => {
+    const status = activeTripRequest?.status;
+    if (!activeTripRequest || !userLocation || !['accepted', 'arrived', 'active'].includes(status ?? '')) {
+      setDriverActiveRoute(null);
+      setDriverEta(null);
+      driverLastEtaFetchRef.current = null;
+      return;
+    }
+
+    const last = driverLastEtaFetchRef.current;
+    if (
+      last &&
+      Math.abs(last.lat - userLocation.lat) < 0.0001 &&
+      Math.abs(last.lng - userLocation.lng) < 0.0001
+    ) return;
+
+    driverLastEtaFetchRef.current = { lat: userLocation.lat, lng: userLocation.lng };
+
+    const target = status === 'active'
+      ? (passengerLocation ?? activeTripRequest.pickupLocation)
+      : activeTripRequest.pickupLocation;
+
+    if (!target) return;
+
+    const fetchRoute = async () => {
+      try {
+        const { getRoute } = await import('@/lib/routing/osrm');
+        const result = await getRoute(userLocation.lat, userLocation.lng, target.lat, target.lng);
+        if (result?.geometry) setDriverActiveRoute(result.geometry as GeoJSON.LineString);
+        if (result?.duration != null) setDriverEta(Math.ceil(result.duration));
+      } catch {
+        // non-fatal
+      }
+    };
+
+    fetchRoute();
+    const interval = setInterval(fetchRoute, 30_000);
+    return () => clearInterval(interval);
+  }, [activeTripRequest?.status, userLocation, passengerLocation]);
+
+  const handleAcceptTrip = async () => {
+    if (!activeTripRequest) return;
+    try {
+      await updateTripStatus(activeTripRequest.id, 'accepted');
+      setActiveTripRequest((prev) => prev ? { ...prev, status: 'accepted' } : null);
+      toast({ title: 'Trip accepted', description: 'Navigate to pickup point.' });
+    } catch {
+      toast({ title: 'Failed to accept trip', description: 'Check your connection and try again.', variant: 'destructive' });
+    }
+  };
+
+  const handleRejectTrip = async () => {
+    if (!activeTripRequest) return;
+    try {
+      await updateTripStatus(activeTripRequest.id, 'rejected');
+      setActiveTripRequest(null);
+      toast({ title: 'Trip rejected' });
+    } catch {
+      toast({ title: 'Failed to reject trip', description: 'Check your connection and try again.', variant: 'destructive' });
+    }
+  };
+
+  const handlePassengerBoarded = async () => {
+    if (!activeTripRequest) return;
+    try {
+      await updateTripStatus(activeTripRequest.id, 'active');
+      setActiveTripRequest((prev) => prev ? { ...prev, status: 'active' } : null);
+      toast({ title: 'Trip started', description: 'Navigate to destination.' });
+    } catch {
+      toast({ title: 'Failed to start trip', description: 'Check your connection and try again.', variant: 'destructive' });
+    }
+  };
+
+  const handleCompleteTrip = async () => {
+    if (!activeTripRequest) return;
+    try {
+      await updateTripStatus(activeTripRequest.id, 'completed');
+      const bookingId = (activeTripRequest as any).bookingId as string | undefined;
+      if (bookingId) {
+        await handlePassengerDropoff(bookingId);
+      }
+      setRatingTripId(activeTripRequest.id);
+      setRatingPassengerName(activeTripRequest.passengerName);
+      setActiveTripRequest(null);
+      setShowRatingModal(true);
+      toast({ title: 'Trip completed' });
+    } catch {
+      toast({ title: 'Failed to complete trip', description: 'Check your connection and try again.', variant: 'destructive' });
+    }
+  };
+
   // Driver foreground tracking with strict 5s heartbeat flush.
   useEffect(() => {
     if (!locationEnabled || !selectedBus?.id || !isOnline || !driverWalletAddress) return;
@@ -383,7 +500,6 @@ export default function DriverDashboard() {
 
         lastKnownLocationRef.current = next;
         setUserLocation({ lat: next.lat, lng: next.lng });
-        setLastLocationUpdate(new Date());
         setCurrentSpeed(next.speed ?? 0);
 
         if (Date.now() - lastFlushRef.current >= 5000) {
@@ -754,11 +870,6 @@ export default function DriverDashboard() {
         return;
       }
 
-      // ZK Identity Redirect check (Phase 1 upgrade)
-      if (userData && isComplete && !(userData as any)?.verificationBadge) {
-        // Automatically open the ZK onboarding panel inline
-        setShowZKPanel(true);
-      }
     }
   }, [currentUser, role, loading, router, userData]);
 
@@ -778,192 +889,107 @@ export default function DriverDashboard() {
     );
   }
 
-  // Determine if profile is stable
   const isProfileStable = userData && checkProfileCompletion(userData);
 
   return (
-    <div
-      className="min-h-screen flex flex-col overflow-y-auto"
-      style={{ background: '#0B0E14', WebkitOverflowScrolling: 'touch' }}
-    >
+    <div className="min-h-screen flex flex-col overflow-y-auto" style={{ background: '#0B0E14', WebkitOverflowScrolling: 'touch' }}>
+
+      {/* Passenger Reached full-screen alert */}
       {showPassengerReachedAlert && (
-        <div className="fixed inset-0 z-[1200] bg-blue-700/95 flex flex-col items-center justify-center text-white px-6 text-center">
-          <p className="text-4xl font-extrabold tracking-wide">PASSENGER REACHED</p>
-          <p className="mt-3 text-sm opacity-90">Pickup point is within 10 meters.</p>
+        <div className="fixed inset-0 z-[1400] flex flex-col items-center justify-center text-white px-6 text-center" style={{ background: 'rgba(6,182,212,0.97)' }}>
+          <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-6">
+            <MapPin className="w-8 h-8 text-white" />
+          </div>
+          <p className="text-3xl font-black tracking-tight">Passenger Nearby</p>
+          <p className="mt-2 text-sm opacity-80">You are within 10 metres of the pickup point.</p>
           <Button
-            className="mt-8 bg-white text-blue-700 hover:bg-white/90 font-bold"
-            onClick={() => setShowPassengerReachedAlert(false)}
+            className="mt-8 bg-white text-cyan-700 hover:bg-white/90 font-bold px-8 h-12 rounded-2xl"
+            onClick={async () => {
+              setShowPassengerReachedAlert(false);
+              if (activeTripRequest?.id) {
+                await updateTripStatus(activeTripRequest.id, 'arrived');
+                setActiveTripRequest((prev) => prev ? { ...prev, status: 'arrived' } : null);
+              }
+            }}
           >
-            Dismiss
+            Confirm Arrival
           </Button>
         </div>
       )}
 
-      {/* ── ZK Identity Verification Panel (auto-shows if badge is missing) ── */}
-      {showZKPanel && userData && (
-        <div className="fixed inset-0 z-[1100] bg-slate-950/95 flex flex-col items-center justify-center p-6 overflow-y-auto">
-          <div className="w-full max-w-lg">
-            <div className="mb-4 text-center">
-              <h2 className="text-xl font-bold text-white">ZK Identity Required</h2>
-              <p className="text-slate-400 text-sm mt-1">Complete your ZK verification to unlock the full Cockpit.</p>
-            </div>
-            <VerificationPanel
-              driver={userData as Driver}
-              onVerificationSuccess={() => {
-                setShowZKPanel(false);
-                toast({ title: '✅ Verified!', description: 'Your ZK badge is minted. Welcome to the Cockpit.' });
-              }}
-            />
-            <button
-              onClick={() => setShowZKPanel(false)}
-              className="mt-4 w-full text-xs text-slate-500 hover:text-slate-300 transition-colors"
-            >
-              Skip for now
-            </button>
-          </div>
-        </div>
-      )}
+      {/* ── Header ── */}
+      <header className="sticky top-0 z-50 border-b border-slate-800/50" style={{ background: 'rgba(11,14,20,0.97)', backdropFilter: 'blur(20px)' }}>
+        <div className="px-4 py-3 flex items-center justify-between">
 
-      {/* ── 1. Cockpit Header ── */}
-      <div className="sticky top-0 z-50 border-b border-slate-800/60 overflow-hidden"
-        style={{ background: 'rgba(11,14,20,0.92)', backdropFilter: 'blur(20px)' }}
-      >
-        {/* Animated scanning line */}
-        <div className="absolute top-0 left-0 right-0 h-[2px] overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-70"
-            style={{ animation: 'scanline 2.8s linear infinite', width: '60%' }} />
-        </div>
-
-        <div className="px-4 pt-4 pb-3 flex items-center justify-between">
-          {/* चालक Brand */}
-          <div className="flex items-center gap-3">
-            {/* Shield icon with glow */}
-            <div className="relative w-9 h-9 flex items-center justify-center">
-              <div className="absolute inset-0 rounded-full bg-cyan-500/10 blur-md" />
-              <svg viewBox="0 0 36 36" className="w-9 h-9 relative">
-                <path d="M18 3 L33 9 L33 18 C33 26 26 32 18 34 C10 32 3 26 3 18 L3 9 Z"
-                  fill="none" stroke="#06b6d4" strokeWidth="1.5" opacity="0.6">
-                  <animateTransform attributeName="transform" type="rotate"
-                    from="0 18 18" to="360 18 18" dur="8s" repeatCount="indefinite" />
-                </path>
-                <path d="M18 6 L30 11 L30 18 C30 24.5 25 29.5 18 31.5 C11 29.5 6 24.5 6 18 L6 11 Z"
-                  fill="rgba(6,182,212,0.07)" stroke="#22d3ee" strokeWidth="1" />
-                <path d="M13 18 L16.5 21.5 L23 15" stroke="#22d3ee" strokeWidth="2"
-                  strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          {/* Brand */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700/60 flex items-center justify-center shrink-0">
+              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="#22d3ee" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2L20 6V12C20 17 16.5 21 12 22C7.5 21 4 17 4 12V6L12 2Z" />
+                <path d="M9 12L11 14L15 10" />
               </svg>
             </div>
-
             <div>
-              <h1
-                className="text-[26px] font-extrabold leading-none"
-                style={{
-                  fontFamily: 'var(--font-mukta), sans-serif',
-                  background: 'linear-gradient(135deg, #67e8f9 0%, #22d3ee 40%, #ffffff 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  filter: 'drop-shadow(0 0 12px rgba(34,211,238,0.5))',
-                }}
-              >
+              <h1 className="text-xl font-extrabold leading-none text-white" style={{ fontFamily: 'var(--font-mukta), sans-serif' }}>
                 चालक
               </h1>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-cyan-400' : 'bg-slate-600'}`}
-                  style={{
-                    boxShadow: isOnline ? '0 0 6px #22d3ee' : 'none',
-                    animation: isOnline ? 'pulse 1.5s ease-in-out infinite' : 'none'
-                  }} />
-                <span className="text-[10px] font-bold tracking-widest"
-                  style={{ color: isOnline ? '#67e8f9' : '#64748b' }}>
+                <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'}`} />
+                <span className="text-[10px] font-bold tracking-widest" style={{ color: isOnline ? '#6ee7b7' : '#64748b' }}>
                   {isOnline ? 'ONLINE' : 'OFFLINE'}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Right Controls */}
+          {/* Right: GPS pill + Avatar */}
           <div className="flex items-center gap-2">
-            {/* SOS Button with rhythmic red glow */}
-            <Dialog>
+            <button
+              type="button"
+              onClick={() => handleLocationToggle(!locationEnabled)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all active:scale-95 ${
+                locationEnabled
+                  ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300'
+                  : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-600'
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${locationEnabled ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+              {locationEnabled ? 'LIVE' : 'GO LIVE'}
+            </button>
+
+            <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
               <DialogTrigger asChild>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="h-10 px-4 font-black tracking-widest text-sm rounded-xl border border-red-500/60"
-                  style={{
-                    background: 'rgba(239,68,68,0.12)',
-                    color: '#f87171',
-                    animation: 'sos-pulse 2s ease-in-out infinite',
-                    boxShadow: '0 0 0 0 rgba(239,68,68,0.4)',
-                  }}
-                >
-                  SOS
+                <Button variant="outline" size="icon" className="w-9 h-9 rounded-full bg-slate-900 border border-slate-700 hover:border-slate-600">
+                  {isProfileStable ? (
+                    <span className="text-sm font-bold text-cyan-400">{userData?.name?.[0].toUpperCase() ?? '?'}</span>
+                  ) : (
+                    <div className="h-3.5 w-3.5 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                  )}
                 </Button>
               </DialogTrigger>
-              <DialogContent className="bg-slate-900 border-slate-800 text-white sm:max-w-md rounded-2xl">
+              <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-xs mx-auto">
                 <DialogHeader>
-                  <DialogTitle className="text-red-400 flex items-center gap-2">
-                    <AlertTriangle className="w-5 h-5" /> Emergency Report
-                  </DialogTitle>
-                  <DialogDescription className="text-slate-400">
-                    This will immediately alert the admin team. Use only in emergencies.
-                  </DialogDescription>
+                  <DialogTitle className="text-white">{userData?.name ?? 'Driver'}</DialogTitle>
+                  <DialogDescription className="text-slate-400 text-sm">{(currentUser as any)?.email ?? ''}</DialogDescription>
                 </DialogHeader>
-                <div className="grid grid-cols-2 gap-4 py-4">
-                  <Button variant="outline" className="h-24 flex flex-col gap-2 border-slate-700 hover:bg-red-950 hover:border-red-500 hover:text-red-400 rounded-xl"
-                    onClick={() => handleReportEmergency('accident')}>
-                    <Car className="w-8 h-8" /> Accident
-                  </Button>
-                  <Button variant="outline" className="h-24 flex flex-col gap-2 border-slate-700 hover:bg-orange-950 hover:border-orange-500 hover:text-orange-400 rounded-xl"
-                    onClick={() => handleReportEmergency('breakdown')}>
-                    <Wrench className="w-8 h-8" /> Breakdown
+                <div className="py-2">
+                  <Button variant="destructive" className="w-full" onClick={async () => { setShowProfileDialog(false); await signOut(); }}>
+                    Sign Out
                   </Button>
                 </div>
                 <DialogFooter>
-                  <DialogClose asChild>
-                    <Button variant="ghost" className="text-slate-400">Cancel</Button>
-                  </DialogClose>
+                  <DialogClose asChild><Button variant="ghost" className="text-slate-400 w-full">Cancel</Button></DialogClose>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-
-            {/* GPS Toggle */}
-            <div className={`flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur border transition-all ${locationEnabled ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-slate-900/50 border-slate-700/50'}`}>
-              <Switch checked={locationEnabled} onCheckedChange={handleLocationToggle}
-                className="scale-75 data-[state=checked]:bg-cyan-500" />
-              <MapPin className={`w-3 h-3 ${locationEnabled ? 'text-cyan-400' : 'text-slate-400'}`} />
-              {locationEnabled && selectedBus && (
-                <div className="flex items-center gap-1.5">
-                  <span className={`w-1.5 h-1.5 rounded-full ${lastFirebaseUpdate && (Date.now() - lastFirebaseUpdate.getTime()) < 10000 ? 'bg-green-400 animate-pulse' : 'bg-slate-500'}`} />
-                  <span className="text-[10px] text-slate-300 font-medium">
-                    {lastFirebaseUpdate ? `${Math.floor((Date.now() - lastFirebaseUpdate.getTime()) / 1000)}s` : '...'}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* STABLE AVATAR LOGIC (Replaces plain Sign Out Door) */}
-            <Button
-              variant="outline"
-              size="icon"
-              className="w-10 h-10 rounded-full bg-slate-900 border-2 border-cyan-500/50 shadow-[0_0_15px_rgba(34,211,238,0.2)]"
-              onClick={() => signOut()} // Logout for now, or open profile
-            >
-              {isProfileStable ? (
-                <span className="text-sm font-black text-cyan-400">
-                  {userData?.name ? userData.name[0].toUpperCase() : '?'}
-                </span>
-              ) : (
-                <div className="h-4 w-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-              )}
-            </Button>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* ── 2. Map Section ── */}
+      {/* ── Map ── */}
       <div
-        className="relative w-full shrink-0 border-b border-slate-800/60"
-        style={{ height: '50vh', touchAction: 'pan-y' }}
+        className="relative w-full shrink-0 border-b border-slate-800/40 transition-all duration-500"
+        style={{ height: activeTripRequest ? '65vh' : '50vh', touchAction: 'pan-y' }}
       >
         <MapWrapper
           role="driver"
@@ -975,26 +1001,84 @@ export default function DriverDashboard() {
           userLocation={userLocation}
           hailedDriverId={selectedBus?.id || null}
           activeTripId={activeTripRequest?.id || null}
+          passengerLocation={passengerLocation}
+          activeRoute={driverActiveRoute}
+          routePhase={activeTripRequest?.status === 'active' ? 'trip' : activeTripRequest ? 'pickup' : null}
+          focusLocation={
+            activeTripRequest?.status === 'accepted' || activeTripRequest?.status === 'arrived'
+              ? activeTripRequest.pickupLocation ?? null
+              : activeTripRequest?.status === 'active'
+                ? (passengerLocation ?? activeTripRequest.pickupLocation ?? null)
+                : null
+          }
         />
       </div>
 
-      {/* ── 3. Scrollable Cockpit Sections ── */}
-      <div className="p-4 space-y-4 pb-24" style={{ background: '#0B0E14' }}>
+      {/* ── Cockpit ── */}
+      <div className="p-4 space-y-3 pb-40" style={{ background: '#0B0E14' }}>
 
-        {/* Bus Controls Section */}
-        {selectedBus && (
-          <section className="rounded-2xl border border-cyan-500/20 overflow-hidden"
-            style={{ boxShadow: '0 0 0 1px rgba(6,182,212,0.1), inset 0 0 40px rgba(6,182,212,0.03)' }}>
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-800/60"
-              style={{ background: 'rgba(6,182,212,0.05)' }}>
+        {/* Active trip: navigation strip */}
+        {activeTripRequest && (
+          <section className="rounded-2xl border border-cyan-500/15 overflow-hidden" style={{ background: 'rgba(6,182,212,0.03)' }}>
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-800/50">
               <div className="flex items-center gap-2">
-                <Settings className="w-4 h-4 text-cyan-400" />
-                <span className="text-xs font-bold tracking-widest text-cyan-300 uppercase">Vehicle Status</span>
+                <Navigation className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="text-[11px] font-bold tracking-widest text-cyan-300 uppercase">
+                  {activeTripRequest.status === 'active' ? 'Trip in Progress' : activeTripRequest.status === 'arrived' ? 'At Pickup' : 'Navigate to Pickup'}
+                </span>
               </div>
-              <Button variant="ghost" size="sm" className="h-5 text-[10px] text-slate-600 hover:text-red-500 px-2"
-                onClick={triggerManualTest}>Test Crash</Button>
+              {driverEta !== null && (
+                <span className="text-xs font-bold text-white bg-slate-700/70 px-2.5 py-0.5 rounded-full">{driverEta} min</span>
+              )}
             </div>
-            <div className="p-4">
+            <div className="p-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-slate-700/60 border border-slate-600/40 flex items-center justify-center text-sm font-bold text-white shrink-0">
+                  {activeTripRequest.passengerName?.[0]?.toUpperCase() ?? 'P'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-semibold text-sm">{activeTripRequest.passengerName}</p>
+                  <p className="text-slate-400 text-xs">
+                    {activeTripRequest.status === 'requested' && 'Waiting for response'}
+                    {activeTripRequest.status === 'accepted' && 'On the way'}
+                    {activeTripRequest.status === 'arrived' && 'At pickup point'}
+                    {activeTripRequest.status === 'active' && 'Trip underway'}
+                  </p>
+                </div>
+                {userLocation && activeTripRequest.pickupLocation && (() => {
+                  const R = 6371000;
+                  const dLat = (activeTripRequest.pickupLocation.lat - userLocation.lat) * Math.PI / 180;
+                  const dLng = (activeTripRequest.pickupLocation.lng - userLocation.lng) * Math.PI / 180;
+                  const a = Math.sin(dLat / 2) ** 2 + Math.cos(userLocation.lat * Math.PI / 180) * Math.cos(activeTripRequest.pickupLocation.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+                  const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                  return <span className="text-sm font-bold text-cyan-300 shrink-0">{dist < 1000 ? `${Math.round(dist)}m` : `${(dist / 1000).toFixed(1)}km`}</span>;
+                })()}
+              </div>
+              {activeTripRequest.pickupLocation && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800/50">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <p className="text-slate-300 text-xs truncate">
+                    {activeTripRequest.pickupLocation.address ?? `${activeTripRequest.pickupLocation.lat.toFixed(4)}, ${activeTripRequest.pickupLocation.lng.toFixed(4)}`}
+                  </p>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* Vehicle Status */}
+        <section className="rounded-2xl border border-slate-800/70 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-800/50" style={{ background: 'rgba(255,255,255,0.015)' }}>
+            <div className="flex items-center gap-2">
+              <BusIcon className="w-3.5 h-3.5 text-slate-500" />
+              <span className="text-[11px] font-bold tracking-widest text-slate-500 uppercase">Vehicle Status</span>
+            </div>
+            {process.env.NODE_ENV === 'development' && (
+              <Button variant="ghost" size="sm" className="h-5 text-[10px] text-slate-700 hover:text-red-500 px-2" onClick={triggerManualTest}>Test Crash</Button>
+            )}
+          </div>
+          <div className="p-4">
+            {selectedBus ? (
               <DriverPanel
                 bus={selectedBus}
                 onLocationToggle={handleLocationToggle}
@@ -1002,40 +1086,45 @@ export default function DriverDashboard() {
                 onAddOfflinePassenger={handleAddOfflinePassenger}
                 onRemoveOfflinePassenger={handleRemoveOfflinePassenger}
               />
-            </div>
-          </section>
-        )}
+            ) : (
+              <div className="py-8 text-center space-y-2">
+                <BusIcon className="w-7 h-7 text-slate-700 mx-auto" />
+                <p className="text-slate-500 text-sm">No vehicle assigned</p>
+                <p className="text-slate-700 text-xs">Complete your driver profile to link a vehicle.</p>
+              </div>
+            )}
+          </div>
+        </section>
 
-        {/* ZK Identity Section */}
+        {/* Security Clearance */}
         {userData && (
-          <section className="rounded-2xl border border-blue-500/20 overflow-hidden"
-            style={{ boxShadow: '0 0 0 1px rgba(59,130,246,0.1), inset 0 0 40px rgba(59,130,246,0.03)' }}>
-            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-800/60 relative z-[1000]"
-              style={{ background: 'rgba(59,130,246,0.05)' }}>
-              <Settings className="w-4 h-4 text-blue-400" />
-              <span className="text-xs font-bold tracking-widest text-blue-300 uppercase">Security Clearance</span>
+          <section className="rounded-2xl border border-slate-800/70 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-800/50" style={{ background: 'rgba(255,255,255,0.015)' }}>
+              <div className="flex items-center gap-2">
+                <Settings className="w-3.5 h-3.5 text-slate-500" />
+                <span className="text-[11px] font-bold tracking-widest text-slate-500 uppercase">Security Clearance</span>
+              </div>
+              {!(userData as any).verificationBadge && (
+                <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">Action needed</span>
+              )}
             </div>
             <div className="p-4">
               <VerificationPanel
                 driver={userData as Driver}
-                onVerificationSuccess={() => { }}
+                onVerificationSuccess={() => toast({ title: '✅ Verified!', description: 'Your ZK badge is minted.' })}
               />
             </div>
           </section>
         )}
 
-        {/* Passenger Manifest */}
-        <section className="rounded-2xl border border-purple-500/20 overflow-hidden"
-          style={{ boxShadow: '0 0 0 1px rgba(168,85,247,0.1), inset 0 0 40px rgba(168,85,247,0.03)' }}>
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-800/60"
-            style={{ background: 'rgba(168,85,247,0.05)' }}>
+        {/* Passengers */}
+        <section className="rounded-2xl border border-slate-800/70 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-800/50" style={{ background: 'rgba(255,255,255,0.015)' }}>
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-purple-400" />
-              <span className="text-xs font-bold tracking-widest text-purple-300 uppercase">Passenger Manifest</span>
+              <Users className="w-3.5 h-3.5 text-slate-500" />
+              <span className="text-[11px] font-bold tracking-widest text-slate-500 uppercase">Passengers</span>
             </div>
-            <span className="text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-full px-2.5 py-0.5">
-              {passengers.length}
-            </span>
+            <span className="text-[11px] font-bold text-slate-500 bg-slate-800 border border-slate-700/50 rounded-full px-2.5 py-0.5">{passengers.length}</span>
           </div>
           <div className="p-4">
             <PassengerList
@@ -1047,95 +1136,73 @@ export default function DriverDashboard() {
           </div>
         </section>
 
-        <div className="h-8" />
+        <div className="h-2" />
       </div>
 
-      {/* Accident Alert Popup */}
-      <div className="fixed inset-x-0 bottom-16 z-[1100] flex justify-center pointer-events-none">
+      {/* Trip Request Panel (fixed bottom sheet) */}
+      {activeTripRequest && (
+        <TripRequestPanel
+          request={activeTripRequest}
+          driverLocation={userLocation}
+          tripStatus={activeTripRequest.status as TripStatus}
+          onAccept={handleAcceptTrip}
+          onReject={handleRejectTrip}
+          onPassengerBoarded={handlePassengerBoarded}
+          onCompleteTrip={handleCompleteTrip}
+        />
+      )}
+
+      <TripRatingModal
+        open={showRatingModal}
+        role="driver"
+        targetName={ratingPassengerName}
+        onSubmit={async (stars, comment) => {
+          if (ratingTripId) await submitTripRating(ratingTripId, 'driver', stars, comment);
+          setShowRatingModal(false);
+          setRatingTripId(null);
+        }}
+        onSkip={() => { setShowRatingModal(false); setRatingTripId(null); }}
+      />
+
+      {/* Accident Alert */}
+      <div className="fixed inset-x-0 bottom-14 z-[1100] flex justify-center pointer-events-none">
         <div className="pointer-events-auto">
-          <AccidentAlert
-            isOpen={isAccidentDetected}
-            onConfirm={handleAccidentConfirm}
-            onCancel={handleAccidentCancel}
-          />
+          <AccidentAlert isOpen={isAccidentDetected} onConfirm={handleAccidentConfirm} onCancel={handleAccidentCancel} />
         </div>
       </div>
 
-      {/* Fixed bottom safety bar (SOS + quick status) */}
-      <div className="fixed inset-x-0 bottom-0 z-[1200] bg-slate-950/95 border-t border-slate-800/70 backdrop-blur-md px-4 py-2 flex items-center justify-between">
+      {/* Fixed bottom bar: status + SOS */}
+      <div className="fixed inset-x-0 bottom-0 z-[1200] border-t border-slate-800/60 backdrop-blur-md px-4 py-2.5 flex items-center justify-between" style={{ background: 'rgba(11,14,20,0.97)' }}>
         <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-400' : 'bg-slate-500'}`} />
-          <span className="text-[11px] font-semibold text-slate-200">
-            {isOnline ? 'Live tracking active' : 'You are offline'}
-          </span>
+          <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-400' : 'bg-slate-600'}`} />
+          <span className="text-[11px] font-medium text-slate-400">{isOnline ? 'Live tracking active' : 'Offline'}</span>
         </div>
         <Dialog>
           <DialogTrigger asChild>
-            <Button
-              variant="destructive"
-              size="sm"
-              className="h-9 px-4 font-black tracking-widest text-xs rounded-xl border border-red-500/60"
-              style={{
-                background: 'rgba(239,68,68,0.18)',
-                color: '#fecaca',
-                animation: 'sos-pulse 2s ease-in-out infinite',
-                boxShadow: '0 0 0 0 rgba(239,68,68,0.4)',
-              }}
-            >
+            <Button variant="destructive" size="sm" className="h-8 px-4 font-bold text-xs rounded-xl"
+              style={{ background: 'rgba(239,68,68,0.15)', color: '#fca5a5', border: '1px solid rgba(239,68,68,0.3)' }}>
               SOS
             </Button>
           </DialogTrigger>
           <DialogContent className="bg-slate-900 border-slate-800 text-white sm:max-w-md rounded-2xl">
             <DialogHeader>
-              <DialogTitle className="text-red-400 flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5" /> Emergency Report
-              </DialogTitle>
-              <DialogDescription className="text-slate-400">
-                This will immediately alert the admin team. Use only in emergencies.
-              </DialogDescription>
+              <DialogTitle className="text-red-400 flex items-center gap-2"><AlertTriangle className="w-5 h-5" /> Emergency Report</DialogTitle>
+              <DialogDescription className="text-slate-400">This will immediately alert the admin team. Use only in emergencies.</DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-2 gap-4 py-4">
-              <Button
-                variant="outline"
-                className="h-24 flex flex-col gap-2 border-slate-700 hover:bg-red-950 hover:border-red-500 hover:text-red-400 rounded-xl"
-                onClick={() => handleReportEmergency('accident')}
-              >
+              <Button variant="outline" className="h-24 flex flex-col gap-2 border-slate-700 hover:bg-red-950 hover:border-red-500 hover:text-red-400 rounded-xl" onClick={() => handleReportEmergency('accident')}>
                 <Car className="w-8 h-8" /> Accident
               </Button>
-              <Button
-                variant="outline"
-                className="h-24 flex flex-col gap-2 border-slate-700 hover:bg-orange-950 hover:border-orange-500 hover:text-orange-400 rounded-xl"
-                onClick={() => handleReportEmergency('breakdown')}
-              >
+              <Button variant="outline" className="h-24 flex flex-col gap-2 border-slate-700 hover:bg-orange-950 hover:border-orange-500 hover:text-orange-400 rounded-xl" onClick={() => handleReportEmergency('breakdown')}>
                 <Wrench className="w-8 h-8" /> Breakdown
               </Button>
             </div>
             <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="ghost" className="text-slate-400">
-                  Cancel
-                </Button>
-              </DialogClose>
+              <DialogClose asChild><Button variant="ghost" className="text-slate-400">Cancel</Button></DialogClose>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
-
-      {/* Global cockpit keyframes */}
-      <style jsx global>{`
-        @keyframes scanline {
-          0%   { transform: translateX(-60%); }
-          100% { transform: translateX(200%); }
-        }
-        @keyframes sos-pulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
-          50%       { box-shadow: 0 0 0 10px rgba(239,68,68,0); }
-        }
-        @keyframes shield-spin {
-          from { transform: rotate(0deg); }
-          to   { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }

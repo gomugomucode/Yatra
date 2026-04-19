@@ -1,6 +1,6 @@
-import { getDatabase, ref, set, update, onValue, push, get, onDisconnect } from 'firebase/database';
+import { getDatabase, ref, set, update, remove, onValue, push, get, onDisconnect } from 'firebase/database';
 import { getFirebaseApp } from './firebase';
-import { Bus, Booking, Location, LiveUser } from './types';
+import { Bus, Booking, Location, LiveUser, TripStatus } from './types';
 
 export const getDb = () => getDatabase(getFirebaseApp());
 const getActiveDriverRef = (driverId: string) => ref(getDb(), `drivers/active/${driverId}`);
@@ -185,7 +185,7 @@ export interface TripRequest {
     driverId: string;
     passengerId: string;
     passengerName: string;
-    status: 'requested' | 'accepted' | 'arrived' | 'completed' | 'cancelled' | 'pending' | 'rejected' | 'expired';
+    status: TripStatus | 'pending';
     lat: number;
     lng: number;
     createdAt: string;
@@ -509,6 +509,8 @@ export const subscribeToLiveUsers = (callback: (users: LiveUser[]) => void) => {
     let driverData: Record<string, any> = {};
     let passengerData: Record<string, any> = {};
     let cancelled = false;
+    // badge cache: fetched once per driver id per subscription lifetime
+    const badgeCache = new Map<string, LiveUser['verificationBadge'] | null>();
 
     const emit = async () => {
         const rawDrivers = Object.entries(driverData)
@@ -549,23 +551,24 @@ export const subscribeToLiveUsers = (callback: (users: LiveUser[]) => void) => {
 
         const rawList = [...rawDrivers, ...rawPassengers] as LiveUser[];
 
-        // For drivers, fetch their user profile to attach verificationBadge.
+        // Attach verificationBadge for drivers — fetch once per driver, then serve from cache.
         const list = await Promise.all(
             rawList.map(async (user) => {
                 if (user.role !== 'driver') return user;
+                if (badgeCache.has(user.id)) {
+                    const cached = badgeCache.get(user.id);
+                    return cached ? { ...user, verificationBadge: cached } : user;
+                }
                 try {
                     const userRef = ref(db, `users/${user.id}`);
                     const userSnap = await get(userRef);
-                    if (userSnap.exists()) {
-                        const userData = userSnap.val();
-                        if (userData.verificationBadge) {
-                            return { ...user, verificationBadge: userData.verificationBadge };
-                        }
-                    }
+                    const badge = userSnap.exists() ? userSnap.val().verificationBadge ?? null : null;
+                    badgeCache.set(user.id, badge);
+                    return badge ? { ...user, verificationBadge: badge } : user;
                 } catch {
-                    // Non-fatal: badge just won't show for this driver
+                    badgeCache.set(user.id, null);
+                    return user;
                 }
-                return user;
             })
         );
 
@@ -635,3 +638,76 @@ export const updateLiveUserStatus = async (user: LiveUser) => {
         }
     }
 };
+
+// --- Trip State Machine Write Functions ---
+
+export async function updateTripStatus(
+    tripId: string,
+    status: TripStatus,
+    extraFields?: Record<string, unknown>
+): Promise<void> {
+    const db = getDb();
+    await update(ref(db, `trips/${tripId}`), {
+        status,
+        updatedAt: new Date().toISOString(),
+        ...extraFields,
+    });
+}
+
+export async function publishTripLocation(
+    tripId: string,
+    role: 'driver' | 'passenger',
+    lat: number,
+    lng: number
+): Promise<void> {
+    if (
+        !isFinite(lat) || !isFinite(lng) ||
+        lat < -90 || lat > 90 ||
+        lng < -180 || lng > 180
+    ) {
+        console.warn('[publishTripLocation] Invalid coordinates', { lat, lng });
+        return;
+    }
+    const db = getDb();
+    await set(ref(db, `tripLocations/${tripId}/${role}`), {
+        lat,
+        lng,
+        timestamp: new Date().toISOString(),
+    });
+}
+
+export function subscribeTripLocation(
+    tripId: string,
+    role: 'driver' | 'passenger',
+    callback: (loc: { lat: number; lng: number } | null) => void
+): () => void {
+    const db = getDb();
+    const locRef = ref(db, `tripLocations/${tripId}/${role}`);
+    const unsubscribe = onValue(locRef, (snap) => {
+        const val = snap.val();
+        if (val && typeof val.lat === 'number' && typeof val.lng === 'number') {
+            callback({ lat: val.lat, lng: val.lng });
+        } else {
+            callback(null);
+        }
+    });
+    return unsubscribe;
+}
+
+export async function cleanupTripLocation(tripId: string): Promise<void> {
+    const db = getDb();
+    await remove(ref(db, `tripLocations/${tripId}`));
+}
+
+export async function submitTripRating(
+    tripId: string,
+    rater: 'passenger' | 'driver',
+    stars: number,
+    comment: string
+): Promise<void> {
+    const db = getDb();
+    const field = rater === 'passenger' ? 'passengerRating' : 'driverRating';
+    await update(ref(db, `trips/${tripId}`), {
+        [field]: { stars, comment, createdAt: new Date().toISOString() },
+    });
+}

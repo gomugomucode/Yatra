@@ -8,10 +8,10 @@ import { Loader2 } from 'lucide-react';
 const LeafletMap = dynamic(() => import('./LeafletMap'), {
     ssr: false,
     loading: () => (
-        <div className="w-full h-full min-h-[400px] flex items-center justify-center bg-gray-50">
+        <div className="w-full h-full min-h-[400px] flex items-center justify-center bg-slate-900">
             <div className="text-center">
-                <Loader2 className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
-                <p className="text-gray-600">Loading map...</p>
+                <Loader2 className="w-10 h-10 text-cyan-500 animate-spin mx-auto mb-3" />
+                <p className="text-slate-500 text-sm">Loading map…</p>
             </div>
         </div>
     ),
@@ -31,9 +31,13 @@ interface MapWrapperProps {
     pickupProximityLevel?: 'far' | 'approaching' | 'nearby' | 'arrived' | null;
     busETAs?: Record<string, number | null>;
     busLocations?: Record<string, { lat: number; lng: number; timestamp: string; heading?: number; speed?: number }>;
-    requestStatus?: 'idle' | 'requesting' | 'on-trip';
+    requestStatus?: 'idle' | 'requesting' | 'accepted' | 'on-trip';
     hailedDriverId?: string | null;
     activeTripId?: string | null;
+    passengerLocation?: { lat: number; lng: number } | null;
+    activeRoute?: GeoJSON.LineString | null;
+    routePhase?: 'pickup' | 'trip' | null;
+    focusLocation?: { lat: number; lng: number } | null;
 }
 
 export default function MapWrapper(props: MapWrapperProps) {

@@ -10,9 +10,10 @@
       }
     },
     "locations": {
-      ".read": true, 
+      ".read": false,
       "$uid": {
-        ".write": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin')"
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
       }
     },
     "drivers": {
@@ -36,13 +37,26 @@
       }
     },
     "trips": {
-      ".read": "auth != null",
       ".write": "auth != null",
-      ".indexOn": ["driverId", "passengerId", "status", "createdAt"]
+      "$tripId": {
+        ".read": "auth != null && (data.child('passengerId').val() === auth.uid || data.child('driverId').val() === auth.uid)",
+        ".indexOn": ["driverId", "passengerId", "status", "createdAt"]
+      }
+    },
+    "tripLocations": {
+      "$tripId": {
+        ".read": "auth != null && (root.child('trips').child($tripId).child('passengerId').val() === auth.uid || root.child('trips').child($tripId).child('driverId').val() === auth.uid)",
+        "driver": {
+          ".write": "auth != null && root.child('trips').child($tripId).child('driverId').val() === auth.uid"
+        },
+        "passenger": {
+          ".write": "auth != null && root.child('trips').child($tripId).child('passengerId').val() === auth.uid"
+        }
+      }
     },
     "users": {
       "$uid": {
-        ".read": "auth != null", 
+        ".read": "auth != null",
         ".write": "auth != null && auth.uid === $uid",
         "verificationBadge": {
            ".validate": "newData.hasChildren(['mintAddress', 'txSignature'])"
