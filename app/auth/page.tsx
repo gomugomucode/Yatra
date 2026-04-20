@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { FirebaseError } from 'firebase/app';
@@ -89,7 +89,7 @@ async function resolvePostLoginRedirect(
   // On sign-in, go directly to dashboard for both roles — no profile setup required.
   // Use window.location.assign (hard nav) so the auth-page useEffect can't race and override.
   if (isSignIn) {
-    window.location.assign(selectedRole === 'driver' ? '/driver' : '/passenger');
+    window.location.assign(role === 'driver' ? '/driver' : '/passenger');
     return 'dashboard';
   }
 
@@ -115,6 +115,7 @@ function AuthContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState<'idle' | 'google' | 'email'>('idle');
+  const isSigningInRef = useRef(false);
 
   // Sync role from URL query parameter
   const roleInUrl = searchParams.get('role') as Role | null;
@@ -128,6 +129,7 @@ function AuthContent() {
   // Handle automatic redirection if already logged in
   useEffect(() => {
     if (authLoading || !currentUser || pathname !== '/auth') return;
+    if (isSigningInRef.current) return; // don't race with an in-progress sign-in
     if (userData === undefined) return;
 
     if (userData === null) {
@@ -153,6 +155,7 @@ function AuthContent() {
 
   const handleGoogleSignIn = async () => {
     if (loading !== 'idle') return;
+    isSigningInRef.current = true;
     setLoading('google');
     try {
       const cred = await signInWithGoogle();
@@ -160,8 +163,9 @@ function AuthContent() {
       const idToken = await user.getIdToken(true);
       const isNewUser = user.metadata.creationTime === user.metadata.lastSignInTime;
       await resolvePostLoginRedirect(user.uid, selectedRole, idToken, setRole, router, !isNewUser);
-      toast({ title: 'Welcome to Yatra', description: 'You’re signed in.' });
+      toast({ title: 'Welcome to Yatra', description: "You're signed in." });
     } catch (err: unknown) {
+      isSigningInRef.current = false;
       toast({ variant: 'destructive', title: 'Sign-in failed', description: mapFirebaseError(err) });
     } finally {
       setLoading('idle');
@@ -174,6 +178,7 @@ function AuthContent() {
       toast({ variant: 'destructive', title: 'Weak password', description: 'Password must be at least 6 characters.' });
       return;
     }
+    isSigningInRef.current = true;
     setLoading('email');
     try {
       let userCredential;
@@ -189,6 +194,7 @@ function AuthContent() {
         await resolvePostLoginRedirect(userCredential.user.uid, selectedRole, idToken, setRole, router, true);
       }
     } catch (err: unknown) {
+      isSigningInRef.current = false;
       if (isSignUp && err instanceof FirebaseError && err.code === 'auth/email-already-in-use') {
         setIsSignUp(false);
         toast({ title: 'Account already exists', description: 'Switching to sign in mode.' });
