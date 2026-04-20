@@ -98,6 +98,10 @@
     @apply border-border outline-ring/50;
   }
 
+  html {
+    background-color: #05070a;
+  }
+
   body {
     @apply text-foreground;
     background:
