@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Loader2 } from 'lucide-react';
+import { Bus, Passenger, RequestStatus } from '@/lib/types';
 
 // Dynamically import LeafletMap to avoid SSR issues
 const LeafletMap = dynamic(() => import('./LeafletMap'), {
@@ -19,10 +20,10 @@ const LeafletMap = dynamic(() => import('./LeafletMap'), {
 
 interface MapWrapperProps {
     role: 'driver' | 'passenger' | 'admin';
-    buses: any[];
-    passengers?: any[];
-    selectedBus?: any;
-    onBusSelect?: (bus: any) => void;
+    buses: Bus[];
+    passengers?: Passenger[];
+    selectedBus?: Bus | null;
+    onBusSelect?: (bus: Bus) => void;
     onLocationSelect?: (location: { lat: number; lng: number }) => void;
     showRoute?: boolean;
     pickupLocation?: { lat: number; lng: number; address?: string } | null;
@@ -31,7 +32,7 @@ interface MapWrapperProps {
     pickupProximityLevel?: 'far' | 'approaching' | 'nearby' | 'arrived' | null;
     busETAs?: Record<string, number | null>;
     busLocations?: Record<string, { lat: number; lng: number; timestamp: string; heading?: number; speed?: number }>;
-    requestStatus?: 'idle' | 'requesting' | 'accepted' | 'on-trip';
+    requestStatus?: RequestStatus;
     hailedDriverId?: string | null;
     activeTripId?: string | null;
     passengerLocation?: { lat: number; lng: number } | null;

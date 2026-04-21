@@ -4,7 +4,7 @@ import React, { Component, ReactNode, useEffect, useState, useRef, useMemo } fro
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Circle, GeoJSON, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Bus, Passenger, LiveUser, VehicleTypeId } from '@/lib/types';
+import { Bus, Passenger, LiveUser } from '@/lib/types';
 import { DEFAULT_LOCATION } from '@/lib/constants';
 import { subscribeToBusLocation, subscribeToLiveUsers, subscribeToTrip, TripRequest } from '@/lib/firebaseDb';
 import LiveUserMarker from './LiveUserMarker';
@@ -20,6 +20,7 @@ const DefaultIcon = L.icon({
     iconSize: [25, 41],
     iconAnchor: [12, 41],
 });
+L.Marker.prototype.options.icon = DefaultIcon;
 
 interface LeafletMapProps {
     role: 'driver' | 'passenger' | 'admin';
@@ -59,23 +60,23 @@ function FocusUpdater({ focusLocation }: { focusLocation?: { lat: number; lng: n
 
 function MapUpdater({ center, selectedUserId, currentPosition }: { center: { lat: number; lng: number }, selectedUserId?: string, currentPosition?: [number, number] | null }) {
     const map = useMap();
-    const [lastUserId, setLastUserId] = useState<string | undefined>(undefined);
-    const [hasCenteredOnce, setHasCenteredOnce] = useState(false);
+    const lastUserIdRef = useRef<string | undefined>(undefined);
+    const hasCenteredOnceRef = useRef(false);
 
     useEffect(() => {
-        if (selectedUserId && selectedUserId !== lastUserId) {
+        if (selectedUserId && selectedUserId !== lastUserIdRef.current) {
             map.flyTo([center.lat, center.lng], 16);
-            setLastUserId(selectedUserId);
+            lastUserIdRef.current = selectedUserId;
         }
-    }, [center, selectedUserId, lastUserId, map]);
+    }, [center, selectedUserId, map]);
 
     useEffect(() => {
         if (!currentPosition) return;
 
         // Auto-center map to zoom level 14 once location is first acquired
-        if (!hasCenteredOnce) {
+        if (!hasCenteredOnceRef.current) {
             map.flyTo(currentPosition, 14);
-            setHasCenteredOnce(true);
+            hasCenteredOnceRef.current = true;
         } else {
             // If GPS drifts drastically (e.g. initial fake location -> real location)
             const mapCenter = map.getCenter();
@@ -84,7 +85,7 @@ function MapUpdater({ center, selectedUserId, currentPosition }: { center: { lat
                 map.flyTo(currentPosition, 14);
             }
         }
-    }, [currentPosition, hasCenteredOnce, map]);
+    }, [currentPosition, map]);
 
     return null;
 }
@@ -170,7 +171,6 @@ function MapControls({ initialCenter, userLocation }: { initialCenter: { lat: nu
 
     const glassBtn = `w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold text-white
         border border-white/10 transition-all active:scale-90 select-none`;
-    const glassBg = 'background:rgba(11,14,20,0.75);backdrop-filter:blur(10px);box-shadow:0 4px 20px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.06)';
     return (
         <div className="absolute bottom-4 right-4 z-[1000] flex flex-col gap-2.5">
             <button onClick={handleZoomIn} className={glassBtn} style={{ background: 'rgba(11,14,20,0.75)', backdropFilter: 'blur(10px)', boxShadow: '0 4px 20px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.06)' }}>+</button>
@@ -186,7 +186,7 @@ function MapControls({ initialCenter, userLocation }: { initialCenter: { lat: nu
 }
 
 function TrackingControls({ role, isTracking, onToggleTracking, currentPosition }: { role: string; isTracking: boolean; onToggleTracking: () => void; currentPosition: [number, number] | null }) {
-    if (role === 'admin') return null;
+    if (role !== 'driver') return null;
     return (
         <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2">
             {/* GO ONLINE — glassmorphism pill */}
@@ -264,12 +264,8 @@ function LeafletMapInner({
     focusLocation,
 }: LeafletMapProps) {
     const { currentUser } = useAuth(); // FIX: Access real UID
-    const [mounted, setMounted] = useState(false);
-    const [isMapReady, setIsMapReady] = useState(false); // Wait for GPS
+    const [locationFallbackReady, setLocationFallbackReady] = useState(false);
     const [liveUsers, setLiveUsers] = useState<LiveUser[]>([]);
-    const [currentPosition, setCurrentPosition] = useState<[number, number] | null>(null);
-    const [vehicleType, setVehicleType] = useState<VehicleTypeId | undefined>(undefined);
-
     // Routing States
     const [selectedUser, setSelectedUser] = useState<LiveUser | null>(null);
     const [routeGeoJSON, setRouteGeoJSON] = useState<GeoJSON.LineString | null>(null);
@@ -278,37 +274,28 @@ function LeafletMapInner({
     const [handshakeTrip, setHandshakeTrip] = useState<TripRequest | null>(null);
 
     // FIX: STABLE ID from Auth UID
-    const stableId = useMemo(() => {
-        if (currentUser?.uid) return currentUser.uid;
-        // Fallback for demo/unauth only
-        return role + "_" + Math.random().toString(36).substring(2, 7);
-    }, [currentUser, role]);
-
+    const stableId = currentUser?.uid ?? `${role}_fallback`;
     const driverRoute = role === 'driver' ? (buses?.[0]?.route || 'Route 1') : undefined;
 
     // Call custom hook for pushing our own location to Firebase
     const { isTracking, toggleTracking, location: liveLocation } = useLiveLocation(
         stableId,
-        role === 'admin' ? undefined : (role as 'driver' | 'passenger'),
+        role === 'driver' ? 'driver' : undefined,
         false,
         driverRoute,
         undefined,          // vehicleType - handled separately
         requestStatus       // Pass requestStatus so passengers can signal 'requesting'
     );
-
-    useEffect(() => {
-        if (liveLocation) {
-            setCurrentPosition([liveLocation.lat, liveLocation.lng]);
-            setIsMapReady(true);
-        } else if (userLocation && !currentPosition) {
-            setCurrentPosition([userLocation.lat, userLocation.lng]);
-            setIsMapReady(true);
-        }
+    const currentPosition = useMemo<[number, number] | null>(() => {
+        if (liveLocation) return [liveLocation.lat, liveLocation.lng];
+        if (userLocation) return [userLocation.lat, userLocation.lng];
+        return null;
     }, [liveLocation, userLocation]);
+    const isMapReady = !!currentPosition || locationFallbackReady;
 
     // Fallback: if GPS takes > 8s (denied / slow), load map at DEFAULT_LOCATION
     useEffect(() => {
-        const timer = setTimeout(() => setIsMapReady(true), 8000);
+        const timer = setTimeout(() => setLocationFallbackReady(true), 8000);
         return () => clearTimeout(timer);
     }, []);
 
@@ -317,22 +304,19 @@ function LeafletMapInner({
         const unsubscribe = subscribeToLiveUsers((users) => {
             clearTimeout(timeout);
             timeout = setTimeout(() => {
-                const visibleUsers = users.filter((u: any) => {
-                    if (!Number.isFinite(u.lat) || !Number.isFinite(u.lng)) return false;
+                const visibleUsers = users.filter((u) => {
+                    const user = u as LiveUser & { status?: string };
+                    if (!Number.isFinite(user.lat) || !Number.isFinite(user.lng)) return false;
                     // Remove 'ghost' cars: require active online status AND location ping within last 30 seconds
-                    if (!u.isOnline || u.status === 'offline') return false;
+                    if (!user.isOnline || user.status === 'offline') return false;
 
                     const now = Date.now();
-                    const lastSeen = u.timestamp ? new Date(u.timestamp).getTime() : 0;
+                    const lastSeen = user.timestamp ? new Date(user.timestamp).getTime() : 0;
                     if (now - lastSeen > 30000) return false;
 
                     // Passenger map focuses to the hailed driver once handshake starts.
-                    if (role === 'passenger' && u.role === 'driver') {
-                        return hailedDriverId ? u.id === hailedDriverId : true;
-                    }
-                    // Drivers ONLY see passengers who are actively requesting a ride
-                    if (role === 'driver' && u.role === 'passenger') {
-                        return u.requestStatus === 'requesting';
+                    if (role === 'passenger' && user.role === 'driver') {
+                        return hailedDriverId ? user.id === hailedDriverId : true;
                     }
                     return false;
                 });
@@ -344,37 +328,35 @@ function LeafletMapInner({
 
     useEffect(() => {
         if (!hailedDriverId) {
-            setHandshakeDriverLocation(null);
             return;
         }
 
-        return subscribeToBusLocation(hailedDriverId, (location) => {
+        const unsubscribe = subscribeToBusLocation(hailedDriverId, (location) => {
             if (!location) {
                 setHandshakeDriverLocation(null);
                 return;
             }
             setHandshakeDriverLocation({ lat: location.lat, lng: location.lng });
         });
+        return () => {
+            unsubscribe();
+            setHandshakeDriverLocation(null);
+        };
     }, [hailedDriverId]);
 
     useEffect(() => {
         if (!activeTripId) {
-            setHandshakeTrip(null);
             return;
         }
 
-        return subscribeToTrip(activeTripId, (trip) => {
+        const unsubscribe = subscribeToTrip(activeTripId, (trip) => {
             setHandshakeTrip(trip);
         });
+        return () => {
+            unsubscribe();
+            setHandshakeTrip(null);
+        };
     }, [activeTripId]);
-
-    useEffect(() => {
-        const prev = (L.Marker.prototype as any).options.icon;
-        (L.Marker.prototype as any).options.icon = DefaultIcon;
-        setMounted(true);
-        return () => { (L.Marker.prototype as any).options.icon = prev; };
-    }, []);
-
     useEffect(() => {
         let isMounted = true;
 
@@ -394,8 +376,10 @@ function LeafletMapInner({
         const endPoint = passengerPoint || fallbackTarget;
 
         if (!startPoint || !endPoint) {
-            setRouteGeoJSON(null);
-            setRouteInfo(null);
+            queueMicrotask(() => {
+                setRouteGeoJSON(null);
+                setRouteInfo(null);
+            });
             return;
         }
 
@@ -410,8 +394,6 @@ function LeafletMapInner({
             isMounted = false;
         };
     }, [selectedUser, currentPosition, handshakeDriverLocation, handshakeTrip]);
-
-    if (!mounted) return <div className="w-full h-full min-h-[300px] bg-gray-100 flex items-center justify-center"><div className="animate-pulse w-11/12 h-64 bg-gray-200 rounded-lg" /></div>;
 
     // Show GPS acquiring screen until we have a real location
     if (!isMapReady) {

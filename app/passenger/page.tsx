@@ -2,13 +2,10 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import BookingPanel from '@/components/passenger/BookingPanel';
-import SeatVisualizer from '@/components/passenger/SeatVisualizer';
 import WalletSettings from '@/components/passenger/WalletSettings';
 import TripHistory from '@/components/passenger/TripHistory';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Bus, Booking, VehicleTypeId, RequestStatus } from '@/lib/types';
+import { Bus, Booking, Location, VehicleTypeId, RequestStatus } from '@/lib/types';
 
 const NEARBY_DRIVER_RADIUS_KM = 10;
 import { VEHICLE_TYPES, DEFAULT_LOCATION } from '@/lib/constants';
@@ -17,10 +14,6 @@ import {
   Ticket,
   Navigation,
   Clock,
-  Smartphone,
-  Users,
-  CircleUser,
-  LogOut,
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -40,9 +33,19 @@ import LocationSearch from '@/components/map/LocationSearch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useProximityHandshake } from '@/hooks/useProximityHandshake';
 
+interface PassengerBookingData {
+  passengerName?: string;
+  phoneNumber?: string;
+  email?: string;
+  numberOfPassengers?: number;
+  notes?: string;
+  paymentMethod?: 'cash' | 'digital';
+  status?: string;
+}
+
 export default function PassengerDashboard() {
   const router = useRouter();
-  const { currentUser, role, loading, signOut, userData } = useAuth();
+  const { currentUser, role, loading, userData } = useAuth();
   const { toast } = useToast();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [buses, setBuses] = useState<Bus[]>([]);
@@ -56,12 +59,12 @@ export default function PassengerDashboard() {
   const [lastNotificationByBooking, setLastNotificationByBooking] = useState<
     Record<string, ProximityLevel | null>
   >({});
-  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(() => {
+  const [notificationsEnabled] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
     const stored = window.localStorage.getItem('notificationsEnabled');
     return stored ? stored === 'true' : true;
   });
-  const [vibrationEnabled, setVibrationEnabled] = useState<boolean>(() => {
+  const [vibrationEnabled] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
     const stored = window.localStorage.getItem('vibrationEnabled');
     return stored ? stored === 'true' : true;
@@ -85,6 +88,7 @@ export default function PassengerDashboard() {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [ratingTripId, setRatingTripId] = useState<string | null>(null);
   const [ratingDriverName, setRatingDriverName] = useState<string>('');
+  const hasLocationErrorRef = useRef(false);
   const lastTripRequestAtRef = useRef<Record<string, number>>({});
   const [busLocations, setBusLocations] = useState<Record<string, {
     lat: number;
@@ -144,7 +148,8 @@ export default function PassengerDashboard() {
         }
 
         // Only show toast once per session or if critical
-        if (!userLocation) {
+        if (!hasLocationErrorRef.current) {
+          hasLocationErrorRef.current = true;
           toast({
             title: "Location Error",
             description: errorMessage + " Using default location.",
@@ -162,7 +167,7 @@ export default function PassengerDashboard() {
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
-  }, []);
+  }, [toast]);
 
   // Subscribe to real-time bus updates
   useEffect(() => {
@@ -195,15 +200,19 @@ export default function PassengerDashboard() {
   // Subscribe to real-time location updates for each active bus
   // We use a stable key for buses to prevent infinite loops when updating bus locations
   const activeBusIds = buses.filter(b => b.isActive).map(b => b.id).join(',');
+  const targetBuses = useMemo(
+    () => hailedDriverId
+      ? buses.filter((bus) => bus.id === hailedDriverId && bus.isActive)
+      : buses.filter((bus) => bus.isActive),
+    [buses, hailedDriverId]
+  );
+  const selectedBusId = selectedBus?.id ?? null;
+  const selectedDriverName = selectedBus?.driverName ?? '';
 
   useEffect(() => {
-    // eslint-disable-next-line no-console
     console.log('[PASSENGER] Setting up location listeners for active buses');
 
     const unsubscribes: (() => void)[] = [];
-    const targetBuses = hailedDriverId
-      ? buses.filter((bus) => bus.id === hailedDriverId && bus.isActive)
-      : buses.filter((bus) => bus.isActive);
 
     if (hailedDriverId) {
       setBusLocations((prev) => {
@@ -214,7 +223,6 @@ export default function PassengerDashboard() {
 
     targetBuses.forEach(bus => {
       if (bus.isActive) {
-        // eslint-disable-next-line no-console
         console.log('[PASSENGER] Subscribing to bus location:', bus.id);
 
         const unsubscribe = subscribeToBusLocation(bus.id, (location) => {
@@ -225,7 +233,7 @@ export default function PassengerDashboard() {
             }));
 
             // Calculate ETA only if user location is available AND this is the selected bus
-            if (userLocation && selectedBus && selectedBus.id === bus.id) {
+            if (userLocation && selectedBusId === bus.id) {
               const eta = calculateETA(
                 { lat: location.lat, lng: location.lng },
                 userLocation,
@@ -243,13 +251,10 @@ export default function PassengerDashboard() {
     });
 
     return () => {
-      // eslint-disable-next-line no-console
       console.log('[PASSENGER] Cleaning up location listeners');
       unsubscribes.forEach(unsub => unsub());
     };
-    // Only re-subscribe if the set of active buses changes, or if userLocation/selectedBus changes (for ETA)
-    // We intentionally omit 'buses' to avoid the infinite loop caused by setBuses updating the dependency
-  }, [activeBusIds, userLocation, selectedBus?.id, hailedDriverId]);
+  }, [activeBusIds, hailedDriverId, selectedBusId, targetBuses, userLocation]);
 
   // Update bus locations in buses array when real-time updates arrive
   useEffect(() => {
@@ -267,11 +272,11 @@ export default function PassengerDashboard() {
             return {
               ...bus,
               currentLocation: {
-                ...(bus.currentLocation || {}),
                 lat: locationUpdate.lat,
                 lng: locationUpdate.lng,
+                address: bus.currentLocation?.address,
                 timestamp: new Date(locationUpdate.timestamp),
-              } as any, // Cast to avoid strict type issues with optional
+              } as Location,
             };
           }
         }
@@ -294,9 +299,10 @@ export default function PassengerDashboard() {
       }
 
       if (['completed', 'cancelled', 'rejected', 'expired'].includes(trip.status)) {
-        if (trip.status === 'completed' && selectedBus?.driverName) {
+        cleanupTripLocation(activeTripId).catch(console.warn);
+        if (trip.status === 'completed' && selectedDriverName) {
           setRatingTripId(activeTripId);
-          setRatingDriverName(selectedBus.driverName);
+          setRatingDriverName(selectedDriverName);
           setShowRatingModal(true);
         }
         setRequestStatus('idle');
@@ -317,7 +323,7 @@ export default function PassengerDashboard() {
         status: trip.status,
       });
     });
-  }, [activeTripId]);
+  }, [activeTripId, selectedDriverName, toast]);
 
   // Publish passenger location to tripLocations only after driver accepts
   useEffect(() => {
@@ -362,6 +368,7 @@ export default function PassengerDashboard() {
     if (requestStatus === 'requesting' && activeTripId) {
       requestTimeoutRef.current = setTimeout(async () => {
         await updateTripStatus(activeTripId, 'expired');
+        cleanupTripLocation(activeTripId).catch(console.warn);
         setRequestStatus('idle');
         setSelectedBus(null);
         setHailedDriverId(null);
@@ -377,7 +384,7 @@ export default function PassengerDashboard() {
     return () => {
       if (requestTimeoutRef.current) clearTimeout(requestTimeoutRef.current);
     };
-  }, [requestStatus, activeTripId]);
+  }, [requestStatus, activeTripId, toast]);
 
   // Two-phase ETA: fetch OSRM route from driver position to pickup/destination
   useEffect(() => {
@@ -429,7 +436,7 @@ export default function PassengerDashboard() {
     fetchEta();
     const interval = setInterval(fetchEta, 30_000);
     return () => clearInterval(interval);
-  }, [activeTripPickup?.status, busLocations, hailedDriverId, pickupLocation, dropoffLocation]);
+  }, [activeTripPickup, busLocations, hailedDriverId, pickupLocation, dropoffLocation]);
 
   // Proximity alarm is now handled by useProximityHandshake above.
 
@@ -690,7 +697,7 @@ export default function PassengerDashboard() {
   };
 
   // BOOKING FLOW (seat reservation)
-  const handleBookBus = async (bus: Bus, bookingData?: any) => {
+  const handleBookBus = async (bus: Bus, bookingData?: PassengerBookingData) => {
     if (!pickupLocation) {
       toast({
         title: 'Select pickup location first',
@@ -820,6 +827,7 @@ export default function PassengerDashboard() {
   const handleCancelRequest = async () => {
     if (!activeTripId) return;
     await updateTripStatus(activeTripId, 'cancelled');
+    cleanupTripLocation(activeTripId).catch(console.warn);
     setRequestStatus('idle');
     setSelectedBus(null);
     setHailedDriverId(null);

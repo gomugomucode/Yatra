@@ -4,10 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import DriverPanel from '@/components/driver/DriverPanel';
 import PassengerList from '@/components/driver/PassengerList';
 import VerificationPanel from '@/components/driver/VerificationPanel';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
 import { Bus, Passenger, Driver, checkProfileCompletion } from '@/lib/types';
 import MapWrapper from '@/components/map/MapWrapper';
 import {
@@ -54,6 +51,16 @@ import AccidentAlert from '@/components/driver/AccidentAlert';
 import { getPushTokenFromBrowser } from '@/lib/push';
 import { useProximityHandshake } from '@/hooks/useProximityHandshake';
 
+interface BrowserAudioContextWindow extends Window {
+  webkitAudioContext?: typeof AudioContext;
+}
+
+interface DriverBookingLookup {
+  id?: string;
+  passengerId?: string;
+  fare?: number;
+}
+
 export default function DriverDashboard() {
   const router = useRouter();
   const { currentUser, role, loading, signOut, userData } = useAuth();
@@ -65,12 +72,9 @@ export default function DriverDashboard() {
   const [locationEnabled, setLocationEnabled] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [hasGeolocationError, setHasGeolocationError] = useState(false);
-  const [lastLocationUpdate, setLastLocationUpdate] = useState<Date | null>(null);
-  const [locationUpdateCount, setLocationUpdateCount] = useState(0);
-  const [lastFirebaseUpdate, setLastFirebaseUpdate] = useState<Date | null>(null);
   const [notificationPermissionRequested, setNotificationPermissionRequested] = useState(false);
   const [currentSpeed, setCurrentSpeed] = useState(0);
-  const [activeTripRequest, setActiveTripRequest] = useState<{ id: string; lat: number; lng: number; status: string; passengerName: string; pickupLocation?: { lat: number; lng: number; address?: string }; bookingId?: string } | null>(null);
+  const [activeTripRequest, setActiveTripRequest] = useState<{ id: string; lat: number; lng: number; status: string; passengerId?: string; passengerName: string; pickupLocation?: { lat: number; lng: number; address?: string }; bookingId?: string } | null>(null);
   const [passengerLocation, setPassengerLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [driverActiveRoute, setDriverActiveRoute] = useState<GeoJSON.LineString | null>(null);
   const driverLastEtaFetchRef = useRef<{ lat: number; lng: number } | null>(null);
@@ -80,8 +84,9 @@ export default function DriverDashboard() {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [ratingTripId, setRatingTripId] = useState<string | null>(null);
   const [ratingPassengerName, setRatingPassengerName] = useState<string>('');
+  const driverProfile = userData && userData.role === 'driver' ? userData as Driver : null;
   const driverWalletAddress =
-    typeof userData?.solanaWallet === 'string' ? userData.solanaWallet.trim() : '';
+    typeof driverProfile?.solanaWallet === 'string' ? driverProfile.solanaWallet.trim() : '';
   const lastKnownLocationRef = useRef<{ lat: number; lng: number; heading?: number; speed?: number } | null>(null);
   const lastFlushRef = useRef<number>(0);
   const lastTripRequestSeenRef = useRef<string | null>(null);
@@ -124,6 +129,16 @@ export default function DriverDashboard() {
   });
 
 
+  useEffect(() => {
+    if (passengerReached) {
+      setShowPassengerReachedAlert(true);
+    }
+  }, [passengerReached]);
+
+  useEffect(() => {
+    resetPassengerReached();
+  }, [activeTripRequest?.id, resetPassengerReached]);
+
   // Request notification permission on mount
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default' && !notificationPermissionRequested) {
@@ -160,8 +175,8 @@ export default function DriverDashboard() {
       // Try to find the driver's specific bus
       const driverBus =
         busesData.find((b) => b.id === currentUser?.uid) ||
-        (userData?.role === 'driver' && (userData as any).vehicleNumber
-          ? busesData.find((b) => b.busNumber === (userData as any).vehicleNumber)
+        (driverProfile?.vehicleNumber
+          ? busesData.find((b) => b.busNumber === driverProfile.vehicleNumber)
           : undefined);
 
       // Only update selectedBus if we found the driver's bus
@@ -184,7 +199,7 @@ export default function DriverDashboard() {
         unsubscribe();
       }
     };
-  }, [selectedBus, currentUser, userData]);
+  }, [selectedBus, currentUser, driverProfile]);
 
   // Subscribe to real passengers (bookings) for the selected bus
   useEffect(() => {
@@ -208,7 +223,11 @@ export default function DriverDashboard() {
         newBookings.forEach((booking) => {
           // Play notification sound using Web Audio API
           try {
-            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const AudioContextClass = window.AudioContext || (window as BrowserAudioContextWindow).webkitAudioContext;
+            if (!AudioContextClass) {
+              throw new Error('AudioContext unavailable');
+            }
+            const audioContext = new AudioContextClass();
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
 
@@ -222,7 +241,7 @@ export default function DriverDashboard() {
 
             oscillator.start(audioContext.currentTime);
             oscillator.stop(audioContext.currentTime + 0.5);
-          } catch (e) {
+          } catch {
             // Fallback: use browser beep
             console.warn('[Driver] Web Audio API unavailable for notification sound');
           }
@@ -283,8 +302,10 @@ export default function DriverDashboard() {
         lat: newest.lat,
         lng: newest.lng,
         status: newest.status,
+        passengerId: newest.passengerId,
         passengerName: newest.passengerName || 'Passenger',
         pickupLocation: newest.pickupLocation,
+        bookingId: newest.bookingId,
       });
 
       if (!lastTripRequestSeenRef.current) {
@@ -401,7 +422,7 @@ export default function DriverDashboard() {
     fetchRoute();
     const interval = setInterval(fetchRoute, 30_000);
     return () => clearInterval(interval);
-  }, [activeTripRequest?.status, userLocation, passengerLocation]);
+  }, [activeTripRequest, userLocation, passengerLocation]);
 
   const handleAcceptTrip = async () => {
     if (!activeTripRequest) return;
@@ -440,9 +461,9 @@ export default function DriverDashboard() {
     if (!activeTripRequest) return;
     try {
       await updateTripStatus(activeTripRequest.id, 'completed');
-      const bookingId = activeTripRequest.bookingId;
-      if (bookingId) {
-        await handlePassengerDropoff(bookingId);
+      const tripRecordId = activeTripRequest.bookingId ?? activeTripRequest.passengerId;
+      if (tripRecordId) {
+        await handlePassengerDropoff(tripRecordId);
       }
       setRatingTripId(activeTripRequest.id);
       setRatingPassengerName(activeTripRequest.passengerName);
@@ -478,8 +499,6 @@ export default function DriverDashboard() {
       try {
         await updateBusLocation(busId, driverWalletAddress, payload);
         lastFlushRef.current = Date.now();
-        setLastFirebaseUpdate(new Date());
-        setLocationUpdateCount((prev) => prev + 1);
       } catch (error) {
         console.error('[DRIVER] Failed to flush location:', error);
       }
@@ -638,7 +657,6 @@ export default function DriverDashboard() {
         if (!enabled) {
           await setDriverOffline(selectedBus.id, driverWalletAddress);
         }
-        // eslint-disable-next-line no-console
         console.log('[Driver] Location sharing', enabled ? 'enabled' : 'disabled');
 
         toast({
@@ -648,7 +666,6 @@ export default function DriverDashboard() {
             : 'Your location sharing has been stopped',
         });
       } catch (error) {
-        // eslint-disable-next-line no-console
         console.error('[Driver] Failed to update location sharing status:', error);
         toast({
           title: 'Update failed',
@@ -734,9 +751,9 @@ export default function DriverDashboard() {
       if (bookingsSnap.exists()) {
         const allBookingsData = bookingsSnap.val();
         // Since Yatra bookings might be stored as flat objects or under child keys, we iterate
-        for (const [key, bData] of Object.entries(allBookingsData as Record<string, any>)) {
+        for (const [key, bData] of Object.entries(allBookingsData as Record<string, DriverBookingLookup>)) {
           if (bData.id === bookingId || key === bookingId) {
-            truePassengerId = bData.passengerId;
+            truePassengerId = bData.passengerId ?? null;
             actualFare = bData.fare || 75;
             break;
           }
@@ -863,7 +880,7 @@ export default function DriverDashboard() {
       }
 
       // If userData exists, check completeness
-      const isComplete = (userData as any).role ? checkProfileCompletion(userData) : false;
+      const isComplete = userData?.role ? checkProfileCompletion(userData) : false;
 
       if (!isComplete && userData) {
         router.replace('/auth/profile');
@@ -889,7 +906,7 @@ export default function DriverDashboard() {
     );
   }
 
-  const isProfileStable = userData && checkProfileCompletion(userData);
+  const isProfileStable = !!driverProfile && checkProfileCompletion(driverProfile);
 
   return (
     <div className="min-h-screen flex flex-col overflow-y-auto" style={{ background: '#0B0E14', WebkitOverflowScrolling: 'touch' }}>
@@ -970,7 +987,7 @@ export default function DriverDashboard() {
               <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-xs mx-auto">
                 <DialogHeader>
                   <DialogTitle className="text-white">{userData?.name ?? 'Driver'}</DialogTitle>
-                  <DialogDescription className="text-slate-400 text-sm">{(currentUser as any)?.email ?? ''}</DialogDescription>
+                  <DialogDescription className="text-slate-400 text-sm">{currentUser?.email ?? ''}</DialogDescription>
                 </DialogHeader>
                 <div className="py-2">
                   <Button variant="destructive" className="w-full" onClick={async () => { setShowProfileDialog(false); await signOut(); }}>
@@ -1104,13 +1121,13 @@ export default function DriverDashboard() {
                 <Settings className="w-3.5 h-3.5 text-slate-500" />
                 <span className="text-[11px] font-bold tracking-widest text-slate-500 uppercase">Security Clearance</span>
               </div>
-              {!(userData as any).verificationBadge && (
+              {!driverProfile?.verificationBadge && (
                 <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">Action needed</span>
               )}
             </div>
             <div className="p-4">
               <VerificationPanel
-                driver={userData as Driver}
+                driver={driverProfile!}
                 onVerificationSuccess={() => toast({ title: '✅ Verified!', description: 'Your ZK badge is minted.' })}
               />
             </div>

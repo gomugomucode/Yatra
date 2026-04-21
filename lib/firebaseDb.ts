@@ -184,6 +184,7 @@ export interface TripRequest {
     busId: string;
     driverId: string;
     passengerId: string;
+    bookingId?: string;
     passengerName: string;
     status: TripStatus | 'pending';
     lat: number;
@@ -215,6 +216,7 @@ export const subscribeToTripRequests = (
                 busId: entry.busId || entry.driverId,
                 driverId: entry.driverId || entry.busId,
                 passengerId: entry.passengerId,
+                bookingId: entry.bookingId,
                 passengerName: entry.passengerName || 'Passenger',
                 status: entry.status || 'requested',
                 lat: entry.lat ?? entry.pickupLocation?.lat,
@@ -254,6 +256,7 @@ export const subscribeToTrip = (
             busId: entry.busId || entry.driverId,
             driverId: entry.driverId || entry.busId,
             passengerId: entry.passengerId,
+            bookingId: entry.bookingId,
             passengerName: entry.passengerName || 'Passenger',
             status: entry.status || 'requested',
             lat: entry.lat ?? entry.pickupLocation?.lat,
