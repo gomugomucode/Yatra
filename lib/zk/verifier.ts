@@ -1,32 +1,5 @@
 import * as snarkjs from 'snarkjs';
-import { join } from 'path';
-import { existsSync, readFileSync } from 'fs';
-
-let _verificationKey: any | null = null;
-
-function getVerificationKey(): any {
-    if (_verificationKey) return _verificationKey;
-
-    const paths = [
-        join(process.cwd(), 'lib', 'zk', 'verification_key.json'),
-        join(process.cwd(), 'public', 'zk', 'verification_key.json'),
-    ];
-
-    for (const vkeyPath of paths) {
-        if (existsSync(vkeyPath)) {
-            try {
-                const data = readFileSync(vkeyPath, 'utf-8');
-                _verificationKey = JSON.parse(data);
-                console.log(`[ZK Verifier] Key loaded: ${vkeyPath}`);
-                return _verificationKey;
-            } catch (e) {
-                console.error(`[ZK Verifier] Failed to parse key at ${vkeyPath}:`, e);
-            }
-        }
-    }
-
-    throw new Error('[ZK Verifier] verification_key.json not found');
-}
+import vKey from './verification_key.json';
 
 export interface ZKVerifyResult {
     isValid: boolean;
@@ -40,8 +13,6 @@ export async function verifyDriverProof(
     publicSignals: any
 ): Promise<ZKVerifyResult> {
     try {
-        const vKey = getVerificationKey();
-
         const isValid = await snarkjs.groth16.verify(vKey, publicSignals, proof);
 
         if (!isValid) {

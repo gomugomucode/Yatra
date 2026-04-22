@@ -6,12 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
 import OfflineBanner from "@/components/shared/OfflineBanner";
 import PwaBootstrap from "@/components/shared/PwaBootstrap";
-import dynamic from "next/dynamic";
-
-const WalletProviderWrapper = dynamic(
-  () => import("@/components/providers/WalletProviderWrapper"),
-  { ssr: false }
-);
+import ClientWalletProvider from "@/components/providers/ClientWalletProvider";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -63,13 +58,13 @@ export default function RootLayout({
         className={`${outfit.variable} ${jetbrainsMono.variable} ${mukta.variable} antialiased font-sans`}
       >
         <AuthProvider>
-          <WalletProviderWrapper>
+          <ClientWalletProvider>
             <PwaBootstrap />
             {children}
             <Toaster />
             <SonnerToaster richColors position="top-center" duration={5000} />
             <OfflineBanner />
-          </WalletProviderWrapper>
+          </ClientWalletProvider>
         </AuthProvider>
       </body>
     </html>

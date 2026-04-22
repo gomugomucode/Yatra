@@ -5,7 +5,7 @@ import BookingPanel from '@/components/passenger/BookingPanel';
 import WalletSettings from '@/components/passenger/WalletSettings';
 import TripHistory from '@/components/passenger/TripHistory';
 import { Button } from '@/components/ui/button';
-import { Bus, Booking, Location, VehicleTypeId, RequestStatus } from '@/lib/types';
+import { Bus, Booking, VehicleTypeId, RequestStatus } from '@/lib/types';
 
 const NEARBY_DRIVER_RADIUS_KM = 10;
 import { VEHICLE_TYPES, DEFAULT_LOCATION } from '@/lib/constants';
@@ -198,8 +198,11 @@ export default function PassengerDashboard() {
   }, []);
 
   // Subscribe to real-time location updates for each active bus
-  // We use a stable key for buses to prevent infinite loops when updating bus locations
-  const activeBusIds = buses.filter(b => b.isActive).map(b => b.id).join(',');
+  // Sorted + joined string: stable across Object.values ordering changes from Firebase
+  const activeBusIds = useMemo(
+    () => buses.filter(b => b.isActive).map(b => b.id).sort().join(','),
+    [buses]
+  );
   const targetBuses = useMemo(
     () => hailedDriverId
       ? buses.filter((bus) => bus.id === hailedDriverId && bus.isActive)
@@ -217,7 +220,14 @@ export default function PassengerDashboard() {
     if (hailedDriverId) {
       setBusLocations((prev) => {
         const focused = prev[hailedDriverId];
-        return focused ? { [hailedDriverId]: focused } : {};
+        if (!focused) return prev;
+        const existing = prev[hailedDriverId];
+        if (existing &&
+            existing.lat === focused.lat &&
+            existing.lng === focused.lng) {
+          return prev;
+        }
+        return { ...prev, [hailedDriverId]: focused };
       });
     }
 
@@ -227,23 +237,15 @@ export default function PassengerDashboard() {
 
         const unsubscribe = subscribeToBusLocation(bus.id, (location) => {
           if (location) {
-            setBusLocations(prev => ({
-              ...prev,
-              [bus.id]: location,
-            }));
-
-            // Calculate ETA only if user location is available AND this is the selected bus
-            if (userLocation && selectedBusId === bus.id) {
-              const eta = calculateETA(
-                { lat: location.lat, lng: location.lng },
-                userLocation,
-                location.speed || 30
-              );
-              setBusETAs(prev => ({
-                ...prev,
-                [bus.id]: eta,
-              }));
-            }
+            setBusLocations(prev => {
+              const existing = prev[bus.id];
+              if (existing &&
+                  existing.lat === location.lat &&
+                  existing.lng === location.lng) {
+                return prev;
+              }
+              return { ...prev, [bus.id]: location };
+            });
           }
         });
         unsubscribes.push(unsubscribe);
@@ -254,37 +256,30 @@ export default function PassengerDashboard() {
       console.log('[PASSENGER] Cleaning up location listeners');
       unsubscribes.forEach(unsub => unsub());
     };
-  }, [activeBusIds, hailedDriverId, selectedBusId, targetBuses, userLocation]);
+  // targetBuses excluded: it's a new array reference on every buses change, which would re-run
+  // this effect on every location tick. activeBusIds (sorted primitive string) only changes when
+  // buses go online/offline.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBusIds, hailedDriverId]);
 
-  // Update bus locations in buses array when real-time updates arrive
+  // Primitive extractions for the selected bus — avoids the ETA effect re-running on every
+  // busLocations object creation (which happens on every location tick for any bus).
+  const selectedBusLat = selectedBusId != null ? (busLocations[selectedBusId]?.lat ?? null) : null;
+  const selectedBusLng = selectedBusId != null ? (busLocations[selectedBusId]?.lng ?? null) : null;
+  const selectedBusSpeed = selectedBusId != null ? (busLocations[selectedBusId]?.speed ?? null) : null;
+  const userLat = userLocation?.lat ?? null;
+  const userLng = userLocation?.lng ?? null;
+
   useEffect(() => {
-    if (Object.keys(busLocations).length === 0) return;
+    if (selectedBusId == null || selectedBusLat == null || selectedBusLng == null || userLat == null || userLng == null) return;
+    const eta = calculateETA(
+      { lat: selectedBusLat, lng: selectedBusLng },
+      { lat: userLat, lng: userLng },
+      selectedBusSpeed ?? 30
+    );
+    setBusETAs(prev => ({ ...prev, [selectedBusId]: eta }));
+  }, [selectedBusId, selectedBusLat, selectedBusLng, userLat, userLng, selectedBusSpeed]);
 
-    setBuses(prevBuses => {
-      const updated = prevBuses.map(bus => {
-        const locationUpdate = busLocations[bus.id];
-        if (locationUpdate) {
-          // Only update if location actually changed
-          const currentLat = bus.currentLocation?.lat || 0;
-          const currentLng = bus.currentLocation?.lng || 0;
-          if (Math.abs(currentLat - locationUpdate.lat) > 0.00001 ||
-            Math.abs(currentLng - locationUpdate.lng) > 0.00001) {
-            return {
-              ...bus,
-              currentLocation: {
-                lat: locationUpdate.lat,
-                lng: locationUpdate.lng,
-                address: bus.currentLocation?.address,
-                timestamp: new Date(locationUpdate.timestamp),
-              } as Location,
-            };
-          }
-        }
-        return bus;
-      });
-      return updated;
-    });
-  }, [busLocations]);
 
   useEffect(() => {
     if (!activeTripId) {
@@ -510,17 +505,18 @@ export default function PassengerDashboard() {
 
       activeBookings.forEach((booking) => {
         const bus = buses.find((b) => b.id === booking.busId && b.isActive);
-        if (!bus || !booking.pickupLocation || !bus.currentLocation) return;
+        const busLoc = bus ? (busLocations[bus.id] ?? bus.currentLocation) : null;
+        if (!bus || !booking.pickupLocation || !busLoc) return;
 
         const level = checkProximity(
-          bus.currentLocation,
+          busLoc,
           booking.pickupLocation
         );
         if (!level) return;
 
         const distanceMeters = haversineDistance(
-          bus.currentLocation.lat,
-          bus.currentLocation.lng,
+          busLoc.lat,
+          busLoc.lng,
           booking.pickupLocation.lat,
           booking.pickupLocation.lng
         );
@@ -843,10 +839,11 @@ export default function PassengerDashboard() {
     return buses.filter((bus) => {
       if (!bus.isActive) return false;
       if (vehicleFilter !== 'all' && bus.vehicleType !== vehicleFilter) return false;
-      if (!bus.currentLocation) return false;
-      return isWithinRadius(bus.currentLocation, userLocation, NEARBY_DRIVER_RADIUS_KM);
+      const loc = busLocations[bus.id] ?? bus.currentLocation;
+      if (!loc) return false;
+      return isWithinRadius(loc, userLocation, NEARBY_DRIVER_RADIUS_KM);
     });
-  }, [buses, userLocation, vehicleFilter]);
+  }, [buses, busLocations, userLocation, vehicleFilter]);
 
   // Auth guard
   useEffect(() => {
