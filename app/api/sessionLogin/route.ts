@@ -13,28 +13,11 @@ export async function POST(request: Request) {
     try {
       auth = getFirebaseAdminAuth();
     } catch (e) {
-      console.warn('[sessionLogin] Admin SDK not configured, using Dev Mode fallback.');
-      // Dev Mode: Create a mock session if Admin SDK is missing
-      const response = NextResponse.json({ status: 'ok', uid: 'dev-user', devMode: true });
-      const expiresIn = 60 * 60 * 24 * 7 * 1000; // 7 days
-
-      response.cookies.set('session', 'dev-session-token', {
-        httpOnly: true,
-        secure: false,
-        path: '/',
-        sameSite: 'lax',
-        maxAge: expiresIn / 1000,
-      });
-
-      response.cookies.set('role', role, {
-        httpOnly: true,
-        secure: false,
-        path: '/',
-        sameSite: 'lax',
-        maxAge: expiresIn / 1000,
-      });
-
-      return response;
+      console.error('[sessionLogin] Firebase Admin SDK not configured:', e);
+      return NextResponse.json(
+        { error: 'Authentication service unavailable' },
+        { status: 500 }
+      );
     }
 
     const decoded = await auth.verifyIdToken(idToken);

@@ -3,6 +3,7 @@ import { getConnection, getServerKeypair } from '@/lib/solana/connection';
 import { createDriverVerificationBadge, BadgeMetadata } from '@/lib/solana/tokenExtensions';
 import { getAdminDb } from '@/lib/firebaseAdmin';
 import { verifyDriverProof } from '@/lib/zk/verifier';
+import { checkRateLimit } from '@/lib/utils/rateLimit';
 import {
     Transaction,
     TransactionInstruction,
@@ -50,6 +51,11 @@ export async function POST(request: Request) {
             zkPublicSignals,
             licenseNumber,
         } = body;
+
+        // ── Rate Limiting (5 attempts per driver per hour) ────────────────
+        if (driverId && !checkRateLimit(`verify-driver:${driverId}`, 5, 3_600_000)) {
+            return NextResponse.json({ error: 'Rate limit exceeded. Try again in 1 hour.' }, { status: 429 });
+        }
 
         // ── Step 1: ZK Verification ───────────────────────────────────────
         console.log("🔍 [ZK] Verifying Proof...");

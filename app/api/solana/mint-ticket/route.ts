@@ -4,6 +4,7 @@ import bs58 from 'bs58';
 import { mintTripTicketNFT, TripTicketMetadata } from '@/lib/solana/tripTicket';
 import { getDb } from '@/lib/firebaseDb';
 import { ref, update } from 'firebase/database';
+import { checkRateLimit } from '@/lib/utils/rateLimit';
 
 export async function POST(request: Request) {
     try {
@@ -12,6 +13,11 @@ export async function POST(request: Request) {
 
         if (!bookingId || !passengerWallet || !fare || !route || !driverName) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        }
+
+        // Rate limit: 10 mints per passenger per hour
+        if (passengerId && !checkRateLimit(`mint-ticket:${passengerId}`, 10, 3_600_000)) {
+            return NextResponse.json({ error: 'Rate limit exceeded. Try again in 1 hour.' }, { status: 429 });
         }
 
         const privateKeyString = process.env.SOLANA_SERVER_KEY;
