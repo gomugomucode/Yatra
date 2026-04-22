@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { calculateFareFromLocations } from '@/lib/utils/fareCalculator';
 import { VehicleTypeId } from '@/lib/types';
+import { coordSchema } from '@/lib/utils/coordSchema';
 
 export async function POST(request: Request) {
   try {
@@ -21,14 +22,16 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!pickupLocation.lat || !pickupLocation.lng) {
+    const pickupParse = coordSchema.safeParse(pickupLocation);
+    if (!pickupParse.success) {
       return NextResponse.json(
         { error: 'Invalid pickupLocation coordinates' },
         { status: 400 }
       );
     }
 
-    if (!dropoffLocation.lat || !dropoffLocation.lng) {
+    const dropoffParse = coordSchema.safeParse(dropoffLocation);
+    if (!dropoffParse.success) {
       return NextResponse.json(
         { error: 'Invalid dropoffLocation coordinates' },
         { status: 400 }
@@ -52,8 +55,8 @@ export async function POST(request: Request) {
 
     // Calculate fare
     const fare = calculateFareFromLocations(
-      pickupLocation,
-      dropoffLocation,
+      pickupParse.data,
+      dropoffParse.data,
       vehicleType,
       numberOfPassengers
     );

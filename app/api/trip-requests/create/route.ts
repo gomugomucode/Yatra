@@ -2,20 +2,12 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getFirebaseAdminAuth, getAdminDb } from '@/lib/firebaseAdmin';
 import { getMessaging } from 'firebase-admin/messaging';
+import { coordWithOptionalAddressSchema } from '@/lib/utils/coordSchema';
 
 interface TripRequestBody {
   busId: string;
   pickupLocation?: { lat: number; lng: number; address?: string };
   dropoffLocation?: { lat: number; lng: number; address?: string };
-}
-
-function isValidCoord(lat: unknown, lng: unknown): boolean {
-  return (
-    typeof lat === 'number' && typeof lng === 'number' &&
-    isFinite(lat) && isFinite(lng) &&
-    lat >= -90 && lat <= 90 &&
-    lng >= -180 && lng <= 180
-  );
 }
 
 export async function POST(request: Request) {
@@ -27,11 +19,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required field: busId' }, { status: 400 });
     }
 
-    if (pickupLocation && !isValidCoord(pickupLocation.lat, pickupLocation.lng)) {
+    const pickupParse = pickupLocation
+      ? coordWithOptionalAddressSchema.safeParse(pickupLocation)
+      : null;
+    if (pickupLocation && !pickupParse?.success) {
       return NextResponse.json({ error: 'Invalid pickup coordinates' }, { status: 400 });
     }
 
-    if (dropoffLocation && !isValidCoord(dropoffLocation.lat, dropoffLocation.lng)) {
+    const dropoffParse = dropoffLocation
+      ? coordWithOptionalAddressSchema.safeParse(dropoffLocation)
+      : null;
+    if (dropoffLocation && !dropoffParse?.success) {
       return NextResponse.json({ error: 'Invalid dropoff coordinates' }, { status: 400 });
     }
 
@@ -64,7 +62,7 @@ export async function POST(request: Request) {
     const passengerData = passengerSnap.exists() ? passengerSnap.val() as { name?: string } : {};
     const passengerName = passengerData.name || 'Passenger';
 
-    if (!pickupLocation || !Number.isFinite(pickupLocation.lat) || !Number.isFinite(pickupLocation.lng)) {
+    if (!pickupParse?.success) {
       return NextResponse.json({ error: 'Missing pickupLocation coordinates' }, { status: 400 });
     }
 
@@ -77,12 +75,12 @@ export async function POST(request: Request) {
       passengerId,
       passengerName,
       status: 'requested' as const,
-      lat: pickupLocation.lat,
-      lng: pickupLocation.lng,
+      lat: pickupParse.data.lat,
+      lng: pickupParse.data.lng,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      ...(pickupLocation ? { pickupLocation } : {}),
-      ...(dropoffLocation ? { dropoffLocation } : {}),
+      pickupLocation: pickupParse.data,
+      ...(dropoffParse?.success ? { dropoffLocation: dropoffParse.data } : {}),
     };
 
     await tripRequestRef.set(tripRequest);

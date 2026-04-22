@@ -130,6 +130,7 @@ export async function POST(request: Request) {
             txSignature: mintResult.signature,
             explorerLink: mintResult.explorerLink,
             verifiedAt: new Date().toISOString(),
+            commitment: zkResult.commitment,
             zkCommitment: zkResult.commitment,
             zkMemoSignature: memoSignature ?? null,
             isApproved: true,

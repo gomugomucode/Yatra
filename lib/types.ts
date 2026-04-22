@@ -48,6 +48,8 @@ export interface User {
   role: UserRole;
   createdAt: Date;
   solanaWallet?: string; // Phantom wallet address (for Solana features)
+  walletAddress?: string;
+  walletVerifiedAt?: string;
 }
 
 export interface Driver extends User {

@@ -20,6 +20,16 @@ let recaptchaVerifier: RecaptchaVerifier | null = null;
 
 export const getFirebaseApp = (): FirebaseApp => {
   if (!firebaseApp) {
+    const envConfig = {
+      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+      databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+    };
+
     const clientConfig: {
       apiKey: string;
       authDomain: string;
@@ -29,12 +39,12 @@ export const getFirebaseApp = (): FirebaseApp => {
       appId: string;
       databaseURL?: string;
     } = {
-      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
-      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '',
-      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
-      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
-      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '',
+      apiKey: envConfig.apiKey || '',
+      authDomain: envConfig.authDomain || '',
+      projectId: envConfig.projectId || '',
+      storageBucket: envConfig.storageBucket || '',
+      messagingSenderId: envConfig.messagingSenderId || '',
+      appId: envConfig.appId || '',
     };
 
     /**
@@ -42,15 +52,28 @@ export const getFirebaseApp = (): FirebaseApp => {
      * The warning indicates your DB lives in europe-west1.
      * We check the environment variable first, otherwise we default to the European URL.
      */
-    if (process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL) {
-      clientConfig.databaseURL = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL;
+    if (envConfig.databaseURL) {
+      clientConfig.databaseURL = envConfig.databaseURL;
     } else if (clientConfig.projectId) {
       // Changed from asia-southeast1 to europe-west1 to match your Firebase warning
       clientConfig.databaseURL = `https://${clientConfig.projectId}-default-rtdb.europe-west1.firebasedatabase.app`;
     }
 
     if (!clientConfig.apiKey) {
-      throw new Error('Missing Firebase client configuration. Please set NEXT_PUBLIC_FIREBASE_* env vars.');
+      const missingKeys = Object.entries({
+        NEXT_PUBLIC_FIREBASE_API_KEY: envConfig.apiKey,
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: envConfig.authDomain,
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: envConfig.projectId,
+        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: envConfig.storageBucket,
+        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: envConfig.messagingSenderId,
+        NEXT_PUBLIC_FIREBASE_APP_ID: envConfig.appId,
+      })
+        .filter(([, value]) => !value)
+        .map(([key]) => key);
+
+      throw new Error(
+        `Missing Firebase client configuration. Missing keys: ${missingKeys.join(', ')}`
+      );
     }
 
     firebaseApp = getApps().length === 0 ? initializeApp(clientConfig) : getApps()[0]!;

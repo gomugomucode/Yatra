@@ -5,6 +5,7 @@ import { getDatabase } from 'firebase-admin/database';
 import { initializeApp, getApps, cert, type ServiceAccount } from 'firebase-admin/app';
 import { calculateFareFromLocations } from '@/lib/utils/fareCalculator';
 import { Booking, VehicleTypeId } from '@/lib/types';
+import { coordWithOptionalAddressSchema } from '@/lib/utils/coordSchema';
 
 // Initialize Firebase Admin for database access
 function getAdminApp() {
@@ -70,6 +71,22 @@ export async function POST(request: Request) {
       );
     }
 
+    const pickupParse = coordWithOptionalAddressSchema.safeParse(pickupLocation);
+    if (!pickupParse.success) {
+      return NextResponse.json(
+        { error: 'Invalid pickupLocation coordinates' },
+        { status: 400 }
+      );
+    }
+
+    const dropoffParse = coordWithOptionalAddressSchema.safeParse(dropoffLocation);
+    if (!dropoffParse.success) {
+      return NextResponse.json(
+        { error: 'Invalid dropoffLocation coordinates' },
+        { status: 400 }
+      );
+    }
+
     // Initialize Firebase Admin
     const adminApp = getAdminApp();
     const db = getDatabase(adminApp);
@@ -101,8 +118,8 @@ export async function POST(request: Request) {
     let fare = 0;
     try {
       fare = calculateFareFromLocations(
-        pickupLocation,
-        dropoffLocation,
+        pickupParse.data,
+        dropoffParse.data,
         vehicleType as VehicleTypeId,
         numberOfPassengers
       );
@@ -162,11 +179,11 @@ export async function POST(request: Request) {
       email: email || null,
       numberOfPassengers,
       pickupLocation: {
-        ...pickupLocation,
+        ...pickupParse.data,
         timestamp: new Date(),
       },
       dropoffLocation: {
-        ...dropoffLocation,
+        ...dropoffParse.data,
         timestamp: new Date(),
       },
       fare,

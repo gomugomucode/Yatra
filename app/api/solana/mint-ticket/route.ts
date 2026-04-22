@@ -1,42 +1,52 @@
 import { NextResponse } from 'next/server';
-import { Connection, Keypair } from '@solana/web3.js';
-import bs58 from 'bs58';
 import { mintTripTicketNFT, TripTicketMetadata } from '@/lib/solana/tripTicket';
-import { getDb } from '@/lib/firebaseDb';
-import { ref, update } from 'firebase/database';
 import { checkRateLimit } from '@/lib/utils/rateLimit';
+import { getAdminDb } from '@/lib/firebaseAdmin';
+import { getConnection, getServerKeypair } from '@/lib/solana/connection';
 
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { bookingId, passengerId, passengerWallet, fare, route, driverName } = body;
+        const { bookingId, passengerId, fare, route, driverName } = body;
 
-        if (!bookingId || !passengerWallet || !fare || !route || !driverName) {
+        if (!bookingId || !passengerId || !fare || !route || !driverName) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        // Rate limit: 10 mints per passenger per hour
-        if (passengerId && !checkRateLimit(`mint-ticket:${passengerId}`, 10, 3_600_000)) {
+        if (!checkRateLimit(`mint-ticket:${passengerId}`, 10, 3_600_000)) {
             return NextResponse.json({ error: 'Rate limit exceeded. Try again in 1 hour.' }, { status: 429 });
         }
 
-        const privateKeyString = process.env.SOLANA_SERVER_KEY;
-        if (!privateKeyString) {
-            console.error('[MINT] SOLANA_SERVER_KEY is not defined in env variables');
-            return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+        const adminDb = getAdminDb();
+        const existingReceiptSnap = await adminDb.ref(`receipts/${bookingId}`).get();
+        if (existingReceiptSnap.exists()) {
+            return NextResponse.json({
+                success: true,
+                minted: true,
+                idempotent: true,
+                receipt: existingReceiptSnap.val(),
+            });
         }
 
-        // Decode base58 private key
-        let serverKeypair: Keypair;
-        try {
-            serverKeypair = Keypair.fromSecretKey(bs58.decode(privateKeyString));
-        } catch (e) {
-            console.error('[MINT] Failed to parse SOLANA_SERVER_KEY:', e);
-            return NextResponse.json({ error: 'Server key formulation error' }, { status: 500 });
+        const passengerSnap = await adminDb.ref(`users/${passengerId}`).get();
+        if (!passengerSnap.exists()) {
+            return NextResponse.json({ error: 'Passenger profile not found' }, { status: 404 });
         }
 
-        // Init connection to Solana Devnet
-        const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+        const passengerData = passengerSnap.val() as { walletAddress?: string; solanaWallet?: string };
+        const recipientAddress = passengerData.walletAddress || passengerData.solanaWallet;
+
+        if (!recipientAddress) {
+            console.warn(`[MINT] Passenger ${passengerId} has no verified wallet. Skipping mint.`);
+            return NextResponse.json({
+                success: true,
+                minted: false,
+                reason: 'no_wallet',
+            });
+        }
+
+        const connection = getConnection();
+        const serverKeypair = getServerKeypair();
 
         const metadataDetails: TripTicketMetadata = {
             tripId: bookingId,
@@ -46,39 +56,39 @@ export async function POST(request: Request) {
             tripDate: new Date().toISOString(),
         };
 
-        // Execute the Mint
         const receipt = await mintTripTicketNFT(
             connection,
             serverKeypair,
-            passengerWallet,
+            recipientAddress,
             metadataDetails
         );
 
-        // Update Firebase bookings record
-        // In Yatra, ride requests/bookings are stored in `bookings/{passengerId}/` or maybe `trips/{bookingId}`
-        // Let's update `trips/{bookingId}` or `bookings/{passengerId}/{bookingId}`
-        // Usually, the app writes to `bookings/{userId}/{bookingId}`.
-        const db = getDb();
-        const passengerIdToUse = passengerId || bookingId;
+        const mintedAt = new Date().toISOString();
+        const receiptRecord = {
+            passengerId,
+            walletAddress: recipientAddress,
+            mintAddress: receipt.mintAddress,
+            txSignature: receipt.signature,
+            explorerLink: receipt.explorerLink,
+            mintedAt,
+            timestamp: mintedAt,
+        };
 
-        // Both `bookings` and `trips` might need it. The UI (YatraProfileDrawer) binds to `bookings/{uid}/{passenger-role}`.
-        // wait, `subscribeToBookings(currentUser.uid, 'passenger')` queries `bookings/{passengerId}`.
-        // So we definitely must update `bookings/${passengerIdToUse}/${bookingId}`.
-
-        const bookingRef = ref(db, `bookings/${passengerIdToUse}/${bookingId}`);
-
-        await update(bookingRef, {
+        await adminDb.ref(`bookings/${passengerId}/${bookingId}`).update({
             receipt: {
                 status: 'minted',
                 txSignature: receipt.signature,
                 mintAddress: receipt.mintAddress,
                 explorerLink: receipt.explorerLink,
-            }
+                mintedAt,
+            },
         });
+
+        await adminDb.ref(`receipts/${bookingId}`).set(receiptRecord);
 
         console.log(`[MINT] Successfully minted NFT ${receipt.mintAddress} for booking ${bookingId}`);
 
-        return NextResponse.json({ success: true, receipt });
+        return NextResponse.json({ success: true, minted: true, receipt: receiptRecord });
     } catch (error: any) {
         console.error('[MINT] Final Error:', error);
         return NextResponse.json({ error: error.message || 'Unknown error' }, { status: 500 });

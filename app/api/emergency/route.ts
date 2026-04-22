@@ -1,9 +1,18 @@
 import { NextResponse } from 'next/server';
+import { coordSchema } from '@/lib/utils/coordSchema';
 
 export async function POST(request: Request) {
     try {
         const body = await request.json();
         const { busId, busNumber, driverName, location, type } = body;
+
+        const locationParse = coordSchema.safeParse(location);
+        if (!locationParse.success) {
+            return NextResponse.json(
+                { success: false, error: 'Invalid emergency location coordinates' },
+                { status: 400 }
+            );
+        }
 
         // In a real app, this would integrate with Twilio or a similar service
         // to place an automated voice call to emergency services or the fleet manager.
@@ -13,7 +22,7 @@ export async function POST(request: Request) {
         console.log(`Type: ${type.toUpperCase()}`);
         console.log(`Bus: ${busNumber} (${busId})`);
         console.log(`Driver: ${driverName}`);
-        console.log(`Location: ${location.lat}, ${location.lng}`);
+        console.log(`Location: ${locationParse.data.lat}, ${locationParse.data.lng}`);
         console.log('Action: Simulating call to 100...');
         console.log('--------------------------------');
 

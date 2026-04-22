@@ -60,7 +60,7 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = isControlled ? onOpenChange : setInternalOpen;
 
-  const wallet = userData?.solanaWallet;
+  const wallet = userData?.walletAddress || userData?.solanaWallet;
   const displayName = userData?.name || currentUser?.email?.split('@')[0] || 'Rider';
   const initial = displayName.charAt(0).toUpperCase();
 

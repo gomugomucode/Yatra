@@ -124,13 +124,13 @@ export async function getTripTicketRentBreakdown(
 export async function mintTripTicketNFT(
     connection: Connection,
     serverKeypair: Keypair,
-    passengerWalletAddress: string,
+    recipientAddress: string,
     metadataDetails: TripTicketMetadata,
     options: TripTicketMintOptions = {}
 ) {
     console.log("🛠️ [Trip Ticket] Initializing Ticket Mint...");
 
-    const passengerPubkey = new PublicKey(passengerWalletAddress);
+    const passengerPubkey = new PublicKey(recipientAddress);
     const mintKeypair = Keypair.generate();
     const mintPubkey = mintKeypair.publicKey;
     const permanentDelegate = options.permanentDelegate ?? serverKeypair.publicKey;

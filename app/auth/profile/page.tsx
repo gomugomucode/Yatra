@@ -146,6 +146,20 @@ function ProfilePageContent() {
     }
   }, [currentUser, userData, loading, isSubmitting]);
 
+  // Redirect to auth if no role is found
+  useEffect(() => {
+    if (!loading && currentUser && !effectiveRole) {
+      router.push('/auth');
+    }
+  }, [loading, currentUser, effectiveRole, router]);
+
+  // Redirect to auth if invalid role
+  useEffect(() => {
+    if (!loading && currentUser && (!effectiveRole || (effectiveRole !== 'driver' && effectiveRole !== 'passenger'))) {
+      router.push('/auth');
+    }
+  }, [loading, currentUser, effectiveRole, router]);
+
   // ── 4. CONDITIONAL RENDERING (Only after all hooks are declared) ──
 
   if (loading || (!currentUser && !isSubmitting)) {
@@ -159,10 +173,16 @@ function ProfilePageContent() {
     );
   }
 
-  // If auth is done but no role is found, go back to selection
+  // If auth is done but no role is found, show loading while redirecting
   if (!effectiveRole) {
-    router.push('/auth');
-    return null;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-cyan-400 mx-auto mb-4" />
+          <p className="text-slate-400">Redirecting to role selection...</p>
+        </div>
+      </div>
+    );
   }
 
   // ── 5. HANDLERS ──
@@ -336,11 +356,16 @@ function ProfilePageContent() {
     );
   }
 
-  // No role — user arrived at /auth/profile without going through the landing page.
-  // Just send them back to pick a role. No toast in the render path.
+  // If auth is done but no valid role is found, show loading while redirecting
   if (!effectiveRole || (effectiveRole !== 'driver' && effectiveRole !== 'passenger')) {
-    router.push('/auth');
-    return null;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-cyan-400 mx-auto mb-4" />
+          <p className="text-slate-400">Redirecting to role selection...</p>
+        </div>
+      </div>
+    );
   }
 
   const isDriver = effectiveRole === 'driver';

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import BookingPanel from '@/components/passenger/BookingPanel';
 import WalletSettings from '@/components/passenger/WalletSettings';
 import TripHistory from '@/components/passenger/TripHistory';
@@ -200,12 +200,6 @@ export default function PassengerDashboard() {
   // Subscribe to real-time location updates for each active bus
   // We use a stable key for buses to prevent infinite loops when updating bus locations
   const activeBusIds = buses.filter(b => b.isActive).map(b => b.id).join(',');
-  const targetBuses = useMemo(
-    () => hailedDriverId
-      ? buses.filter((bus) => bus.id === hailedDriverId && bus.isActive)
-      : buses.filter((bus) => bus.isActive),
-    [buses, hailedDriverId]
-  );
   const selectedBusId = selectedBus?.id ?? null;
   const selectedDriverName = selectedBus?.driverName ?? '';
 
@@ -220,6 +214,10 @@ export default function PassengerDashboard() {
         return focused ? { [hailedDriverId]: focused } : {};
       });
     }
+
+    const targetBuses = hailedDriverId
+      ? buses.filter((bus) => bus.id === hailedDriverId && bus.isActive)
+      : buses.filter((bus) => bus.isActive);
 
     targetBuses.forEach(bus => {
       if (bus.isActive) {
@@ -254,7 +252,7 @@ export default function PassengerDashboard() {
       console.log('[PASSENGER] Cleaning up location listeners');
       unsubscribes.forEach(unsub => unsub());
     };
-  }, [activeBusIds, hailedDriverId, selectedBusId, targetBuses, userLocation]);
+  }, [activeBusIds, hailedDriverId, selectedBusId, userLocation]);
 
   // Update bus locations in buses array when real-time updates arrive
   useEffect(() => {

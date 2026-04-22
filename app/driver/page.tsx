@@ -766,26 +766,8 @@ export default function DriverDashboard() {
         truePassengerId = passengerId;
       }
 
-      // Firebase lookup for passenger's Solana wallet
-      const passengerRef = ref(db, `users/${truePassengerId}`);
-      const passengerSnap = await get(passengerRef);
-
-      if (!passengerSnap.exists()) {
-        console.log(`[Trip Ticket] Passenger ${truePassengerId} does not exist.`);
-        return;
-      }
-
-      const passengerData = passengerSnap.val();
-      const passengerWallet = passengerData.solanaWallet;
-
-      if (!passengerWallet) {
-        console.log(`[Trip Ticket] Passenger ${truePassengerId} has no linked Solana Wallet.`);
-        return; // Silently exit if no wallet
-      }
-
       const payload = {
         passengerId: truePassengerId,
-        passengerWallet,
         bookingId,
         fare: actualFare,
         route: selectedBus.route || 'Local Trip',
@@ -801,10 +783,15 @@ export default function DriverDashboard() {
         body: JSON.stringify(payload),
       }).then(async (res) => {
         const data = await res.json();
-        if (data.success) {
+        if (data.success && data.minted) {
           toast({
             title: 'Trip Ticket Minted! 🎉',
-            description: `Sent to ${passengerWallet.slice(0, 4)}...${passengerWallet.slice(-4)}`,
+            description: 'Receipt was minted to the passenger wallet.',
+          });
+        } else if (data.success && data.reason === 'no_wallet') {
+          toast({
+            title: 'Trip completed',
+            description: 'Passenger has no verified wallet, so no NFT receipt was minted.',
           });
         } else {
           console.error('[Trip Ticket] Minting API Error:', data.error);

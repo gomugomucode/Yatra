@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
 import OfflineBanner from "@/components/shared/OfflineBanner";
 import PwaBootstrap from "@/components/shared/PwaBootstrap";
+import WalletProviders from "@/components/providers/WalletProviderWrapper";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -56,13 +57,15 @@ export default function RootLayout({
       <body
         className={`${outfit.variable} ${jetbrainsMono.variable} ${mukta.variable} antialiased font-sans`}
       >
-        <AuthProvider>
-          <PwaBootstrap />
-          {children}
-          <Toaster />
-          <SonnerToaster richColors position="top-center" duration={5000} />
-          <OfflineBanner />
-        </AuthProvider>
+        <WalletProviders>
+          <AuthProvider>
+            <PwaBootstrap />
+            {children}
+            <Toaster />
+            <SonnerToaster richColors position="top-center" duration={5000} />
+            <OfflineBanner />
+          </AuthProvider>
+        </WalletProviders>
       </body>
     </html>
   );
