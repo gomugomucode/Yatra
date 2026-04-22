@@ -739,7 +739,7 @@ export default function DriverDashboard() {
       // The `passengerId` argument here is actually the booking ID coming from the UI List
       const bookingId = passengerId;
 
-      // We need to find the `bookings/*/bookingId` to get the true passengerId 
+      // We need to find the `bookings/*/bookingId` to get the true passengerId
       // Actually, since bookings are stored under `bookings/{passengerId}/{bookingId}` or `bookings/{busId}/{bookingId}`,
       // Yatra's `subscribeToBookings` fetches all `bookings` and filters. Let's fetch `bookings` root and find it.
       const bookingsRef = ref(db, 'bookings');
@@ -892,11 +892,11 @@ export default function DriverDashboard() {
 
   if (loading || !currentUser || (role && role !== 'driver')) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-linear-to-br from-slate-950 via-blue-950 to-slate-950 flex items-center justify-center">
         <div className="text-center">
           <div className="relative w-20 h-20 mx-auto mb-6">
             <div className="absolute inset-0 bg-cyan-500/20 rounded-full animate-ping"></div>
-            <div className="relative bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl w-full h-full flex items-center justify-center shadow-2xl shadow-cyan-500/50">
+            <div className="relative bg-linear-to-br from-cyan-500 to-blue-600 rounded-2xl w-full h-full flex items-center justify-center shadow-2xl shadow-cyan-500/50">
               <BusIcon className="w-10 h-10 text-white animate-pulse" />
             </div>
           </div>
@@ -913,7 +913,7 @@ export default function DriverDashboard() {
 
       {/* Passenger Reached full-screen alert */}
       {showPassengerReachedAlert && (
-        <div className="fixed inset-0 z-[1400] flex flex-col items-center justify-center text-white px-6 text-center" style={{ background: 'rgba(6,182,212,0.97)' }}>
+        <div className="fixed inset-0 z-1400 flex flex-col items-center justify-center text-white px-6 text-center" style={{ background: 'rgba(6,182,212,0.97)' }}>
           <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-6">
             <MapPin className="w-8 h-8 text-white" />
           </div>
@@ -1182,14 +1182,14 @@ export default function DriverDashboard() {
       />
 
       {/* Accident Alert */}
-      <div className="fixed inset-x-0 bottom-14 z-[1100] flex justify-center pointer-events-none">
+      <div className="fixed inset-x-0 bottom-14 z-1100 flex justify-center pointer-events-none">
         <div className="pointer-events-auto">
           <AccidentAlert isOpen={isAccidentDetected} onConfirm={handleAccidentConfirm} onCancel={handleAccidentCancel} />
         </div>
       </div>
 
       {/* Fixed bottom bar: status + SOS */}
-      <div className="fixed inset-x-0 bottom-0 z-[1200] border-t border-slate-800/60 backdrop-blur-md px-4 py-2.5 flex items-center justify-between" style={{ background: 'rgba(11,14,20,0.97)' }}>
+      <div className="fixed inset-x-0 bottom-0 z-1200 border-t border-slate-800/60 backdrop-blur-md px-4 py-2.5 flex items-center justify-between" style={{ background: 'rgba(11,14,20,0.97)' }}>
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-400' : 'bg-slate-600'}`} />
           <span className="text-[11px] font-medium text-slate-400">{isOnline ? 'Live tracking active' : 'Offline'}</span>

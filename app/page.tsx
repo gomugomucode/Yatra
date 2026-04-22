@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { BusFront, Users, MapPin, Clock, Navigation, Smartphone, ArrowRight, Zap, Star } from 'lucide-react';
+import { BusFront, Users, ArrowRight, Star } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import YatraHero from '@/components/YatraHero';
 import { subscribeToBuses } from '@/lib/firebaseDb';
@@ -290,7 +290,7 @@ export default function Home() {
       </div>
 
       {/* How It Works */}
-      <div className="relative bg-gradient-to-b from-slate-950 to-slate-900 py-24 md:py-32">
+      <div className="relative bg-linear-to-b from-slate-950 to-slate-900 py-24 md:py-32">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-20">
             <h2 className="text-5xl md:text-6xl font-black text-white mb-6 tracking-tight">
@@ -304,9 +304,9 @@ export default function Home() {
           <div className="space-y-12">
             {/* Step 1 */}
             <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
-              <div className="flex-shrink-0">
+              <div className="shrink-0">
                 <div className="relative w-32 h-32">
-                  <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full animate-pulse"></div>
+                  <div className="absolute inset-0 bg-linear-to-br from-cyan-500 to-blue-600 rounded-full animate-pulse"></div>
                   <div className="absolute inset-2 bg-slate-900 rounded-full flex items-center justify-center">
                     <span className="text-6xl font-black text-white">1</span>
                   </div>
@@ -322,14 +322,14 @@ export default function Home() {
 
             {/* Connector */}
             <div className="flex justify-center">
-              <div className="w-1 h-16 bg-gradient-to-b from-blue-500 to-purple-500 rounded-full"></div>
+              <div className="w-1 h-16 bg-linear-to-b from-blue-500 to-purple-500 rounded-full"></div>
             </div>
 
             {/* Step 2 */}
             <div className="flex flex-col md:flex-row-reverse items-center gap-8 md:gap-12">
-              <div className="flex-shrink-0">
+              <div className="shrink-0">
                 <div className="relative w-32 h-32">
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full animate-pulse delay-300"></div>
+                  <div className="absolute inset-0 bg-linear-to-br from-purple-500 to-pink-600 rounded-full animate-pulse delay-300"></div>
                   <div className="absolute inset-2 bg-slate-900 rounded-full flex items-center justify-center">
                     <span className="text-6xl font-black text-white">2</span>
                   </div>
@@ -345,14 +345,14 @@ export default function Home() {
 
             {/* Connector */}
             <div className="flex justify-center">
-              <div className="w-1 h-16 bg-gradient-to-b from-purple-500 to-green-500 rounded-full"></div>
+              <div className="w-1 h-16 bg-linear-to-b from-purple-500 to-green-500 rounded-full"></div>
             </div>
 
             {/* Step 3 */}
             <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
-              <div className="flex-shrink-0">
+              <div className="shrink-0">
                 <div className="relative w-32 h-32">
-                  <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full animate-pulse delay-700"></div>
+                  <div className="absolute inset-0 bg-linear-to-br from-green-500 to-emerald-600 rounded-full animate-pulse delay-700"></div>
                   <div className="absolute inset-2 bg-slate-900 rounded-full flex items-center justify-center">
                     <span className="text-6xl font-black text-white">3</span>
                   </div>
@@ -376,7 +376,7 @@ export default function Home() {
 
       {/* Final CTA */}
       <div className="relative bg-slate-900 py-24 md:py-32">
-        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10"></div>
+        <div className="absolute inset-0 bg-linear-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10"></div>
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="mb-12">
             <div className="flex justify-center gap-2 mb-8">
@@ -387,7 +387,7 @@ export default function Home() {
             <h2 className="text-5xl md:text-6xl font-black text-white mb-6 tracking-tight leading-tight">
               Start tracking buses
               <br />
-              <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+              <span className="bg-linear-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
                 right now
               </span>
             </h2>
@@ -407,7 +407,7 @@ export default function Home() {
                   <Button
                     size="lg"
                     onClick={() => handleRoleSwitch('passenger')}
-                    className="group w-full sm:w-auto h-20 px-12 text-xl font-bold rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 shadow-2xl shadow-cyan-500/50 transition-all duration-300 hover:scale-105"
+                    className="group w-full sm:w-auto h-20 px-12 text-xl font-bold rounded-2xl bg-linear-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 shadow-2xl shadow-cyan-500/50 transition-all duration-300 hover:scale-105"
                   >
                     <Users className="w-7 h-7 mr-3" />
                     Get Started Now
@@ -428,7 +428,7 @@ export default function Home() {
                   <Link href="/auth?role=passenger&redirect=/passenger">
                     <Button
                       size="lg"
-                      className="group w-full sm:w-auto h-20 px-12 text-xl font-bold rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 shadow-2xl shadow-cyan-500/50 transition-all duration-300 hover:scale-105"
+                      className="group w-full sm:w-auto h-20 px-12 text-xl font-bold rounded-2xl bg-linear-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 shadow-2xl shadow-cyan-500/50 transition-all duration-300 hover:scale-105"
                     >
                       <Users className="w-7 h-7 mr-3" />
                       Get Started Now

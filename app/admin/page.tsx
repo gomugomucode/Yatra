@@ -24,7 +24,7 @@ export default function AdminDashboard() {
             if (!currentUser || role !== 'admin') {
                 // For hackathon demo ease, we might want to allow easy access or redirect
                 // But let's stick to the plan: redirect if not admin
-                // router.replace('/auth'); 
+                // router.replace('/auth');
                 // Actually, let's just show a warning for now or allow it if I manually set role
             }
         }
@@ -77,7 +77,7 @@ export default function AdminDashboard() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Live Map - Takes up 2 columns */}
-                    <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-4 h-[500px] flex flex-col">
+                    <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-4 h-125 flex flex-col">
                         <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                             Live Fleet Map

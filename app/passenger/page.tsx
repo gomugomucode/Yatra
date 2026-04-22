@@ -858,7 +858,7 @@ export default function PassengerDashboard() {
 
   if (loading || !currentUser || (role && role !== 'passenger')) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 flex flex-col">
+      <div className="min-h-screen bg-linear-to-br from-slate-950 via-blue-950 to-slate-950 flex flex-col">
         {/* Skeleton Header */}
         <div className="h-16 border-b border-slate-800 bg-slate-950/80 p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -877,7 +877,7 @@ export default function PassengerDashboard() {
             <div className="text-center">
               <div className="relative w-20 h-20 mx-auto mb-6">
                 <div className="absolute inset-0 bg-cyan-500/20 rounded-full animate-ping"></div>
-                <div className="relative bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl w-full h-full flex items-center justify-center shadow-2xl shadow-cyan-500/50">
+                <div className="relative bg-linear-to-br from-cyan-500 to-blue-600 rounded-2xl w-full h-full flex items-center justify-center shadow-2xl shadow-cyan-500/50">
                   <Navigation className="w-10 h-10 text-white animate-pulse" />
                 </div>
               </div>
@@ -899,7 +899,7 @@ export default function PassengerDashboard() {
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col">
       {showRideHereAlert && (
-        <div className="fixed inset-0 z-[1200] bg-emerald-600/95 flex flex-col items-center justify-center text-white px-6 text-center">
+        <div className="fixed inset-0 z-1200 bg-emerald-600/95 flex flex-col items-center justify-center text-white px-6 text-center">
           <p className="text-4xl font-extrabold tracking-wide">YOUR RIDE IS HERE</p>
           <p className="mt-3 text-sm opacity-90">Your driver is within 10 meters.</p>
           <Button
@@ -989,7 +989,7 @@ export default function PassengerDashboard() {
           </div>
 
           {/* Right section - Actions */}
-          <div className="flex items-center gap-3 relative z-[100] pointer-events-auto">
+          <div className="flex items-center gap-3 relative z-100 pointer-events-auto">
             <DetailedBookingModal />
 
             {/* STABLE AVATAR LOGIC */}
@@ -999,8 +999,8 @@ export default function PassengerDashboard() {
               className="w-10 h-10 rounded-full bg-slate-900 border-2 border-cyan-500/50 shadow-[0_0_15px_rgba(34,211,238,0.3)]"
               onClick={() => setIsDrawerOpen(true)}
             >
-              {/* Check if userData and the initial exist. 
-       If it's still loading, show a loading spinner or the 'Y' anyway 
+              {/* Check if userData and the initial exist.
+       If it's still loading, show a loading spinner or the 'Y' anyway
        instead of jumping to the logout door.
     */}
               {userData?.name ? (
@@ -1106,7 +1106,7 @@ export default function PassengerDashboard() {
             role="status"
             aria-live="polite"
             aria-atomic="true"
-            className="absolute top-4 left-1/2 -translate-x-1/2 z-[400] flex items-center gap-2 px-4 py-2 rounded-full shadow-lg backdrop-blur-sm"
+            className="absolute top-4 left-1/2 -translate-x-1/2 z-400 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg backdrop-blur-sm"
             style={{ background: etaToDestination !== null ? '#1d4ed8cc' : '#059669cc' }}
           >
             <span className="text-lg" aria-hidden="true">{etaToDestination !== null ? '🏁' : '🚗'}</span>
@@ -1120,8 +1120,8 @@ export default function PassengerDashboard() {
 
         {/* Pickup guide — shown when a driver is selected but no pickup set */}
         {selectedBus && !pickupLocation && requestStatus === 'idle' && (
-          <div className="absolute bottom-4 left-4 right-4 z-[400] bg-slate-900 border border-slate-700 rounded-xl p-4 flex items-center gap-3 text-sm shadow-lg animate-in slide-in-from-bottom-4 fade-in duration-300">
-            <MapPin className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+          <div className="absolute bottom-4 left-4 right-4 z-400 bg-slate-900 border border-slate-700 rounded-xl p-4 flex items-center gap-3 text-sm shadow-lg animate-in slide-in-from-bottom-4 fade-in duration-300">
+            <MapPin className="w-5 h-5 text-emerald-500 shrink-0" />
             <span className="text-slate-300 flex-1">Tap the map to set your pickup point, or use your current location</span>
             <Button size="sm" variant="outline" className="text-xs shrink-0"
               onClick={() => {
@@ -1138,7 +1138,7 @@ export default function PassengerDashboard() {
 
         {/* HAIL button — only shown when driver AND pickup are both set */}
         {selectedBus && pickupLocation && requestStatus === 'idle' && (
-          <div className="absolute bottom-4 left-4 right-4 z-[400] animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="absolute bottom-4 left-4 right-4 z-400 animate-in slide-in-from-bottom-4 fade-in duration-300">
             <Button
               className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2"
               onClick={() => handleBusSelect(selectedBus)}
@@ -1151,7 +1151,7 @@ export default function PassengerDashboard() {
 
         {/* Waiting banner — shown while request is pending, with cancel button */}
         {requestStatus === 'requesting' && (
-          <div className="absolute bottom-4 left-4 right-4 z-[400] bg-slate-900/95 border border-amber-500/30 rounded-xl px-4 py-3 flex items-center gap-3 shadow-lg animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="absolute bottom-4 left-4 right-4 z-400 bg-slate-900/95 border border-amber-500/30 rounded-xl px-4 py-3 flex items-center gap-3 shadow-lg animate-in slide-in-from-bottom-4 fade-in duration-300">
             <div className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin shrink-0" />
             <span className="text-amber-200 text-sm font-medium flex-1">Waiting for driver to accept…</span>
             <Button
