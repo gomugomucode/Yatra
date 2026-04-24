@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import DriverPanel from '@/components/driver/DriverPanel';
+import { DriverProfileDrawer } from '@/components/driver/DriverProfileDrawer';
 import PassengerList from '@/components/driver/PassengerList';
 import VerificationPanel from '@/components/driver/VerificationPanel';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,7 @@ import TripRequestPanel from '@/components/driver/TripRequestPanel';
 import { TripStatus } from '@/lib/types';
 import { addOfflinePassenger, removeOfflinePassenger } from '@/lib/seatManagement';
 import { useToast } from '@/components/ui/use-toast';
+import { updateDriverReputation, getDriverReputation } from '@/lib/solana/trrl';
 import {
   Dialog,
   DialogContent,
@@ -461,10 +463,22 @@ export default function DriverDashboard() {
     if (!activeTripRequest) return;
     try {
       await updateTripStatus(activeTripRequest.id, 'completed');
+      
       const tripRecordId = activeTripRequest.bookingId ?? activeTripRequest.passengerId;
       if (tripRecordId) {
         await handlePassengerDropoff(tripRecordId);
       }
+
+      // Update TRRL Reputation
+      if (currentUser && driverWalletAddress) {
+        const currentRep = await getDriverReputation(currentUser.uid);
+        await updateDriverReputation(currentUser.uid, driverWalletAddress, {
+          totalTrips: (currentRep?.totalTrips || 0) + 1,
+          completedTrips: (currentRep?.completedTrips || 0) + 1,
+          zkVerified: !!driverProfile?.verificationBadge?.ageVerified,
+        });
+      }
+
       setRatingTripId(activeTripRequest.id);
       setRatingPassengerName(activeTripRequest.passengerName);
       setActiveTripRequest(null);
@@ -974,31 +988,17 @@ export default function DriverDashboard() {
               {locationEnabled ? 'LIVE' : 'GO LIVE'}
             </button>
 
-            <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="icon" className="w-9 h-9 rounded-full bg-slate-900 border border-slate-700 hover:border-slate-600">
-                  {isProfileStable ? (
-                    <span className="text-sm font-bold text-cyan-400">{userData?.name?.[0].toUpperCase() ?? '?'}</span>
-                  ) : (
-                    <div className="h-3.5 w-3.5 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-                  )}
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-xs mx-auto">
-                <DialogHeader>
-                  <DialogTitle className="text-white">{userData?.name ?? 'Driver'}</DialogTitle>
-                  <DialogDescription className="text-slate-400 text-sm">{currentUser?.email ?? ''}</DialogDescription>
-                </DialogHeader>
-                <div className="py-2">
-                  <Button variant="destructive" className="w-full" onClick={async () => { setShowProfileDialog(false); await signOut(); }}>
-                    Sign Out
-                  </Button>
-                </div>
-                <DialogFooter>
-                  <DialogClose asChild><Button variant="ghost" className="text-slate-400 w-full">Cancel</Button></DialogClose>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <button
+              type="button"
+              onClick={() => setShowProfileDialog(true)}
+              className="w-10 h-10 rounded-full bg-[#0b0f1a] border border-slate-700 text-cyan-300 hover:bg-slate-800 shadow-md flex items-center justify-center transition-colors"
+            >
+              <span className="text-sm font-bold">
+                {userData?.role === 'driver' ? (userData.name?.charAt(0).toUpperCase() || 'D') : 'D'}
+              </span>
+            </button>
+
+            <DriverProfileDrawer open={showProfileDialog} onOpenChange={setShowProfileDialog} />
           </div>
         </div>
       </header>
