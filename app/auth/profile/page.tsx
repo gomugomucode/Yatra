@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Bus, User2, Loader2, Upload, Camera, MapPin, Shield, Phone, Mail, CreditCard, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Bus, User2, Loader2, Upload, Camera, MapPin, Shield, Phone, Mail, CreditCard, CheckCircle2, ArrowRight, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -31,10 +31,15 @@ const driverSchema = z.object({
   vehicleType: z.enum(['bus', 'others', 'taxi', 'bike']),
   vehicleNumber: z.string().min(1, 'Vehicle number is required'),
   licenseNumber: z.string().min(1, 'License number is required'),
+  solanaWallet: z.string().min(32, 'Valid Solana wallet is required').max(44),
   route: z.string().min(1, 'Route is required'),
   capacity: z.number().min(1).max(100),
   profileImage: z.string().optional(),
   vehicleImage: z.string().optional(),
+  // ZK Fields (optional in Zod but populated by onboarding)
+  zkProof: z.any().optional(),
+  zkPublicSignals: z.array(z.string()).optional(),
+  zkCommitment: z.string().optional(),
 });
 
 const passengerSchema = z.object({
@@ -108,6 +113,7 @@ function ProfilePageContent() {
       vehicleType: 'bus',
       vehicleNumber: '',
       licenseNumber: '',
+      solanaWallet: '',
       route: '',
       capacity: 40,
     },
@@ -240,6 +246,15 @@ function ProfilePageContent() {
         role: 'driver',
         capacity: finalCapacity,
         isApproved: false,
+        solanaWallet: data.solanaWallet,
+        verificationBadge: data.zkProof ? {
+          mintAddress: 'PENDING_MINT', // Will be updated by the minting API if needed
+          txSignature: 'PENDING',
+          explorerLink: '',
+          verifiedAt: new Date().toISOString(),
+          zkCommitment: data.zkCommitment,
+          ageVerified: true
+        } : undefined
       });
 
       const rtdb = getDatabase(getFirebaseApp());
@@ -356,11 +371,17 @@ function ProfilePageContent() {
                 ...driverForm.getValues(),
                 name: data.name || driverForm.getValues('name'),
                 licenseNumber: data.licenseNumber || driverForm.getValues('licenseNumber'),
+                vehicleNumber: data.vehicleNumber || driverForm.getValues('vehicleNumber'),
+                solanaWallet: data.solanaWallet || driverForm.getValues('solanaWallet'),
+                zkProof: data.zkProof,
+                zkPublicSignals: data.zkPublicSignals,
+                zkCommitment: data.zkCommitment,
               });
             } else {
               passengerForm.reset({
                 ...passengerForm.getValues(),
                 name: data.name || passengerForm.getValues('name'),
+                solanaWallet: data.solanaWallet || passengerForm.getValues('solanaWallet'),
               });
             }
             setShowOnboarding(false);
@@ -656,6 +677,27 @@ function ProfilePageContent() {
                           {driverForm.formState.errors.vehicleNumber && (
                             <p className="text-sm text-red-400">
                               {driverForm.formState.errors.vehicleNumber.message}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Solana Wallet */}
+                        <div className="space-y-3">
+                          <Label htmlFor="solanaWallet" className="text-slate-300 text-sm font-medium">
+                            Solana Wallet Address <span className="text-red-400">*</span>
+                          </Label>
+                          <div className="relative">
+                            <Wallet className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                            <Input
+                              id="solanaWallet"
+                              {...driverForm.register('solanaWallet')}
+                              placeholder="Solana wallet address"
+                              className="h-14 pl-12 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 rounded-xl focus:border-cyan-500 focus:ring-cyan-500/20"
+                            />
+                          </div>
+                          {driverForm.formState.errors.solanaWallet && (
+                            <p className="text-sm text-red-400">
+                              {driverForm.formState.errors.solanaWallet.message}
                             </p>
                           )}
                         </div>

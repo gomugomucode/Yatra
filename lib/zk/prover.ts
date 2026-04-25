@@ -12,6 +12,20 @@ export interface DriverProofOutput {
     ageValid: boolean;
 }
 
+// ── Validation Patterns ──────────────────────────────────────────────────
+export const VALIDATION_PATTERNS = {
+    // Nepal format e.g., BA-12-PA-3456 or 01-12345678
+    LICENSE: /^[a-zA-Z0-9-]{5,20}$/,
+    // Nepal format e.g., Lu 1 Pa 2345 or BA 2 PA 1234
+    VEHICLE: /^[a-zA-Z0-9\s]{5,15}$/,
+    // Solana Base58 format
+    SOLANA_WALLET: /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
+};
+
+export const isValidLicense = (val: string) => VALIDATION_PATTERNS.LICENSE.test(val);
+export const isValidVehicle = (val: string) => VALIDATION_PATTERNS.VEHICLE.test(val);
+export const isValidSolana = (val: string) => VALIDATION_PATTERNS.SOLANA_WALLET.test(val);
+
 // BN128 Field Prime used by Circom/snarkjs
 const FIELD_PRIME = BigInt('21888242871839275222246405745257275088548364400416034343698204186575808495617');
 

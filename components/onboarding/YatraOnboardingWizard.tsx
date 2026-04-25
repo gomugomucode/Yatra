@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User2, Bus, Phone, Shield, Sparkles } from 'lucide-react';
+import { User2, Bus, Phone, Shield, Sparkles, Wallet, Calendar, AlertCircle, Lock as LockIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { isValidLicense, isValidVehicle, isValidSolana } from '@/lib/zk/prover';
 
 type Role = 'driver' | 'passenger';
 
@@ -13,6 +14,11 @@ interface OnboardingData {
   name: string;
   phone: string;
   licenseNumber?: string;
+  vehicleNumber?: string;
+  solanaWallet?: string;
+  zkProof?: object;
+  zkPublicSignals?: string[];
+  zkCommitment?: string;
 }
 
 interface YatraOnboardingWizardProps {
@@ -37,13 +43,70 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [licenseNumber, setLicenseNumber] = useState('');
+  const [vehicleNumber, setVehicleNumber] = useState('');
+  const [solanaWallet, setSolanaWallet] = useState('');
+  const [birthYear, setBirthYear] = useState('');
+  const [isGeneratingProof, setIsGeneratingProof] = useState(false);
+  const [zkResult, setZkResult] = useState<{
+    proof: object;
+    publicSignals: string[];
+    commitment: string;
+  } | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const isDriver = role === 'driver';
 
   const canGoNext =
     (step === 1 && !!role) ||
     (step === 2 && !!name.trim() && phone.replace(/\D/g, '').length >= 8) ||
-    (step === 3 && (!isDriver || !!licenseNumber.trim()));
+    (step === 3 && (isDriver ? (
+      isValidLicense(licenseNumber.trim()) && 
+      isValidVehicle(vehicleNumber.trim()) && 
+      isValidSolana(solanaWallet.trim()) &&
+      parseInt(birthYear) <= 2005 &&
+      !!zkResult
+    ) : (
+      isValidSolana(solanaWallet.trim())
+    )));
+
+  const handleGenerateProof = async () => {
+    if (!isDriver) return;
+    
+    // Clear previous errors
+    setErrors({});
+    const newErrors: Record<string, string> = {};
+
+    if (!isValidLicense(licenseNumber.trim())) newErrors.license = 'Invalid license format';
+    if (!isValidVehicle(vehicleNumber.trim())) newErrors.vehicle = 'Invalid vehicle number';
+    if (!isValidSolana(solanaWallet.trim())) newErrors.wallet = 'Invalid Solana address';
+    const yr = parseInt(birthYear);
+    if (isNaN(yr) || yr > 2005) newErrors.birthYear = 'Must be 21+ (born 2005 or earlier)';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setIsGeneratingProof(true);
+    try {
+      const { generateDriverProof } = await import('@/lib/zk/prover');
+      const result = await generateDriverProof({
+        licenseNumber: licenseNumber.trim(),
+        birthYear: parseInt(birthYear),
+      });
+
+      setZkResult({
+        proof: result.proof,
+        publicSignals: result.publicSignals,
+        commitment: result.commitment,
+      });
+    } catch (err) {
+      console.error('Proof generation failed:', err);
+      setErrors({ proof: err instanceof Error ? err.message : 'ZK-Proof generation failed' });
+    } finally {
+      setIsGeneratingProof(false);
+    }
+  };
 
   const handleNext = () => {
     if (!canGoNext) return;
@@ -53,6 +116,11 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
         name: name.trim(),
         phone: phone.replace(/\D/g, ''),
         licenseNumber: isDriver ? licenseNumber.trim() : undefined,
+        vehicleNumber: isDriver ? vehicleNumber.trim() : undefined,
+        solanaWallet: isDriver ? solanaWallet.trim() : undefined,
+        zkProof: zkResult?.proof,
+        zkPublicSignals: zkResult?.publicSignals,
+        zkCommitment: zkResult?.commitment,
       });
       return;
     }
@@ -300,74 +368,148 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
                 className="space-y-6"
               >
                 <p className="text-xs font-medium uppercase tracking-[0.16em] text-emerald-300">
-                  Step 3 · Secure license vault
+                   Step 3 · Cryptographic Verification
                 </p>
                 <h3 className="text-xl font-semibold text-white mb-3">
-                  Seal your license into Yatra&apos;s zk vault.
+                  Secure your fleet identity.
                 </h3>
 
-                <div className="grid gap-6 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-stretch">
-                  {/* License input */}
-                  <div className="space-y-3">
-                    <div className="relative">
-                      <Input
-                        value={licenseNumber}
-                        onChange={(e) => setLicenseNumber(e.target.value)}
-                        placeholder=" "
-                        className="peer h-14 rounded-2xl border border-emerald-500/60 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 px-11 text-sm text-white shadow-[0_0_0_1px_rgba(16,185,129,0.5)] outline-none transition-all focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/25"
-                      />
-                      <Shield className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-400" />
-                      <label
-                        className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 rounded-full bg-slate-950/90 px-2 text-[11px] text-emerald-200 transition-all
-                        peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:text-emerald-200/80
-                        peer-focus:-top-2 peer-focus:text-[10px] peer-focus:text-emerald-300"
-                      >
-                        License number (vaulted)
-                      </label>
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <div className="space-y-4">
+                    {/* License Input */}
+                    <div className="space-y-1.5">
+                      <div className="relative">
+                        <Input
+                          value={licenseNumber}
+                          onChange={(e) => setLicenseNumber(e.target.value)}
+                          placeholder=" "
+                          className={`peer h-12 rounded-xl border bg-slate-900/50 px-11 text-sm text-white outline-none transition-all focus:ring-2 ${errors.license ? 'border-red-500/50 focus:ring-red-500/20' : 'border-slate-700 focus:border-emerald-500/60 focus:ring-emerald-500/20'}`}
+                        />
+                        <Shield className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-400" />
+                        <label className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 rounded-full bg-slate-950 px-2 text-[10px] text-slate-400 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-focus:-top-2 peer-focus:text-[10px] peer-focus:text-emerald-300">
+                          License Number
+                        </label>
+                      </div>
+                      {errors.license && <p className="text-[10px] text-red-400 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.license}</p>}
                     </div>
-                    <p className="text-[11px] text-emerald-200/80">
-                      Encrypted at rest. Verifiable with zero-knowledge proofs for compliance checks.
-                    </p>
+
+                    {/* Vehicle Number */}
+                    <div className="space-y-1.5">
+                      <div className="relative">
+                        <Input
+                          value={vehicleNumber}
+                          onChange={(e) => setVehicleNumber(e.target.value)}
+                          placeholder=" "
+                          className={`peer h-12 rounded-xl border bg-slate-900/50 px-11 text-sm text-white outline-none transition-all focus:ring-2 ${errors.vehicle ? 'border-red-500/50 focus:ring-red-500/20' : 'border-slate-700 focus:border-cyan-500/60 focus:ring-cyan-500/20'}`}
+                        />
+                        <Bus className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-400" />
+                        <label className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 rounded-full bg-slate-950 px-2 text-[10px] text-slate-400 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-focus:-top-2 peer-focus:text-[10px] peer-focus:text-cyan-300">
+                          Vehicle Number
+                        </label>
+                      </div>
+                      {errors.vehicle && <p className="text-[10px] text-red-400 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.vehicle}</p>}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Birth Year */}
+                      <div className="space-y-1.5">
+                        <div className="relative">
+                          <Input
+                            type="number"
+                            value={birthYear}
+                            onChange={(e) => setBirthYear(e.target.value)}
+                            placeholder=" "
+                            className={`peer h-12 rounded-xl border bg-slate-900/50 px-11 text-sm text-white outline-none transition-all focus:ring-2 ${errors.birthYear ? 'border-red-500/50 focus:ring-red-500/20' : 'border-slate-700 focus:border-amber-500/60 focus:ring-amber-500/20'}`}
+                          />
+                          <Calendar className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-400" />
+                          <label className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 rounded-full bg-slate-950 px-2 text-[10px] text-slate-400 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-focus:-top-2 peer-focus:text-[10px] peer-focus:text-amber-300">
+                            Birth Year
+                          </label>
+                        </div>
+                        {errors.birthYear && <p className="text-[10px] text-red-400">{errors.birthYear}</p>}
+                      </div>
+
+                      {/* Solana Wallet */}
+                      <div className="space-y-1.5">
+                        <div className="relative">
+                          <Input
+                            value={solanaWallet}
+                            onChange={(e) => setSolanaWallet(e.target.value)}
+                            placeholder=" "
+                            className={`peer h-12 rounded-xl border bg-slate-900/50 px-11 text-sm text-white outline-none transition-all focus:ring-2 ${errors.wallet ? 'border-red-500/50 focus:ring-red-500/20' : 'border-slate-700 focus:border-purple-500/60 focus:ring-purple-500/20'}`}
+                          />
+                          <Wallet className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-purple-400" />
+                          <label className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 rounded-full bg-slate-950 px-2 text-[10px] text-slate-400 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-focus:-top-2 peer-focus:text-[10px] peer-focus:text-purple-300">
+                            Solana Wallet
+                          </label>
+                        </div>
+                        {errors.wallet && <p className="text-[10px] text-red-400">{errors.wallet}</p>}
+                      </div>
+                    </div>
+
+                    <Button
+                      type="button"
+                      onClick={handleGenerateProof}
+                      disabled={isGeneratingProof || (!!zkResult && !errors.license && !errors.vehicle && !errors.wallet && !errors.birthYear)}
+                      className="w-full h-12 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 text-white font-bold text-xs uppercase tracking-widest shadow-lg shadow-emerald-900/20"
+                    >
+                      {isGeneratingProof ? (
+                        <><Sparkles className="w-4 h-4 mr-2 animate-spin" /> Sealing Vault...</>
+                      ) : zkResult ? (
+                        <><Shield className="w-4 h-4 mr-2 text-emerald-400" /> Identity Sealed</>
+                      ) : (
+                        <><LockIcon className="w-4 h-4 mr-2" /> Generate ZK Proof</>
+                      )}
+                    </Button>
+                    {errors.proof && <p className="text-[10px] text-red-400 text-center">{errors.proof}</p>}
                   </div>
 
-                  {/* zk-proof animation */}
-                  <div className="relative overflow-hidden rounded-2xl border border-emerald-500/40 bg-gradient-to-br from-emerald-500/10 via-slate-900 to-cyan-500/10 p-4 shadow-[0_18px_45px_rgba(16,185,129,0.35)]">
-                    <div className="pointer-events-none absolute inset-0">
-                      <motion.div
-                        className="absolute -left-10 top-1/2 h-32 w-32 rounded-full bg-emerald-400/25 blur-2xl"
-                        animate={{ x: ['0%', '60%', '0%'] }}
-                        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                      />
-                    </div>
-                    <div className="relative z-10 space-y-3">
-                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200">
-                        <Sparkles className="h-4 w-4 text-emerald-300" />
-                        zk-Proof Engine
+                  {/* zk-proof animation or status */}
+                  <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/40 p-5 flex flex-col justify-center">
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-cyan-500/5" />
+                    
+                    {zkResult ? (
+                       <div className="relative z-10 space-y-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                              <Shield className="w-5 h-5 text-emerald-400" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-white uppercase tracking-wider">Proof Verified</p>
+                              <p className="text-[10px] text-emerald-400/70">Groth16 SNARK Generated</p>
+                            </div>
+                          </div>
+                          <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 font-mono text-[9px] text-emerald-300/80 break-all">
+                             <p className="text-slate-600 mb-1 uppercase tracking-tighter">Commitment Hash</p>
+                             0x{zkResult.commitment}
+                          </div>
+                          <div className="flex gap-2">
+                             <div className="px-2 py-1 rounded bg-emerald-500/10 text-[9px] text-emerald-400 border border-emerald-500/20">License Valid</div>
+                             <div className="px-2 py-1 rounded bg-emerald-500/10 text-[9px] text-emerald-400 border border-emerald-500/20">Age 21+</div>
+                          </div>
+                       </div>
+                    ) : (
+                      <div className="relative z-10 text-center space-y-4 py-4">
+                        <div className="mx-auto w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center">
+                          <Sparkles className={`w-6 h-6 ${isGeneratingProof ? 'text-cyan-400 animate-pulse' : 'text-slate-600'}`} />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-semibold text-slate-300">Identity Vault Ready</p>
+                          <p className="text-[10px] text-slate-500 max-w-[180px] mx-auto">
+                            Enter your credentials to generate a zero-knowledge proof.
+                          </p>
+                        </div>
+                        {isGeneratingProof && (
+                          <div className="w-32 mx-auto h-1 bg-slate-800 rounded-full overflow-hidden">
+                            <motion.div 
+                              className="h-full bg-cyan-500"
+                              animate={{ x: [-128, 128] }}
+                              transition={{ duration: 1, repeat: Infinity }}
+                            />
+                          </div>
+                        )}
                       </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-[11px] text-emerald-100/90">
-                          <span>Constraint circuits</span>
-                          <motion.span
-                            animate={{ opacity: [0.4, 1, 0.4] }}
-                            transition={{ duration: 1.6, repeat: Infinity }}
-                          >
-                            4·096 gates
-                          </motion.span>
-                        </div>
-                        <div className="h-1.5 overflow-hidden rounded-full bg-emerald-900/60">
-                          <motion.div
-                            className="h-full w-1/2 rounded-full bg-gradient-to-r from-emerald-400 via-cyan-400 to-sky-400"
-                            animate={{ x: ['-50%', '120%'] }}
-                            transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-                          />
-                        </div>
-                        <div className="grid grid-cols-3 gap-1.5 text-[10px] text-emerald-100/80">
-                          <div className="rounded-lg bg-emerald-500/10 px-2 py-1">License hash</div>
-                          <div className="rounded-lg bg-emerald-500/10 px-2 py-1">Proof key</div>
-                          <div className="rounded-lg bg-emerald-500/10 px-2 py-1">On-chain ready</div>
-                        </div>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -384,14 +526,35 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
                 className="space-y-6"
               >
                 <p className="text-xs font-medium uppercase tracking-[0.16em] text-cyan-300">
-                  Step 3 · Ready to ride
+                  Step 3 · Wallet & Ready
                 </p>
                 <h3 className="text-xl font-semibold text-white mb-3">
-                  You&apos;re all set, {name || 'traveler'}.
+                  Almost there, {name.split(' ')[0] || 'traveler'}.
                 </h3>
-                <p className="max-w-md text-sm text-slate-300/90">
-                  We&apos;ll use your name and number to keep you synced with live buses, boarding alerts, and
-                  soulbound ticket receipts.
+                
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <div className="relative">
+                      <Input
+                        value={solanaWallet}
+                        onChange={(e) => setSolanaWallet(e.target.value)}
+                        placeholder=" "
+                        className={`peer h-14 rounded-2xl border bg-slate-900/70 px-11 text-sm text-white outline-none transition-all focus:ring-2 ${errors.wallet ? 'border-red-500/50 focus:ring-red-500/20' : 'border-slate-700 focus:border-cyan-400 focus:ring-cyan-500/20'}`}
+                      />
+                      <Wallet className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-400" />
+                      <label className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 rounded-full bg-slate-950 px-2 text-[11px] text-slate-400 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-focus:-top-2 peer-focus:text-[10px] peer-focus:text-cyan-300">
+                        Solana Wallet Address
+                      </label>
+                    </div>
+                    {errors.wallet && <p className="text-xs text-red-400">{errors.wallet}</p>}
+                    <p className="text-[11px] text-slate-500">
+                      We use this to mint your soulbound trip tickets and rewards.
+                    </p>
+                  </div>
+                </div>
+
+                <p className="max-w-md text-sm text-slate-300/90 mt-4">
+                  We&apos;ll use your identity to keep you synced with live buses and boarding alerts.
                 </p>
               </motion.div>
             )}

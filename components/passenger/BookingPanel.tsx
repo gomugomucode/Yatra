@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { Bus } from '@/lib/types';
 import { MapPin, Ticket, X, Navigation } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { getDistance, haversineDistance } from '@/lib/utils/geofencing';
+import { getDriverReputation, DriverRepData } from '@/lib/solana/trrl';
 
 interface BookingPanelProps {
 	pickupLocation: { lat: number; lng: number; address?: string } | null;
@@ -35,6 +36,16 @@ export default function BookingPanel({
 		passengers?: string;
 	}>({});
 	const { toast } = useToast();
+	const [driverRep, setDriverRep] = useState<DriverRepData | null>(null);
+
+	// Fetch reputation when bus is selected
+	useEffect(() => {
+		if (selectedBus?.id) {
+			getDriverReputation(selectedBus.id).then(setDriverRep).catch(console.error);
+		} else {
+			setDriverRep(null);
+		}
+	}, [selectedBus?.id]);
 
 	const seatsUnavailable =
 		!!selectedBus && (selectedBus.availableSeats ?? 0) <= 0;
@@ -158,12 +169,19 @@ export default function BookingPanel({
 								{selectedBus ? (
 									<>
 										<span>Bus {selectedBus.busNumber} Selected</span>
-										{(selectedBus as any).verificationBadge && (
-											<span className="inline-flex items-center gap-1.5 text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full text-xs font-semibold w-fit border border-emerald-500/20">
-												<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /><path d="m9 12 2 2 4-4" /></svg>
-												Solana Verified Driver
-											</span>
-										)}
+										<div className="flex items-center gap-2 mt-1">
+											{(selectedBus as any).verificationBadge && (
+												<span className="inline-flex items-center gap-1.5 text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full text-xs font-semibold w-fit border border-emerald-500/20">
+													<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /><path d="m9 12 2 2 4-4" /></svg>
+													ZK Verified
+												</span>
+											)}
+											{driverRep && (
+												<span className="inline-flex items-center gap-1.5 text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-full text-xs font-semibold w-fit border border-yellow-500/20">
+													⭐ Score: {driverRep.score || 0}/1000
+												</span>
+											)}
+										</div>
 									</>
 								) : 'Select a bus to hail'}
 							</CardDescription>

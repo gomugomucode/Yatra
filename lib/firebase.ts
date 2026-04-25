@@ -45,8 +45,8 @@ export const getFirebaseApp = (): FirebaseApp => {
     if (process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL) {
       clientConfig.databaseURL = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL;
     } else if (clientConfig.projectId) {
-      // Changed from asia-southeast1 to europe-west1 to match your Firebase warning
-      clientConfig.databaseURL = `https://${clientConfig.projectId}-default-rtdb.europe-west1.firebasedatabase.app`;
+      // Connect to the default us-central1 Realtime Database
+      clientConfig.databaseURL = `https://${clientConfig.projectId}-default-rtdb.firebaseio.com`;
     }
 
     if (!clientConfig.apiKey) {
