@@ -50,5 +50,16 @@ All notable changes to the Yatra protocol and application will be documented in 
 - **TypeScript Errors**: Fixed type-safety issues across the driver dashboard and component integration.
 
 
+## [2026-04-26] - Landing Page Refactor & Waitlist Expansion
+
+### Added
+- **Waitlist Dedicated Page**: Created a dedicated `/waitlist` page to act as the standalone waitlist portal.
+- **Unified Navigation CTA**: Added a primary "Launch App" CTA button in the navbar routing users to the `/auth` flow.
+
+### Changed
+- **Waitlist Form Component**: Migrated `WaitlistForm` from `shared/` to a dedicated `waitlist/` directory for better domain separation.
+- **Hero Section Cleanup**: Removed the inline waitlist form and redundant authentication links to improve landing page visual hierarchy.
+- **Footer Links**: Cleaned up the footer by removing deprecated login links and adding a text link to the `/waitlist` page.
+
 ---
 *Built with pride in Butwal, Nepal 🇳🇵*

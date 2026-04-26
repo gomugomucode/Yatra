@@ -1,4 +1,4 @@
-import WaitlistForm from '@/components/shared/WaitlistForm';
+import WaitlistForm from '@/components/waitlist/WaitlistForm';
 
 export default function IntroSection() {
   return (

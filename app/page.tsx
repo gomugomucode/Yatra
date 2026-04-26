@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import WaitlistForm from '@/components/shared/WaitlistForm';
+import WaitlistForm from '@/components/waitlist/WaitlistForm';
 import TripReceiptCard from '@/components/shared/TripReceiptCard';
 
 type ProblemMetric = { title: string; subtitle: string; value: number; suffix?: string };
@@ -138,7 +138,8 @@ function RouteNetwork({ reducedMotion }: { reducedMotion: boolean }) {
             key={`${dot.cx}-${dot.cy}`}
             cx={dot.cx}
             cy={dot.cy}
-            r="4"
+            r={4}
+            initial={{ r: 4 }}
             fill="#7dd3fc"
             animate={reducedMotion ? undefined : { opacity: [0.4, 1, 0.4], r: [3.5, 5, 3.5] }}
             transition={reducedMotion ? undefined : { duration: 1.8, repeat: Infinity }}
@@ -168,16 +169,10 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-2">
             <Link
-              href="/auth?role=passenger&redirect=/passenger"
-              className="inline-flex rounded-full border border-sky-800/80 bg-sky-950/50 px-3 py-2 text-xs font-medium text-sky-100 transition-colors hover:border-sky-600 hover:text-white"
+              href="/auth"
+              className="bg-amber-500 hover:bg-amber-400 text-black px-5 py-2 rounded-full text-sm font-semibold transition-colors whitespace-nowrap"
             >
-              Passenger login
-            </Link>
-            <Link
-              href="/auth?role=driver&redirect=/driver"
-              className="inline-flex rounded-full border border-sky-800/80 bg-sky-950/50 px-3 py-2 text-xs font-medium text-sky-100 transition-colors hover:border-sky-600 hover:text-white"
-            >
-              Driver login
+              Launch App
             </Link>
           </div>
         </nav>
@@ -197,26 +192,6 @@ export default function Home() {
             <p className="mt-5 max-w-md text-[15px] leading-relaxed text-zinc-400 md:text-base">
               Yatra tokenizes every Nepal bus trip as a Soulbound NFT receipt, verifies driver identity with ZK proofs, and tracks your bus in real time — no paper tickets, no blind trust.
             </p>
-            <div className="mt-6 flex flex-wrap gap-2">
-              {/* <span className="inline-flex items-center rounded-full border border-sky-900/80 bg-sky-950/40 px-3 py-2 font-space-mono text-[11px] uppercase tracking-[0.12em] text-sky-200/80">
-                Login
-              </span> */}
-              <Link
-                href="/auth?role=passenger&redirect=/passenger"
-                className="rounded-full border border-sky-800/80 bg-sky-950/50 px-4 py-2 text-xs font-medium text-sky-100 transition-colors hover:border-sky-600 hover:text-white"
-              >
-                Join as a Passenger 
-              </Link>
-              <Link
-                href="/auth?role=driver&redirect=/driver"
-                className="rounded-full border border-sky-800/80 bg-sky-950/50 px-4 py-2 text-xs font-medium text-sky-100 transition-colors hover:border-sky-600 hover:text-white"
-              >
-                Join as a Driver 
-              </Link>
-            </div>
-            <div className="mt-8">
-              <WaitlistForm compact />
-            </div>
             <div className="mt-6 flex flex-wrap gap-3">
               {['< 400ms · Trip minted', 'ZK identity · No data exposed', 'Soulbound · Non-transferable'].map((pill) => (
                 <span key={pill} className="rounded-full border border-sky-900/80 bg-sky-950/40 px-3 py-1.5 font-space-mono text-xs text-zinc-200">
@@ -399,11 +374,11 @@ export default function Home() {
             <p className="mt-1 text-sm text-zinc-500">Nepal&apos;s Transit, Tokenized.</p>
           </div>
           <div className="flex flex-wrap gap-6 text-sm text-zinc-400">
-            <Link href="/auth?role=passenger&redirect=/passenger" className="hover:text-amber-400">Passenger Login</Link>
-            <Link href="/auth?role=driver&redirect=/driver" className="hover:text-amber-400">Driver Login</Link>
-            <a href="https://github.com/gomugomucode/Yatra" target="_blank" rel="noreferrer" className="hover:text-amber-400">GitHub</a>
             <a href="https://x.com/TeamAparichit" target="_blank" rel="noreferrer" className="hover:text-amber-400">Twitter</a>
             <a href="https://solana.com/docs" target="_blank" rel="noreferrer" className="hover:text-amber-400">Docs</a>
+            <Link href="/waitlist" className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
+              Join Waitlist
+            </Link>
           </div>
           <p className="text-sm text-zinc-500">© 2026 Yatra · Built by  TeamAparichit </p>
         </div>
