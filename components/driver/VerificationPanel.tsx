@@ -46,20 +46,22 @@ export default function VerificationPanel({ driver, onVerificationSuccess }: Ver
 
     // ── Field validation ──────────────────────────────────────────────────────
     const validate = (): boolean => {
+        const { validateDriverData } = require('@/lib/zk/prover');
+        const { isValid, errors: validationErrors } = validateDriverData({
+            licenseNumber,
+            vehicleNumber: '', // Not needed for this specific step but required by helper
+            solanaWallet: walletAddress,
+            birthYear
+        });
+        
+        // Map specific errors back to local state
         const e: Record<string, string> = {};
-        if (!licenseNumber.trim()) e.license = 'License number is required';
-
-        const yr = parseInt(birthYear);
-        // FIXED LOGIC: Birth year must be 2005 or earlier to be 21+ in 2026.
-        if (!birthYear || isNaN(yr) || yr < 1920 || yr > 2005) {
-            e.birthYear = 'Must be born in 2005 or earlier (Age ≥ 21)';
-        }
-
-        if (!walletAddress.trim() || walletAddress.trim().length < 32 || walletAddress.trim().length > 44) {
-            e.wallet = 'Enter a valid Solana wallet address (32–44 chars)';
-        }
+        if (validationErrors.licenseNumber) e.license = validationErrors.licenseNumber;
+        if (validationErrors.birthYear) e.birthYear = validationErrors.birthYear;
+        if (validationErrors.solanaWallet) e.wallet = validationErrors.solanaWallet;
+        
         setErrors(e);
-        return Object.keys(e).length === 0;
+        return isValid;
     };
 
     // ── Step 2: Generate ZK Proof (client-side) ───────────────────────────────

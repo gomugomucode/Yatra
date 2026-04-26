@@ -1,5 +1,12 @@
 {
   "rules": {
+     "waitlist": {
+      ".read": false,
+      ".write": true,
+      "$entry": {
+        ".validate": "newData.hasChildren(['email', 'timestamp']) && newData.child('email').isString() && newData.child('email').val().matches(/^[^@]+@[^@]+\\.[^@]+$/)"
+      }
+    },
     "buses": {
       ".read": true,
       "$busId": {

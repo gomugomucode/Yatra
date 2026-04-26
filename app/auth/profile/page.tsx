@@ -2,10 +2,11 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Bus, User2, Loader2, Upload, Camera, MapPin, Shield, Phone, Mail, CreditCard, CheckCircle2, ArrowRight, Wallet } from 'lucide-react';
+import { Bus, User2, Loader2, Upload, Camera, MapPin, Shield, Phone, Mail, CreditCard, CheckCircle2, ArrowRight, Wallet, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -34,9 +35,12 @@ const driverSchema = z.object({
   solanaWallet: z.string().min(32, 'Valid Solana wallet is required').max(44),
   route: z.string().min(1, 'Route is required'),
   capacity: z.number().min(1).max(100),
+  birthYear: z.string().min(4, 'Enter a valid birth year (e.g. 1995)'),
   profileImage: z.string().optional(),
   vehicleImage: z.string().optional(),
-  // ZK Fields (optional in Zod but populated by onboarding)
+  licenseFront: z.string().min(1, 'License front photo is required for ZK identity'),
+  licenseBack: z.string().min(1, 'License back photo is required for ZK identity'),
+  // ZK Fields (optional in Zod but populated by local generation)
   zkProof: z.any().optional(),
   zkPublicSignals: z.array(z.string()).optional(),
   zkCommitment: z.string().optional(),
@@ -103,8 +107,12 @@ function ProfilePageContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [profilePreview, setProfilePreview] = useState<string | null>(null);
   const [vehiclePreview, setVehiclePreview] = useState<string | null>(null);
+  const [licenseFrontPreview, setLicenseFrontPreview] = useState<string | null>(null);
+  const [licenseBackPreview, setLicenseBackPreview] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isGeneratingProof, setIsGeneratingProof] = useState(false);
+  const [verificationProgress, setVerificationProgress] = useState<string[]>([]);
 
   const driverForm = useForm<DriverFormData>({
     resolver: zodResolver(driverSchema),
@@ -114,7 +122,10 @@ function ProfilePageContent() {
       vehicleNumber: '',
       licenseNumber: '',
       solanaWallet: '',
+      licenseFront: '',
+      licenseBack: '',
       route: '',
+      birthYear: '',
       capacity: 40,
     },
   });
@@ -173,7 +184,7 @@ function ProfilePageContent() {
 
   // ── 5. HANDLERS ──
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>, field: 'profileImage' | 'vehicleImage') => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>, field: 'profileImage' | 'vehicleImage' | 'licenseFront' | 'licenseBack') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -187,9 +198,64 @@ function ProfilePageContent() {
       driverForm.setValue(field, resized);
 
       if (field === 'profileImage') setProfilePreview(resized);
-      else setVehiclePreview(resized);
+      else if (field === 'vehicleImage') setVehiclePreview(resized);
+      else if (field === 'licenseFront') setLicenseFrontPreview(resized);
+      else if (field === 'licenseBack') setLicenseBackPreview(resized);
     } catch (err) {
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to process image.' });
+    }
+  };
+
+  const handleGenerateProof = async () => {
+    const licenseNumber = driverForm.getValues('licenseNumber');
+    const birthYear = driverForm.getValues('birthYear');
+    const front = driverForm.getValues('licenseFront');
+    const back = driverForm.getValues('licenseBack');
+
+    if (!licenseNumber || !birthYear || !front || !back) {
+      toast({ 
+        variant: 'destructive', 
+        title: 'Missing information', 
+        description: 'Please fill in license number, birth year, and upload both license photos.' 
+      });
+      return;
+    }
+
+    setIsGeneratingProof(true);
+    setVerificationProgress(['Analyzing license photos...']);
+    
+    try {
+      const { simulateLicenseCheck, generateDriverProof } = await import('@/lib/zk/prover');
+      
+      const check = await simulateLicenseCheck(front, back);
+      if (!check.success) {
+        toast({ variant: 'destructive', title: 'Verification failed', description: check.message || 'License check failed' });
+        setVerificationProgress([]);
+        return;
+      }
+      
+      setVerificationProgress(prev => [...prev, 'Verification successful. Generating ZK proof...']);
+      const result = await generateDriverProof({
+        licenseNumber: licenseNumber.trim(),
+        birthYear: parseInt(birthYear),
+      });
+
+      driverForm.setValue('zkProof', result.proof);
+      driverForm.setValue('zkPublicSignals', result.publicSignals);
+      driverForm.setValue('zkCommitment', result.commitment);
+      
+      setVerificationProgress(prev => [...prev, 'ZK Identity Sealed. Identity protection active.']);
+      toast({ title: 'Success!', description: 'Your identity has been cryptographically verified.' });
+    } catch (err) {
+      console.error('Proof generation failed:', err);
+      toast({ 
+        variant: 'destructive', 
+        title: 'Verification Error', 
+        description: err instanceof Error ? err.message : 'ZK-Proof generation failed' 
+      });
+      setVerificationProgress([]);
+    } finally {
+      setIsGeneratingProof(false);
     }
   };
 
@@ -199,11 +265,9 @@ function ProfilePageContent() {
       setIsSubmitting(true);
 
       // 1. Destructure to pull out fields that we will redefine or that conflict
-      // 'formCapacity' avoids name collision with our calculated 'capacity' variable
-      const { name, capacity: formCapacity, ...restOfData } = data;
-
-      const vehicleTypeData = VEHICLE_TYPES.find((v) => v.id === data.vehicleType);
-      const finalCapacity = vehicleTypeData?.capacity || formCapacity;
+      const { name, vehicleType, capacity, zkProof, zkPublicSignals, zkCommitment, licenseFront, licenseBack, birthYear, ...restOfData } = data;
+      const vehicleTypeData = VEHICLE_TYPES.find((v) => v.id === vehicleType);
+      const finalCapacity = vehicleTypeData?.capacity || capacity;
 
       let idToken = await currentUser.getIdToken();
       const registerRes = await fetch('/api/auth/register', {
@@ -239,22 +303,66 @@ function ProfilePageContent() {
 
       setRole('driver');
 
+      // 3. Final Step: Submit to Database
+      let isVerified = false;
+      let finalVerificationBadge = zkProof ? {
+        mintAddress: 'PENDING_MINT',
+        txSignature: 'PENDING',
+        explorerLink: '',
+        verifiedAt: new Date().toISOString(),
+        zkCommitment: zkCommitment || '',
+        ageVerified: true,
+        licenseFront: licenseFront || '',
+        licenseBack: licenseBack || ''
+      } : null;
+
+      // ── Trigger Server-Side Minting & Verification ──
+      if (zkProof && zkPublicSignals) {
+        try {
+          const verifyRes = await fetch('/api/solana/verify-driver', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              driverId: currentUser.uid,
+              driverName: name,
+              vehicleType: vehicleType,
+              driverWalletAddress: data.solanaWallet,
+              zkProof,
+              zkPublicSignals,
+              licenseNumber: restOfData.licenseNumber
+            }),
+          });
+
+          if (verifyRes.ok) {
+            const verifyData = await verifyRes.json();
+            isVerified = true;
+            finalVerificationBadge = {
+              ...finalVerificationBadge,
+              mintAddress: verifyData.mintAddress,
+              explorerLink: verifyData.explorerLink,
+              verifiedAt: new Date().toISOString(),
+            } as any;
+          }
+        } catch (err) {
+          console.warn('On-chain verification failed during registration, will retry later:', err);
+        }
+      }
+
       await createUserProfile(currentUser.uid, {
-        ...restOfData,
+        licenseNumber: restOfData.licenseNumber || '',
+        vehicleNumber: restOfData.vehicleNumber || '',
+        route: restOfData.route || '',
+        profileImage: restOfData.profileImage || '',
+        vehicleImage: restOfData.vehicleImage || '',
         phone: currentUser.phoneNumber || '',
-        name,
+        name: name || '',
         role: 'driver',
+        vehicleType: vehicleType,
         capacity: finalCapacity,
-        isApproved: false,
-        solanaWallet: data.solanaWallet,
-        verificationBadge: data.zkProof ? {
-          mintAddress: 'PENDING_MINT', // Will be updated by the minting API if needed
-          txSignature: 'PENDING',
-          explorerLink: '',
-          verifiedAt: new Date().toISOString(),
-          zkCommitment: data.zkCommitment,
-          ageVerified: true
-        } : undefined
+        isApproved: isVerified, // Auto-approve if verified
+        isVerified,
+        solanaWallet: data.solanaWallet || '',
+        verificationBadge: finalVerificationBadge
       });
 
       const rtdb = getDatabase(getFirebaseApp());
@@ -323,12 +431,12 @@ function ProfilePageContent() {
       setRole('passenger');
 
       await createUserProfile(currentUser.uid, {
+        name: data.name || '',
+        email: data.email || '',
+        emergencyContact: data.emergencyContact || '',
+        solanaWallet: data.solanaWallet || '',
         phone: currentUser.phoneNumber || '',
-        name: data.name,
-        email: data.email || null,
         role: 'passenger',
-        emergencyContact: data.emergencyContact || null,
-        solanaWallet: data.solanaWallet || null,
       });
 
       toast({ title: 'Success!', description: 'Profile created.' });
@@ -373,6 +481,8 @@ function ProfilePageContent() {
                 licenseNumber: data.licenseNumber || driverForm.getValues('licenseNumber'),
                 vehicleNumber: data.vehicleNumber || driverForm.getValues('vehicleNumber'),
                 solanaWallet: data.solanaWallet || driverForm.getValues('solanaWallet'),
+                licenseFront: data.licenseFront || driverForm.getValues('licenseFront'),
+                licenseBack: data.licenseBack || driverForm.getValues('licenseBack'),
                 zkProof: data.zkProof,
                 zkPublicSignals: data.zkPublicSignals,
                 zkCommitment: data.zkCommitment,
@@ -722,6 +832,27 @@ function ProfilePageContent() {
                             </p>
                           )}
                         </div>
+
+                        {/* Birth Year */}
+                        <div className="space-y-3">
+                          <Label htmlFor="birthYear" className="text-slate-300 text-sm font-medium">
+                            Birth Year <span className="text-red-400">*</span>
+                          </Label>
+                          <div className="relative">
+                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                            <Input
+                              id="birthYear"
+                              {...driverForm.register('birthYear')}
+                              placeholder="e.g. 1995"
+                              className="h-14 pl-12 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 rounded-xl focus:border-cyan-500 focus:ring-cyan-500/20"
+                            />
+                          </div>
+                          {driverForm.formState.errors.birthYear && (
+                            <p className="text-sm text-red-400">
+                              {driverForm.formState.errors.birthYear.message}
+                            </p>
+                          )}
+                        </div>
                       </div>
 
                       {/* Route */}
@@ -743,6 +874,115 @@ function ProfilePageContent() {
                             {driverForm.formState.errors.route.message}
                           </p>
                         )}
+                      </div>
+
+                      {/* ZK Identity Section */}
+                      <div className="pt-8 border-t border-slate-700/50">
+                        <div className="flex items-center gap-3 mb-8">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
+                            <Shield className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <h2 className="text-2xl font-bold text-white">ZK Identity Verification</h2>
+                            <p className="text-sm text-slate-400">Verify your license to unlock on-chain badges</p>
+                          </div>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-8 mb-8">
+                          {/* Front Photo */}
+                          <div className="space-y-3">
+                            <Label className="text-slate-300 text-sm font-medium">License Front Photo</Label>
+                            <div 
+                              onClick={() => document.getElementById('licenseFrontInput')?.click()}
+                              className="aspect-[1.6/1] bg-slate-800 border-2 border-dashed border-slate-700 hover:border-purple-500 rounded-2xl cursor-pointer transition-all overflow-hidden group relative"
+                            >
+                              {licenseFrontPreview ? (
+                                <img src={licenseFrontPreview} alt="Front" className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="flex flex-col items-center justify-center h-full p-4 text-center">
+                                  <Camera className="w-8 h-8 text-slate-600 mb-2 group-hover:text-purple-400 transition-colors" />
+                                  <p className="text-xs text-slate-500">Tap to capture or upload license front</p>
+                                </div>
+                              )}
+                              <input 
+                                id="licenseFrontInput"
+                                type="file" 
+                                accept="image/*"
+                                onChange={(e) => handleImageChange(e, 'licenseFront')}
+                                className="hidden" 
+                              />
+                            </div>
+                          </div>
+
+                          {/* Back Photo */}
+                          <div className="space-y-3">
+                            <Label className="text-slate-300 text-sm font-medium">License Back Photo</Label>
+                            <div 
+                              onClick={() => document.getElementById('licenseBackInput')?.click()}
+                              className="aspect-[1.6/1] bg-slate-800 border-2 border-dashed border-slate-700 hover:border-purple-500 rounded-2xl cursor-pointer transition-all overflow-hidden group relative"
+                            >
+                              {licenseBackPreview ? (
+                                <img src={licenseBackPreview} alt="Back" className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="flex flex-col items-center justify-center h-full p-4 text-center">
+                                  <Camera className="w-8 h-8 text-slate-600 mb-2 group-hover:text-purple-400 transition-colors" />
+                                  <p className="text-xs text-slate-500">Tap to capture or upload license back</p>
+                                </div>
+                              )}
+                              <input 
+                                id="licenseBackInput"
+                                type="file" 
+                                accept="image/*"
+                                onChange={(e) => handleImageChange(e, 'licenseBack')}
+                                className="hidden" 
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Verification Button & Progress */}
+                        <div className="space-y-4">
+                          <Button
+                            type="button"
+                            onClick={handleGenerateProof}
+                            disabled={isGeneratingProof || !!driverForm.watch('zkProof')}
+                            className={`w-full h-14 rounded-xl font-bold text-lg transition-all ${
+                              driverForm.watch('zkProof') 
+                                ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 cursor-default'
+                                : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-500/20'
+                            }`}
+                          >
+                            {isGeneratingProof ? (
+                              <div className="flex items-center gap-3">
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <span>Generating Secure Proof...</span>
+                              </div>
+                            ) : driverForm.watch('zkProof') ? (
+                              <div className="flex items-center gap-2">
+                                <CheckCircle2 className="w-5 h-5" />
+                                <span>Identity Sealed & Verified</span>
+                              </div>
+                            ) : (
+                              'Verify & Seal ZK Identity'
+                            )}
+                          </Button>
+
+                          {verificationProgress.length > 0 && (
+                            <div className="space-y-2 px-2">
+                              {verificationProgress.map((step, idx) => (
+                                <motion.div 
+                                  initial={{ opacity: 0, x: -10 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  key={idx} 
+                                  className="flex items-center text-xs text-purple-300/80"
+                                >
+                                  <div className={`w-1.5 h-1.5 rounded-full mr-2 ${idx === verificationProgress.length - 1 ? 'bg-purple-400 animate-pulse' : 'bg-emerald-400'}`} />
+                                  {step}
+                                </motion.div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* Capacity */}

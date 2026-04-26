@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Outfit, JetBrains_Mono, Mukta } from "next/font/google";
+import { DM_Sans, Instrument_Serif, Space_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
@@ -8,20 +8,22 @@ import OfflineBanner from "@/components/shared/OfflineBanner";
 import PwaBootstrap from "@/components/shared/PwaBootstrap";
 import ClientWalletProvider from "@/components/providers/ClientWalletProvider";
 
-const outfit = Outfit({
-  variable: "--font-outfit",
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
   subsets: ["latin"],
+  weight: ["400", "500"],
 });
 
-const mukta = Mukta({
-  variable: "--font-mukta",
-  subsets: ["devanagari", "latin"],
-  weight: ["400", "600", "700", "800"],
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument-serif",
+  subsets: ["latin"],
+  weight: ["400"],
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
+const spaceMono = Space_Mono({
+  variable: "--font-space-mono",
   subsets: ["latin"],
+  weight: ["400", "700"],
 });
 
 export const viewport: Viewport = {
@@ -55,7 +57,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${outfit.variable} ${jetbrainsMono.variable} ${mukta.variable} antialiased font-sans`}
+        className={`${dmSans.variable} ${instrumentSerif.variable} ${spaceMono.variable} antialiased`}
       >
         <AuthProvider>
           <ClientWalletProvider>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User2, Bus, Phone, Shield, Sparkles, Wallet, Calendar, AlertCircle, Lock as LockIcon } from 'lucide-react';
+import { User2, Bus, Phone, Shield, Sparkles, Wallet, Calendar, AlertCircle, Lock as LockIcon, Camera, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { isValidLicense, isValidVehicle, isValidSolana } from '@/lib/zk/prover';
@@ -16,6 +16,8 @@ interface OnboardingData {
   licenseNumber?: string;
   vehicleNumber?: string;
   solanaWallet?: string;
+  licenseFront?: string;
+  licenseBack?: string;
   zkProof?: object;
   zkPublicSignals?: string[];
   zkCommitment?: string;
@@ -45,8 +47,11 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
   const [licenseNumber, setLicenseNumber] = useState('');
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [solanaWallet, setSolanaWallet] = useState('');
-  const [birthYear, setBirthYear] = useState('');
+  const [birthYear, setBirthYear] = useState('2000');
+  const [licenseFront, setLicenseFront] = useState<string | null>(null);
+  const [licenseBack, setLicenseBack] = useState<string | null>(null);
   const [isGeneratingProof, setIsGeneratingProof] = useState(false);
+  const [verificationProgress, setVerificationProgress] = useState<string[]>([]);
   const [zkResult, setZkResult] = useState<{
     proof: object;
     publicSignals: string[];
@@ -64,6 +69,8 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
       isValidVehicle(vehicleNumber.trim()) && 
       isValidSolana(solanaWallet.trim()) &&
       parseInt(birthYear) <= 2005 &&
+      !!licenseFront &&
+      !!licenseBack &&
       !!zkResult
     ) : (
       isValidSolana(solanaWallet.trim())
@@ -75,20 +82,41 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
     // Clear previous errors
     setErrors({});
     const newErrors: Record<string, string> = {};
+    const { validateDriverData } = await import('@/lib/zk/prover');
+    const { isValid, errors: validationErrors } = validateDriverData({
+      licenseNumber,
+      vehicleNumber,
+      solanaWallet,
+      birthYear
+    });
 
-    if (!isValidLicense(licenseNumber.trim())) newErrors.license = 'Invalid license format';
-    if (!isValidVehicle(vehicleNumber.trim())) newErrors.vehicle = 'Invalid vehicle number';
-    if (!isValidSolana(solanaWallet.trim())) newErrors.wallet = 'Invalid Solana address';
-    const yr = parseInt(birthYear);
-    if (isNaN(yr) || yr > 2005) newErrors.birthYear = 'Must be 21+ (born 2005 or earlier)';
+    if (!isValid) {
+      setErrors(validationErrors);
+      return;
+    }
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+    if (!licenseFront || !licenseBack) {
+      setErrors({ proof: 'Please upload both front and back license photos first.' });
       return;
     }
 
     setIsGeneratingProof(true);
+    setVerificationProgress(['Analyzing license photos...']);
+    
     try {
+      const front = licenseFront;
+      const back = licenseBack;
+      const { simulateLicenseCheck } = await import('@/lib/zk/prover');
+      const check = await simulateLicenseCheck(front, back);
+      
+      if (!check.success) {
+        setErrors({ proof: check.message || 'License verification failed' });
+        setIsGeneratingProof(false);
+        setVerificationProgress([]);
+        return;
+      }
+      
+      setVerificationProgress(prev => [...prev, 'Verification successful. Generating ZK proof...']);
       const { generateDriverProof } = await import('@/lib/zk/prover');
       const result = await generateDriverProof({
         licenseNumber: licenseNumber.trim(),
@@ -100,9 +128,11 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
         publicSignals: result.publicSignals,
         commitment: result.commitment,
       });
+      setVerificationProgress(prev => [...prev, 'ZK Identity Sealed. Identity protection active.']);
     } catch (err) {
       console.error('Proof generation failed:', err);
       setErrors({ proof: err instanceof Error ? err.message : 'ZK-Proof generation failed' });
+      setVerificationProgress([]);
     } finally {
       setIsGeneratingProof(false);
     }
@@ -110,14 +140,16 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
 
   const handleNext = () => {
     if (!canGoNext) return;
-    if (step === 3 || (!isDriver && step === 2)) {
+    if (step === 3) {
       onComplete({
         role,
         name: name.trim(),
         phone: phone.replace(/\D/g, ''),
         licenseNumber: isDriver ? licenseNumber.trim() : undefined,
         vehicleNumber: isDriver ? vehicleNumber.trim() : undefined,
-        solanaWallet: isDriver ? solanaWallet.trim() : undefined,
+        solanaWallet: solanaWallet.trim(),
+        licenseFront: licenseFront || undefined,
+        licenseBack: licenseBack || undefined,
         zkProof: zkResult?.proof,
         zkPublicSignals: zkResult?.publicSignals,
         zkCommitment: zkResult?.commitment,
@@ -125,6 +157,19 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
       return;
     }
     setStep((prev) => (prev === 1 ? 2 : 3));
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      if (side === 'front') setLicenseFront(base64String);
+      else setLicenseBack(base64String);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleBack = () => {
@@ -375,7 +420,46 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
                 </h3>
 
                 <div className="grid gap-6 lg:grid-cols-2">
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">License Front</label>
+                    <div 
+                      onClick={() => document.getElementById('license-front')?.click()}
+                      className={`relative aspect-[3/2] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden ${licenseFront ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-slate-800 bg-slate-900/50 hover:border-cyan-500/50'}`}
+                    >
+                      {licenseFront ? (
+                        <img src={licenseFront} alt="Front" className="absolute inset-0 w-full h-full object-cover" />
+                      ) : (
+                        <>
+                          <Camera className="w-6 h-6 text-slate-600 mb-2" />
+                          <span className="text-[10px] text-slate-500 font-medium">Upload Front</span>
+                        </>
+                      )}
+                      <input id="license-front" type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'front')} className="hidden" />
+                    </div>
+                    {errors.licenseFront && <p className="text-[10px] text-red-400 mt-1 ml-1">{errors.licenseFront}</p>}
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">License Back</label>
+                    <div 
+                      onClick={() => document.getElementById('license-back')?.click()}
+                      className={`relative aspect-[3/2] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden ${licenseBack ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-slate-800 bg-slate-900/50 hover:border-cyan-500/50'}`}
+                    >
+                      {licenseBack ? (
+                        <img src={licenseBack} alt="Back" className="absolute inset-0 w-full h-full object-cover" />
+                      ) : (
+                        <>
+                          <Camera className="w-6 h-6 text-slate-600 mb-2" />
+                          <span className="text-[10px] text-slate-500 font-medium">Upload Back</span>
+                        </>
+                      )}
+                      <input id="license-back" type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'back')} className="hidden" />
+                    </div>
+                    {errors.licenseBack && <p className="text-[10px] text-red-400 mt-1 ml-1">{errors.licenseBack}</p>}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
                     {/* License Input */}
                     <div className="space-y-1.5">
                       <div className="relative">

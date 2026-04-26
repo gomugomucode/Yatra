@@ -14,17 +14,66 @@ export interface DriverProofOutput {
 
 // ── Validation Patterns ──────────────────────────────────────────────────
 export const VALIDATION_PATTERNS = {
-    // Nepal format e.g., BA-12-PA-3456 or 01-12345678
+    // Nepal format e.g., BA-12-PA-3456 or 01-12345678 or generic 5-20 chars
     LICENSE: /^[a-zA-Z0-9-]{5,20}$/,
     // Nepal format e.g., Lu 1 Pa 2345 or BA 2 PA 1234
-    VEHICLE: /^[a-zA-Z0-9\s]{5,15}$/,
+    VEHICLE: /^[a-zA-Z0-9\s-]{5,20}$/,
     // Solana Base58 format
-    SOLANA_WALLET: /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
+    SOLANA_WALLET: /^[1-9A-HJ-NP-Za-km-z]{32,44}$/,
+    // Name validation
+    NAME: /^[a-zA-Z\s.]{3,50}$/
+};
+
+export const validateDriverData = (data: {
+    licenseNumber: string;
+    vehicleNumber: string;
+    solanaWallet: string;
+    birthYear: string;
+}) => {
+    const errors: Record<string, string> = {};
+    
+    if (!VALIDATION_PATTERNS.LICENSE.test(data.licenseNumber)) {
+        errors.licenseNumber = 'Invalid license format (e.g. BA-12-PA-3456)';
+    }
+    if (!VALIDATION_PATTERNS.VEHICLE.test(data.vehicleNumber)) {
+        errors.vehicleNumber = 'Invalid vehicle number format';
+    }
+    if (!VALIDATION_PATTERNS.SOLANA_WALLET.test(data.solanaWallet)) {
+        errors.solanaWallet = 'Invalid Solana wallet address';
+    }
+    
+    const year = parseInt(data.birthYear);
+    if (!data.birthYear || isNaN(year) || year < 1920 || year > 2005) {
+        errors.birthYear = 'Must be 21+ years old (Born 2005 or earlier)';
+    }
+    
+    return {
+        isValid: Object.keys(errors).length === 0,
+        errors
+    };
 };
 
 export const isValidLicense = (val: string) => VALIDATION_PATTERNS.LICENSE.test(val);
 export const isValidVehicle = (val: string) => VALIDATION_PATTERNS.VEHICLE.test(val);
-export const isValidSolana = (val: string) => VALIDATION_PATTERNS.SOLANA_WALLET.test(val);
+export const isValidSolana = (address: string): boolean => VALIDATION_PATTERNS.SOLANA_WALLET.test(address);
+
+// ── Simulated AI Validation ──
+
+/**
+ * Simulates an AI-based check of the license images (front/back).
+ * In a real app, this would call an OCR or verification service.
+ */
+export const simulateLicenseCheck = async (frontBase64: string, backBase64: string): Promise<{ success: boolean; message?: string }> => {
+    // Simulate processing delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Simple heuristic: check if they are actually base64 images
+    if (!frontBase64.startsWith('data:image/') || !backBase64.startsWith('data:image/')) {
+        return { success: false, message: 'Invalid image format. Please upload clear photos.' };
+    }
+    
+    return { success: true };
+};
 
 // BN128 Field Prime used by Circom/snarkjs
 const FIELD_PRIME = BigInt('21888242871839275222246405745257275088548364400416034343698204186575808495617');

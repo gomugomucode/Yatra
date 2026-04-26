@@ -14,10 +14,10 @@ import {
   createUserWithEmail,
   sendPasswordReset,
   signInWithGoogle,
-} from '@/lib/firebase';
+} from '@/lib/firebase'; 
 import { getUserProfile } from '@/lib/firebaseDb';
 import { checkProfileCompletion } from '@/lib/types';
-
+ 
 type Role = 'driver' | 'passenger';
 
 const mapFirebaseError = (err: unknown): string => {

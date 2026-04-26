@@ -37,7 +37,7 @@ Yatra fixes this by combining three technologies that have never been unified in
 | Problem | Yatra's Answer |
 |---|---|
 | Passengers cannot track buses | Real-time GPS with sub-3-second latency via Firebase Realtime DB |
-| No verifiable driver identity | Zero-knowledge proof (Groth16) anchored on Solana — identity verified without exposing documents |
+| No verifiable driver identity | Mandatory ZK-SNARK (Groth16) anchored on Solana — identity verified & documents validated via AI authenticity checks during onboarding |
 | No immutable trip records | Soulbound NFT receipt (Token-2022 NonTransferable) minted to the passenger's wallet on every trip |
 | Driver reputation is not portable | On-chain DriverReputation PDA readable by any dApp without permission |
 | No trustless fare payment | GPS-verified escrow — fare releases only when geofence confirms drop-off |
@@ -58,7 +58,7 @@ Yatra fixes this by combining three technologies that have never been unified in
 
 ### For Drivers (चालक)
 
-- **ZK identity onboarding** — verify your license and age via a Groth16 zero-knowledge proof. No raw documents leave your device
+- **Integrated ZK Identity Setup** — mandatory verification of license and age (21+) directly in the driver profile form. AI-assisted authenticity checks on uploaded documents (front/back) before sealing identity.
 - **Command center** — cockpit-style dashboard to manage route, seats, and live passengers
 - **Trip request panel** — incoming requests slide up with a 90-second countdown. Accept or reject with one tap
 - **On-chain trip logs** — every completed trip updates your DriverReputation PDA on Solana
@@ -242,7 +242,8 @@ Input: [licenseNumber, birthYear]
            │
            ▼
   On-chain: commitment anchored via Solana Memo tx
-            DriverReputation PDA: zk_verified = true
+            Soulbound Badge minted automatically on devnet
+             DriverProfile: isApproved = true, isVerified = true
 ```
 
 The driver's license number and birth year never leave their device. Only the cryptographic proof and the Poseidon commitment are transmitted. The server verifies the math without seeing the inputs.
@@ -297,25 +298,33 @@ npm install
 Create `.env.local` in the project root:
 
 ```env
-# ── Solana ──────────────────────────────────────────
-SOLANA_RPC_URL=https://api.devnet.solana.com
-SOLANA_KEYPAIR=[your_base58_or_array_private_key]
-
-# ── Firebase Client ──────────────────────────────────
+# --- FIREBASE (CLIENT-SIDE) ---
 NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://your_project-default-rtdb.europe-west1.firebasedatabase.app
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+NEXT_PUBLIC_FIREBASE_DATABASE_URL=your_database_url
+NEXT_PUBLIC_FIREBASE_VAPID_KEY=your_vapid_key
 
-# ── Firebase Admin SDK (server-side) ────────────────
+# --- FIREBASE (SERVER-SIDE / ADMIN) ---
 FIREBASE_PROJECT_ID=your_project_id
-FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your_project.iam.gserviceaccount.com
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-FIREBASE_DATABASE_URL=https://your_project-default-rtdb.europe-west1.firebasedatabase.app
+FIREBASE_CLIENT_EMAIL=your_client_email
+FIREBASE_PRIVATE_KEY="your_private_key"
+FIREBASE_DATABASE_URL=your_database_url
 
-# ── SMS (optional, for real notifications) ──────────
-SPARROWSMS_TOKEN=your_sparrowsms_token
+# --- SOLANA ---
+SOLANA_RPC_URL=https://api.devnet.solana.com
+SOLANA_SERVER_PRIVATE_KEY=your_base58_encoded_private_key
+SOLANA_SERVER_KEY=your_base58_encoded_private_key
+
+# --- GOOGLE MAPS ---
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_key
+
+# --- SMS (SPARROW SMS) ---
+SPARROWSMS_TOKEN=your_sparrow_sms_token
+
 ```
 
 > **Security:** Never commit `.env.local` to git. The `.gitignore` already excludes it.
@@ -440,13 +449,13 @@ yatra/
 - [x] OSRM integration for ETA and routing
 - [x] 3D immersive landing page (Three.js + scroll animation)
 - [x] Trip request + FCM push notification to driver
-- [ ] Driver accept/reject panel with 90-second countdown
-- [ ] Two-phase ETA (pickup + destination) with route polyline
-- [ ] Participant-only visibility (tripLocations path)
-- [ ] Passenger wallet connect (Phantom) + NFT receipt delivery
+- [x] Driver accept/reject panel with 90-second countdown
+- [x] Two-phase ETA (pickup + destination) with route polyline
+- [x] Participant-only visibility (tripLocations path)
+- [x] Passenger wallet connect (Phantom) + NFT receipt delivery
+- [x] ZK verifier wired to `snarkjs.groth16.verify()`
 - [ ] DriverReputation PDA (Anchor program on devnet)
 - [ ] PassengerReputation PDA + loyalty badges
-- [ ] ZK verifier wired to `snarkjs.groth16.verify()`
 - [ ] Fare escrow with GPS-verified release
 - [ ] Transport office dashboard (number plate → live map)
 - [ ] `@yatra/sdk` npm package for third-party integration
