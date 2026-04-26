@@ -402,10 +402,10 @@ export default function Home() {
             <Link href="/auth?role=passenger&redirect=/passenger" className="hover:text-amber-400">Passenger Login</Link>
             <Link href="/auth?role=driver&redirect=/driver" className="hover:text-amber-400">Driver Login</Link>
             <a href="https://github.com/gomugomucode/Yatra" target="_blank" rel="noreferrer" className="hover:text-amber-400">GitHub</a>
-            <a href="https://x.com/solana" target="_blank" rel="noreferrer" className="hover:text-amber-400">Twitter</a>
+            <a href="https://x.com/TeamAparichit" target="_blank" rel="noreferrer" className="hover:text-amber-400">Twitter</a>
             <a href="https://solana.com/docs" target="_blank" rel="noreferrer" className="hover:text-amber-400">Docs</a>
           </div>
-          <p className="text-sm text-zinc-500">© 2026 Yatra · Built by Hasan Gaha</p>
+          <p className="text-sm text-zinc-500">© 2026 Yatra · Built by  TeamAparichit </p>
         </div>
       </footer>
     </div>
