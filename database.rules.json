@@ -37,6 +37,7 @@
       }
     },
     "trips": {
+      ".read": "auth != null",
       ".write": "auth != null",
       "$tripId": {
         ".read": "auth != null && (data.child('passengerId').val() === auth.uid || data.child('driverId').val() === auth.uid)",

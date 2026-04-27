@@ -73,7 +73,7 @@ export default function TripRequestPanel({
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 120, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-slate-900 border-t border-slate-700/60 shadow-2xl px-4 pt-4 pb-6"
+        className="fixed bottom-0 left-0 right-0 z-[1300] bg-slate-900 border-t border-slate-700/60 shadow-2xl px-4 pt-4 pb-24"
       >
         {tripStatus === 'requested' && (
           <div className="space-y-4">

@@ -1,4 +1,4 @@
-import { getDatabase, ref, set, update, remove, onValue, push, get, onDisconnect } from 'firebase/database';
+import { getDatabase, ref, set, update, remove, onValue, push, get, onDisconnect, query, orderByChild, equalTo } from 'firebase/database';
 import { getFirebaseApp } from './firebase';
 import { Bus, Booking, Location, LiveUser, TripStatus } from './types';
 
@@ -200,9 +200,10 @@ export const subscribeToTripRequests = (
     callback: (requests: TripRequest[]) => void
 ) => {
     const db = getDb();
-    const tripRequestsRef = ref(db, 'trips');
+    const tripsRef = ref(db, 'trips');
+    const driverQuery = query(tripsRef, orderByChild('driverId'), equalTo(busId));
 
-    const unsubscribe = onValue(tripRequestsRef, (snapshot) => {
+    const unsubscribe = onValue(driverQuery, (snapshot) => {
         const data = snapshot.val();
         if (!data) {
             callback([]);
