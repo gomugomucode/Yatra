@@ -648,7 +648,7 @@ export default function PassengerDashboard() {
         pickupLocation: {
           lat: fallbackLocation.lat,
           lng: fallbackLocation.lng,
-          address: fallbackLocation.address || pickupLocation?.address || 'Current Location',
+          address: (fallbackLocation as any).address || pickupLocation?.address || 'Current Location',
         },
         ...(dropoffLocation ? {
           dropoffLocation: {

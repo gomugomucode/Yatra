@@ -71,7 +71,7 @@ async function resolvePostLoginRedirect(
   }
 
   const hasProfile = userData != null && checkProfileCompletion(userData);
-  const role = hasProfile ? (userData.role as Role) : selectedRole;
+  const role = hasProfile ? (userData!.role as Role) : selectedRole;
 
   const sessionRes = await fetch('/api/sessionLogin', {
     method: 'POST',

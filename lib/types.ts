@@ -57,6 +57,7 @@ export interface Driver extends User {
   licenseNumber: string;
   licenseFrontImage?: string;
   licenseBackImage?: string;
+  route: string;
   isApproved: boolean;
   rating?: number;
   verificationBadge?: {

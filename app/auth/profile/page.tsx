@@ -34,7 +34,7 @@ const driverSchema = z.object({
   licenseFrontImage: z.string().optional(),
   licenseBackImage: z.string().optional(),
   solanaWallet: z.string().min(32, 'Valid Solana wallet is required').max(44),
-  birthYear: z.coerce.number().min(1920, 'Birth year must be 1920 or later').max(2005, 'Drivers must be 21+'),
+  birthYear: z.number().min(1920, 'Birth year must be 1920 or later').max(2005, 'Drivers must be 21+'),
   route: z.string().min(1, 'Route is required'),
   capacity: z.number().min(1).max(100),
   profileImage: z.string().optional(),
