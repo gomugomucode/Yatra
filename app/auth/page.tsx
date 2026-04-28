@@ -52,8 +52,8 @@ const mapFirebaseError = (err: unknown): string => {
 
 /**
  * After Firebase login: resolves where to send the user.
- * - isSignIn=true + passenger role → always go to /passenger dashboard directly (skip profile setup).
- * - Sign-up or driver → check profile completion and redirect accordingly.
+ * Verified/completed users go to their dashboard, while incomplete users return
+ * to the profile setup flow to finish onboarding.
  */
 async function resolvePostLoginRedirect(
   uid: string,
@@ -63,7 +63,7 @@ async function resolvePostLoginRedirect(
   router: ReturnType<typeof useRouter>,
   isSignIn: boolean = false
 ): Promise<'dashboard' | 'profile'> {
-  let userData: any = null;
+  let userData: Record<string, unknown> | null = null;
   try {
     userData = await getUserProfile(uid);
   } catch {
@@ -86,9 +86,9 @@ async function resolvePostLoginRedirect(
 
   setRole(role);
 
-  // On sign-in, go directly to dashboard for both roles — no profile setup required.
-  // Use window.location.assign (hard nav) so the auth-page useEffect can't race and override.
-  if (isSignIn) {
+  // Existing sign-ins should still respect profile completion, especially for
+  // drivers who now must finish zk verification during setup.
+  if (isSignIn && hasProfile) {
     window.location.assign(role === 'driver' ? '/driver' : '/passenger');
     return 'dashboard';
   }
@@ -222,22 +222,22 @@ function AuthContent() {
   const isBusy = loading !== 'idle';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center px-4 py-8 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-sky-950 to-slate-900 flex items-center justify-center px-4 py-8 relative overflow-hidden">
       {/* Background Decor */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-[480px] h-[480px] bg-emerald-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-cyan-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-0 right-0 w-[480px] h-[480px] bg-orange-500/12 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-sky-500/12 rounded-full blur-3xl" />
       </div>
 
       <div className="w-full max-w-md space-y-6 relative z-10">
         {/* Header */}
         <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-slate-900/60 backdrop-blur-md px-4 py-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span className="text-sm font-medium text-emerald-300">Secure Access</span>
+          <div className="inline-flex items-center gap-2 rounded-full border border-orange-400/30 bg-slate-900/60 backdrop-blur-md px-4 py-2">
+            <ShieldCheck className="w-4 h-4 text-orange-300" />
+            <span className="text-sm font-medium text-orange-200">Secure Access</span>
           </div>
           <h1 className="text-4xl font-black text-white tracking-tight">
-            Yatra <span className="text-emerald-400">Portal</span>
+            Yatra <span className="text-orange-300">Portal</span>
           </h1>
           <p className="text-slate-400 text-sm">
             {isSignUp ? 'Create your account to start moving.' : 'Welcome back! Please enter your details.'}
@@ -248,13 +248,13 @@ function AuthContent() {
             If role is in URL, we show a locked confirmation badge.
             If NO role is in URL, we show the switchable tabs. */}
         {roleInUrl ? (
-          <div className="flex items-center justify-between px-5 py-4 rounded-2xl bg-slate-900/50 border border-emerald-500/20 backdrop-blur-md animate-in fade-in zoom-in duration-300">
+          <div className="flex items-center justify-between px-5 py-4 rounded-2xl bg-slate-900/50 border border-orange-400/20 backdrop-blur-md animate-in fade-in zoom-in duration-300">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+              <div className="p-2.5 rounded-xl bg-orange-500/10 border border-orange-400/20">
                 {selectedRole === 'driver' ? (
-                  <Bus className="w-5 h-5 text-emerald-400" />
+                  <Bus className="w-5 h-5 text-orange-300" />
                 ) : (
-                  <User2 className="w-5 h-5 text-emerald-400" />
+                  <User2 className="w-5 h-5 text-orange-300" />
                 )}
               </div>
               <div>
@@ -380,7 +380,7 @@ function AuthContent() {
 
 export default function AuthPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-emerald-500" /></div>}>
+    <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-orange-400" /></div>}>
       <AuthContent />
     </Suspense>
   );

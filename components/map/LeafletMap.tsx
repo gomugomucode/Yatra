@@ -252,6 +252,7 @@ function LeafletMapInner({
     role,
     onLocationSelect,
     pickupLocation,
+    dropoffLocation,
     userLocation,
     buses = [],
     onBusSelect,
@@ -312,7 +313,7 @@ function LeafletMapInner({
 
                     const now = Date.now();
                     const lastSeen = user.timestamp ? new Date(user.timestamp).getTime() : 0;
-                    if (now - lastSeen > 30000) return false;
+                    if (now - lastSeen > 30000 && user.id !== hailedDriverId) return false;
 
                     // Passenger map focuses to the hailed driver once handshake starts.
                     if (role === 'passenger' && user.role === 'driver') {
@@ -457,12 +458,10 @@ function LeafletMapInner({
                                 if (bus) onBusSelect(bus);
                             }
                         }}
-                        onPopupClose={() => setSelectedUser(null)}
-                        routeInfo={selectedUser?.id === user.id ? routeInfo : null}
                     />
                 ))}
 
-                {routeGeoJSON && (
+                {routeGeoJSON && !activeRoute && (
                     <>
                         {/* Glow underlay */}
                         <GeoJSON
@@ -490,8 +489,45 @@ function LeafletMapInner({
 
                 {pickupLocation && (
                     <>
-                        <Circle center={[pickupLocation.lat, pickupLocation.lng]} radius={100} pathOptions={{ color: '#22c55e' }} />
-                        <Marker position={[pickupLocation.lat, pickupLocation.lng]} icon={createLocationIcon('#10b981')}><Popup>Pickup</Popup></Marker>
+                        <Circle
+                            center={[pickupLocation.lat, pickupLocation.lng]}
+                            radius={80}
+                            pathOptions={{
+                                color: '#10b981',
+                                fillColor: '#10b981',
+                                fillOpacity: 0.08,
+                                weight: 1.5,
+                                interactive: false,
+                            }}
+                        />
+                        <Marker
+                            position={[pickupLocation.lat, pickupLocation.lng]}
+                            icon={createLocationIcon('#10b981')}
+                            zIndexOffset={-100}
+                            interactive={false}
+                        />
+                    </>
+                )}
+
+                {dropoffLocation && (
+                    <>
+                        <Circle
+                            center={[dropoffLocation.lat, dropoffLocation.lng]}
+                            radius={60}
+                            pathOptions={{
+                                color: '#3b82f6',
+                                fillColor: '#3b82f6',
+                                fillOpacity: 0.08,
+                                weight: 1.5,
+                                interactive: false,
+                            }}
+                        />
+                        <Marker
+                            position={[dropoffLocation.lat, dropoffLocation.lng]}
+                            icon={createLocationIcon('#2563eb')}
+                            zIndexOffset={-100}
+                            interactive={false}
+                        />
                     </>
                 )}
 

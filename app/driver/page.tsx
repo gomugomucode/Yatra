@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import DriverPanel from '@/components/driver/DriverPanel';
 import { DriverProfileDrawer } from '@/components/driver/DriverProfileDrawer';
 import PassengerList from '@/components/driver/PassengerList';
-import VerificationPanel from '@/components/driver/VerificationPanel';
 import { Button } from '@/components/ui/button';
 import { Bus, Passenger, Driver, checkProfileCompletion } from '@/lib/types';
 import MapWrapper from '@/components/map/MapWrapper';
@@ -12,7 +11,6 @@ import {
   Navigation,
   Users,
   MapPin,
-  Settings,
   Bus as BusIcon
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
@@ -65,7 +63,7 @@ interface DriverBookingLookup {
 
 export default function DriverDashboard() {
   const router = useRouter();
-  const { currentUser, role, loading, signOut, userData } = useAuth();
+  const { currentUser, role, loading, userData } = useAuth();
   const { toast } = useToast();
   const [buses, setBuses] = useState<Bus[]>([]);
   const [passengers, setPassengers] = useState<Passenger[]>([]);
@@ -906,11 +904,11 @@ export default function DriverDashboard() {
 
   if (loading || !currentUser || (role && role !== 'driver')) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-slate-950 via-blue-950 to-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-linear-to-br from-slate-950 via-sky-950 to-slate-900 flex items-center justify-center">
         <div className="text-center">
           <div className="relative w-20 h-20 mx-auto mb-6">
-            <div className="absolute inset-0 bg-cyan-500/20 rounded-full animate-ping"></div>
-            <div className="relative bg-linear-to-br from-cyan-500 to-blue-600 rounded-2xl w-full h-full flex items-center justify-center shadow-2xl shadow-cyan-500/50">
+            <div className="absolute inset-0 bg-orange-500/20 rounded-full animate-ping"></div>
+            <div className="relative bg-linear-to-br from-orange-500 to-sky-500 rounded-2xl w-full h-full flex items-center justify-center shadow-2xl shadow-orange-500/30">
               <BusIcon className="w-10 h-10 text-white animate-pulse" />
             </div>
           </div>
@@ -920,10 +918,8 @@ export default function DriverDashboard() {
     );
   }
 
-  const isProfileStable = !!driverProfile && checkProfileCompletion(driverProfile);
-
   return (
-    <div className="min-h-screen flex flex-col overflow-y-auto" style={{ background: '#0B0E14', WebkitOverflowScrolling: 'touch' }}>
+    <div className="min-h-screen flex flex-col overflow-y-auto" style={{ background: '#09111F', WebkitOverflowScrolling: 'touch' }}>
 
       {/* Passenger Reached full-screen alert */}
       {showPassengerReachedAlert && (
@@ -949,7 +945,7 @@ export default function DriverDashboard() {
       )}
 
       {/* ── Header ── */}
-      <header className="sticky top-0 z-50 border-b border-slate-800/50" style={{ background: 'rgba(11,14,20,0.97)', backdropFilter: 'blur(20px)' }}>
+      <header className="sticky top-0 z-50 border-b border-slate-800/50" style={{ background: 'rgba(9,17,31,0.97)', backdropFilter: 'blur(20px)' }}>
         <div className="px-4 py-3 flex items-center justify-between">
 
           {/* Brand */}
@@ -1032,7 +1028,7 @@ export default function DriverDashboard() {
       </div>
 
       {/* ── Cockpit ── */}
-      <div className="p-4 space-y-3 pb-40" style={{ background: '#0B0E14' }}>
+      <div className="p-4 space-y-3 pb-40" style={{ background: '#09111F' }}>
 
         {/* Active trip: navigation strip */}
         {activeTripRequest && (
@@ -1113,27 +1109,6 @@ export default function DriverDashboard() {
           </div>
         </section>
 
-        {/* Security Clearance */}
-        {userData && (
-          <section className="rounded-2xl border border-slate-800/70 overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-800/50" style={{ background: 'rgba(255,255,255,0.015)' }}>
-              <div className="flex items-center gap-2">
-                <Settings className="w-3.5 h-3.5 text-slate-500" />
-                <span className="text-[11px] font-bold tracking-widest text-slate-500 uppercase">Security Clearance</span>
-              </div>
-              {!driverProfile?.verificationBadge && (
-                <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">Action needed</span>
-              )}
-            </div>
-            <div className="p-4">
-              <VerificationPanel
-                driver={driverProfile!}
-                onVerificationSuccess={() => toast({ title: '✅ Verified!', description: 'Your ZK badge is minted.' })}
-              />
-            </div>
-          </section>
-        )}
-
         {/* Passengers */}
         <section className="rounded-2xl border border-slate-800/70 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-800/50" style={{ background: 'rgba(255,255,255,0.015)' }}>
@@ -1189,7 +1164,7 @@ export default function DriverDashboard() {
       </div>
 
       {/* Fixed bottom bar: status + SOS */}
-      <div className="fixed inset-x-0 bottom-0 z-1200 border-t border-slate-800/60 backdrop-blur-md px-4 py-2.5 flex items-center justify-between" style={{ background: 'rgba(11,14,20,0.97)' }}>
+      <div className="fixed inset-x-0 bottom-0 z-1200 border-t border-slate-800/60 backdrop-blur-md px-4 py-2.5 flex items-center justify-between" style={{ background: 'rgba(9,17,31,0.97)' }}>
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-400' : 'bg-slate-600'}`} />
           <span className="text-[11px] font-medium text-slate-400">{isOnline ? 'Live tracking active' : 'Offline'}</span>

@@ -56,15 +56,15 @@ export default function Home() {
       <div className="relative bg-slate-950 py-24 md:py-32 overflow-hidden">
         {/* Background ambient glows */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-orange-500/8 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-sky-500/8 rounded-full blur-3xl" />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           {/* Section Header */}
           <div className="text-center mb-20">
             <div className="inline-block mb-6">
-              <span className="px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-400/20 text-sm font-semibold text-cyan-400 tracking-widest uppercase">
+              <span className="px-4 py-2 rounded-full bg-orange-500/10 border border-orange-400/20 text-sm font-semibold text-orange-300 tracking-widest uppercase">
                 Core Technology
               </span>
             </div>

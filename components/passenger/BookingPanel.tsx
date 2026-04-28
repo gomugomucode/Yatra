@@ -1,27 +1,31 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Bus } from '@/lib/types';
-import { MapPin, Ticket, X, Navigation } from 'lucide-react';
+import { Bus, Driver } from '@/lib/types';
+import { X, Navigation } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { getDistance, haversineDistance } from '@/lib/utils/geofencing';
+import { haversineDistance } from '@/lib/utils/geofencing';
 import { getDriverReputation, DriverRepData } from '@/lib/solana/trrl';
 
 interface BookingPanelProps {
 	pickupLocation: { lat: number; lng: number; address?: string } | null;
 	dropoffLocation: { lat: number; lng: number; address?: string } | null;
 	selectedBus: Bus | null;
-	onBook: (bus: Bus, bookingData: any) => void;
+	onBook: (bus: Bus, bookingData: {
+		passengerName: string;
+		phoneNumber: string;
+		numberOfPassengers: number;
+		paymentMethod: 'cash';
+		status: 'hailing' | 'pending';
+	}) => void;
 	onReset: () => void;
 	loading?: boolean;
 }
 
 export default function BookingPanel({
 	pickupLocation,
-	dropoffLocation,
 	selectedBus,
 	onBook,
 	onReset,
@@ -37,13 +41,14 @@ export default function BookingPanel({
 	}>({});
 	const { toast } = useToast();
 	const [driverRep, setDriverRep] = useState<DriverRepData | null>(null);
+	const selectedRideBus = selectedBus as (Bus & { verificationBadge?: Driver['verificationBadge'] }) | null;
 
 	// Fetch reputation when bus is selected
 	useEffect(() => {
 		if (selectedBus?.id) {
 			getDriverReputation(selectedBus.id).then(setDriverRep).catch(console.error);
 		} else {
-			setDriverRep(null);
+			queueMicrotask(() => setDriverRep(null));
 		}
 	}, [selectedBus?.id]);
 
@@ -52,30 +57,6 @@ export default function BookingPanel({
 
 	const requestedTooManySeats =
 		!!selectedBus && numberOfPassengers > (selectedBus.availableSeats ?? 0);
-
-	// Derived state using useMemo to avoid useEffect/setState cycles
-	const distanceKm = useMemo(() => {
-		if (!pickupLocation || !dropoffLocation) return null;
-		return getDistance(pickupLocation, dropoffLocation);
-	}, [pickupLocation, dropoffLocation]);
-
-	const farePreview = useMemo(() => {
-		if (!selectedBus || !distanceKm) return null;
-		const base = 30;
-		const perKm = 10;
-		const vehicleMultiplier =
-			selectedBus.vehicleType === 'taxi'
-				? 2.5
-				: selectedBus.vehicleType === 'bike'
-					? 0.8
-					: selectedBus.vehicleType === 'others'
-						? 1.2
-						: 1;
-
-		const estimated =
-			(base + distanceKm * perKm * vehicleMultiplier) * numberOfPassengers;
-		return Math.round(estimated);
-	}, [selectedBus, distanceKm, numberOfPassengers]);
 
 	const busToPickupDistance = useMemo(() => {
 		if (!selectedBus || !selectedBus.currentLocation || !pickupLocation) return null;
@@ -87,18 +68,6 @@ export default function BookingPanel({
 			pickupLocation.lng
 		);
 	}, [selectedBus, pickupLocation]);
-
-	const handlePassengerCountClick = (value: number) => {
-		setNumberOfPassengers(value);
-		if (selectedBus && value > (selectedBus.availableSeats ?? 0)) {
-			setValidationErrors(prev => ({
-				...prev,
-				passengers: `Only ${selectedBus.availableSeats} seats available`,
-			}));
-		} else {
-			setValidationErrors(prev => ({ ...prev, passengers: undefined }));
-		}
-	};
 
 	const handleBooking = (isHail: boolean = false) => {
 		const errors: typeof validationErrors = {};
@@ -170,7 +139,7 @@ export default function BookingPanel({
 									<>
 										<span>Bus {selectedBus.busNumber} Selected</span>
 										<div className="flex items-center gap-2 mt-1">
-											{(selectedBus as any).verificationBadge && (
+											{selectedRideBus?.verificationBadge && (
 												<span className="inline-flex items-center gap-1.5 text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full text-xs font-semibold w-fit border border-emerald-500/20">
 													<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /><path d="m9 12 2 2 4-4" /></svg>
 													ZK Verified
@@ -221,33 +190,6 @@ export default function BookingPanel({
 								<p className="text-lg font-bold text-white">{selectedBus.availableSeats}</p>
 							</div>
 						</div>
-
-						{/* BIG HAIL BUTTON */}
-						<Button
-							className={`w-full h-14 text-lg font-black shadow-xl transition-all ${loading || seatsUnavailable
-								? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-								: 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-white shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-[1.02]'
-								}`}
-							onClick={() => handleBooking(true)}
-							disabled={loading || seatsUnavailable}
-						>
-							{loading ? (
-								<span className="flex items-center gap-2">
-									<span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-									Connecting...
-								</span>
-							) : seatsUnavailable ? (
-								'Bus Full'
-							) : (
-								<span className="flex items-center gap-2">
-									HAIL BUS NOW
-									<Navigation className="w-5 h-5 fill-current" />
-								</span>
-							)}
-						</Button>
-						<p className="text-xs text-center text-slate-500">
-							Tap to instantly notify driver of your location
-						</p>
 
 						{/* Optional Details Accordion */}
 						<details className="group">
