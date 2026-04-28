@@ -55,6 +55,9 @@ export interface Driver extends User {
   vehicleNumber: string;
   capacity: number;
   licenseNumber: string;
+  licenseFrontImage?: string;
+  licenseBackImage?: string;
+  route: string;
   isApproved: boolean;
   rating?: number;
   verificationBadge?: {
@@ -178,7 +181,28 @@ export interface Alert {
   details?: string;
 }
 
-export const checkProfileCompletion = (data: any): boolean => {
+type PartialDriverProfile = Partial<Driver> & { isApproved?: boolean };
+type PartialPassengerProfile = Partial<PassengerUser>;
+type PartialProfile = PartialDriverProfile | PartialPassengerProfile | null | undefined;
+
+export const checkProfileCompletion = (data: PartialProfile): boolean => {
   if (!data || !data.role) return false;
-  return !!(data.name && data.name.trim());
+  if (!data.name || !data.name.trim()) return false;
+
+  if (data.role === 'driver') {
+    const driverData = data as PartialDriverProfile;
+    const badge = driverData.verificationBadge;
+    return !!(
+      driverData.vehicleNumber &&
+      driverData.licenseNumber &&
+      driverData.solanaWallet &&
+      driverData.route &&
+      badge?.mintAddress &&
+      badge?.explorerLink &&
+      badge?.verifiedAt &&
+      driverData.isApproved
+    );
+  }
+
+  return true;
 };

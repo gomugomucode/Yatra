@@ -14,10 +14,10 @@ const NEPAL_PATH = `M 60,140 L 80,130 L 110,125 L 140,120 L 160,115 L 190,110
 
 // Transit route paths across Nepal
 const ROUTES = [
-  { id: 'r1', d: 'M 80,138 Q 200,125 350,110 Q 450,98 555,90', color: '#00f5ff', delay: 0 },
-  { id: 'r2', d: 'M 100,142 Q 220,132 360,118 Q 460,108 545,100', color: '#7c3aed', delay: 0.6 },
-  { id: 'r3', d: 'M 120,145 Q 250,135 380,125 Q 470,115 540,108', color: '#06b6d4', delay: 1.2 },
-  { id: 'r4', d: 'M 150,148 Q 280,140 400,132 Q 500,124 555,118', color: '#8b5cf6', delay: 1.8 },
+  { id: 'r1', d: 'M 80,138 Q 200,125 350,110 Q 450,98 555,90', color: '#fb923c', delay: 0 },
+  { id: 'r2', d: 'M 100,142 Q 220,132 360,118 Q 460,108 545,100', color: '#f97316', delay: 0.6 },
+  { id: 'r3', d: 'M 120,145 Q 250,135 380,125 Q 470,115 540,108', color: '#38bdf8', delay: 1.2 },
+  { id: 'r4', d: 'M 150,148 Q 280,140 400,132 Q 500,124 555,118', color: '#0ea5e9', delay: 1.8 },
 ];
 
 // City dots on the Nepal map
@@ -103,11 +103,11 @@ export default function YatraHero({
         {/* Live Badge */}
         <div className={`yatra-badge transition-all duration-700 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
           <span className="yatra-live-dot" />
-          <span className="text-xs font-bold tracking-[0.2em] text-cyan-300 uppercase">Now Live in Butwal</span>
+          <span className="text-xs font-bold tracking-[0.2em] text-orange-200 uppercase">Now Live in Butwal</span>
           <span className="yatra-badge-chip">BETA</span>
         </div>
 
-        {/* YATRA Typography — Custom SVG Logotype (Cyan → Purple) */}
+        {/* YATRA Typography — Custom SVG Logotype (Orange → Sky) */}
         <div className={`text-center transition-all duration-700 delay-100 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
           <h1 className="inline-block w-full max-w-[min(90vw,420px)]" aria-label="YATRA">
             <svg
@@ -118,9 +118,9 @@ export default function YatraHero({
             >
               <defs>
                 <linearGradient id="yatra-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#00F2FF" />
-                  <stop offset="50%" stopColor="#22d3ee" />
-                  <stop offset="100%" stopColor="#7000FF" />
+                  <stop offset="0%" stopColor="#fb923c" />
+                  <stop offset="50%" stopColor="#f97316" />
+                  <stop offset="100%" stopColor="#38bdf8" />
                 </linearGradient>
               </defs>
               <text
@@ -131,17 +131,17 @@ export default function YatraHero({
                 fontWeight="900"
                 letterSpacing="-0.03em"
                 fill="url(#yatra-gradient)"
-                style={{ filter: 'drop-shadow(0 0 40px rgba(0, 242, 255, 0.35))' }}
+                style={{ filter: 'drop-shadow(0 0 40px rgba(249, 115, 22, 0.28))' }}
                 fontFamily="var(--font-outfit), system-ui, sans-serif"
               >
                 YATRA
               </text>
             </svg>
           </h1>
-          <p className="yatra-subtitle">Nepal's Transit, Tokenized.</p>
+          <p className="yatra-subtitle">Nepal&apos;s Transit, Tokenized.</p>
           <p className="yatra-body mt-3">
             Real-time tracking meets Solana-powered security.
-            <span className="text-cyan-400">Experience the movement.</span>
+            <span className="text-orange-300">Experience the movement.</span>
           </p>
         </div>
 

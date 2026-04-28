@@ -50,6 +50,8 @@ export default function PassengerDashboard() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [buses, setBuses] = useState<Bus[]>([]);
   const [selectedBus, setSelectedBus] = useState<Bus | null>(null);
+  const [hailLoading, setHailLoading] = useState(false);
+  const [isSelectingPickup, setIsSelectingPickup] = useState(false);
   const [pickupLocation, setPickupLocation] = useState<{ lat: number; lng: number; address?: string } | null>(null);
   const [dropoffLocation, setDropoffLocation] = useState<{ lat: number; lng: number; address?: string } | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -107,7 +109,7 @@ export default function PassengerDashboard() {
     driverId: hailedDriverId,
     pickupLat: activeTripPickup?.lat ?? null,
     pickupLng: activeTripPickup?.lng ?? null,
-    enabled: requestStatus === 'requesting' && !!hailedDriverId,
+    enabled: ['accepted', 'on-trip'].includes(requestStatus) && !!hailedDriverId,
   });
 
   useEffect(() => {
@@ -300,10 +302,18 @@ export default function PassengerDashboard() {
           setRatingDriverName(selectedDriverName);
           setShowRatingModal(true);
         }
+        if (trip.status === 'rejected') {
+          toast({ title: "Driver couldn't accept", description: 'Try another driver nearby.' });
+        } else if (trip.status === 'expired') {
+          toast({ title: 'No response', description: 'Request timed out. Try again.' });
+        } else if (trip.status === 'cancelled' && (trip as { cancelledBy?: string }).cancelledBy !== currentUser?.uid) {
+          toast({ title: 'Trip cancelled by driver' });
+        }
         setRequestStatus('idle');
         setHailedDriverId(null);
         setActiveTripId(null);
         setActiveTripPickup(null);
+        setIsSelectingPickup(false);
         return;
       }
 
@@ -318,7 +328,7 @@ export default function PassengerDashboard() {
         status: trip.status,
       });
     });
-  }, [activeTripId, selectedDriverName, toast]);
+  }, [activeTripId, currentUser?.uid, selectedDriverName, toast]);
 
   // Publish passenger location to tripLocations only after driver accepts
   useEffect(() => {
@@ -408,7 +418,7 @@ export default function PassengerDashboard() {
       try {
         const { getRoute } = await import('@/lib/routing/osrm');
         const isActive = trip.status === 'active';
-        const target = isActive ? dropoffLocation : pickupLocation;
+        const target = isActive ? (dropoffLocation ?? pickupLocation) : pickupLocation;
         if (!target) return;
 
         const result = await getRoute(driverPos.lat, driverPos.lng, target.lat, target.lng);
@@ -620,12 +630,12 @@ export default function PassengerDashboard() {
     lastNotificationByBooking,
   ]);
 
-  const sendTripRequest = async (bus: Bus) => {
+  const sendTripRequest = async (bus: Bus, pickupOverride?: { lat: number; lng: number; address?: string }) => {
     const now = Date.now();
     const previous = lastTripRequestAtRef.current[bus.id] || 0;
     if (now - previous < 15000) return;
 
-    const fallbackLocation = pickupLocation || userLocation;
+    const fallbackLocation = pickupOverride || pickupLocation || userLocation;
     if (!fallbackLocation) return;
 
     lastTripRequestAtRef.current[bus.id] = now;
@@ -638,7 +648,7 @@ export default function PassengerDashboard() {
         pickupLocation: {
           lat: fallbackLocation.lat,
           lng: fallbackLocation.lng,
-          address: pickupLocation?.address || 'Current Location',
+          address: (fallbackLocation as any).address || pickupLocation?.address || 'Current Location',
         },
         ...(dropoffLocation ? {
           dropoffLocation: {
@@ -668,28 +678,47 @@ export default function PassengerDashboard() {
     }
   };
 
-  // HAILING FLOW (on-demand)
-  const handleBusSelect = async (bus: Bus) => {
+  const handleDriverPreview = (bus: Bus) => {
+    if (requestStatus !== 'idle') return;
+    setSelectedBus(bus);
+    setIsSelectingPickup(false);
+  };
+
+  const hailSelectedBus = async (bus: Bus, pickupOverride?: { lat: number; lng: number; address?: string }) => {
     if (!userLocation) {
       toast({ variant: 'destructive', title: 'Enable location', description: 'Grant location permission to request a ride.' });
       return;
     }
-    if (!pickupLocation) {
+
+    const effectivePickup = pickupOverride || pickupLocation;
+    if (!effectivePickup) {
       setSelectedBus(bus);
       toast({ title: 'Set your pickup point', description: 'Tap the map to set your pickup point, or use your current location.' });
+      setIsSelectingPickup(true);
       return;
     }
+
     setSelectedBus(bus);
+    setHailLoading(true);
     try {
-      await sendTripRequest(bus);
+      await sendTripRequest(bus, effectivePickup);
       setHailedDriverId(bus.id);
       setRequestStatus('requesting');
+      setIsSelectingPickup(false);
       toast({ title: 'Trip request sent', description: `Driver of ${bus.busNumber} has been notified.` });
     } catch (error) {
       console.warn('[Passenger] Trip request failed:', error);
       toast({ variant: 'destructive', title: 'Request failed', description: 'Please try again.' });
       setSelectedBus(null);
+      setIsSelectingPickup(false);
+    } finally {
+      setHailLoading(false);
     }
+  };
+
+  // HAILING FLOW (on-demand)
+  const handleBusSelect = async (bus: Bus) => {
+    await hailSelectedBus(bus);
   };
 
   // BOOKING FLOW (seat reservation)
@@ -797,16 +826,28 @@ export default function PassengerDashboard() {
     }
   };
 
-  const handleLocationSelect = (location: { lat: number; lng: number }) => {
+  const handleLocationSelect = async (location: { lat: number; lng: number }) => {
     // Simple address generation for demo
     const address = `Location (${location.lat.toFixed(4)}, ${location.lng.toFixed(4)})`;
+    const nextPickup = { ...location, address };
+
+    if (selectedBus && requestStatus === 'idle' && !isSelectingPickup) {
+      setSelectedBus(null);
+      return;
+    }
+
+    if (selectedBus && isSelectingPickup && requestStatus === 'idle') {
+      setPickupLocation(nextPickup);
+      await hailSelectedBus(selectedBus, nextPickup);
+      return;
+    }
 
     if (!pickupLocation) {
-      setPickupLocation({ ...location, address });
+      setPickupLocation(nextPickup);
     } else if (!dropoffLocation) {
       setDropoffLocation({ ...location, address });
     } else {
-      setPickupLocation({ ...location, address });
+      setPickupLocation(nextPickup);
       setDropoffLocation(null);
     }
   };
@@ -814,6 +855,7 @@ export default function PassengerDashboard() {
   const handleResetLocations = () => {
     setPickupLocation(null);
     setDropoffLocation(null);
+    setIsSelectingPickup(false);
     setRequestStatus('idle');
     setHailedDriverId(null);
     setActiveTripId(null);
@@ -826,6 +868,7 @@ export default function PassengerDashboard() {
     cleanupTripLocation(activeTripId).catch(console.warn);
     setRequestStatus('idle');
     setSelectedBus(null);
+    setIsSelectingPickup(false);
     setHailedDriverId(null);
     setActiveTripId(null);
     setActiveTripPickup(null);
@@ -858,7 +901,7 @@ export default function PassengerDashboard() {
 
   if (loading || !currentUser || (role && role !== 'passenger')) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-slate-950 via-blue-950 to-slate-950 flex flex-col">
+      <div className="min-h-screen bg-linear-to-br from-slate-950 via-sky-950 to-slate-900 flex flex-col">
         {/* Skeleton Header */}
         <div className="h-16 border-b border-slate-800 bg-slate-950/80 p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -897,7 +940,7 @@ export default function PassengerDashboard() {
 
   // --- UI Render ---
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col">
+    <div className="min-h-screen bg-slate-950/95 flex flex-col">
       {showRideHereAlert && (
         <div className="fixed inset-0 z-1200 bg-emerald-600/95 flex flex-col items-center justify-center text-white px-6 text-center">
           <p className="text-4xl font-extrabold tracking-wide">YOUR RIDE IS HERE</p>
@@ -1084,7 +1127,7 @@ export default function PassengerDashboard() {
           role="passenger"
           buses={filteredBuses}
           selectedBus={selectedBus}
-          onBusSelect={handleBusSelect}
+          onBusSelect={handleDriverPreview}
           onLocationSelect={handleLocationSelect}
           showRoute={!!selectedBus}
           pickupLocation={pickupLocation}
@@ -1101,7 +1144,7 @@ export default function PassengerDashboard() {
         />
 
         {/* ETA overlay card */}
-        {(etaToPickup !== null || etaToDestination !== null) && (
+        {(etaToPickup !== null || etaToDestination !== null) && ['accepted', 'on-trip'].includes(requestStatus) && (
           <div
             role="status"
             aria-live="polite"
@@ -1119,14 +1162,16 @@ export default function PassengerDashboard() {
         )}
 
         {/* Pickup guide — shown when a driver is selected but no pickup set */}
-        {selectedBus && !pickupLocation && requestStatus === 'idle' && (
+        {selectedBus && isSelectingPickup && requestStatus === 'idle' && (
           <div className="absolute bottom-4 left-4 right-4 z-400 bg-slate-900 border border-slate-700 rounded-xl p-4 flex items-center gap-3 text-sm shadow-lg animate-in slide-in-from-bottom-4 fade-in duration-300">
             <MapPin className="w-5 h-5 text-emerald-500 shrink-0" />
             <span className="text-slate-300 flex-1">Tap the map to set your pickup point, or use your current location</span>
             <Button size="sm" variant="outline" className="text-xs shrink-0"
               onClick={() => {
                 if (userLocation) {
-                  setPickupLocation({ lat: userLocation.lat, lng: userLocation.lng, address: 'Current Location' });
+                  const currentPickup = { lat: userLocation.lat, lng: userLocation.lng, address: 'Current Location' };
+                  setPickupLocation(currentPickup);
+                  void hailSelectedBus(selectedBus, currentPickup);
                 } else {
                   toast({ title: 'Waiting for location...' });
                 }
@@ -1136,16 +1181,46 @@ export default function PassengerDashboard() {
           </div>
         )}
 
-        {/* HAIL button — only shown when driver AND pickup are both set */}
-        {selectedBus && pickupLocation && requestStatus === 'idle' && (
-          <div className="absolute bottom-4 left-4 right-4 z-400 animate-in slide-in-from-bottom-4 fade-in duration-300">
-            <Button
-              className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2"
-              onClick={() => handleBusSelect(selectedBus)}
-            >
-              <Navigation className="w-5 h-5 fill-current" />
-              HAIL {selectedBus.busNumber} NOW
-            </Button>
+        {selectedBus && requestStatus === 'idle' && (
+          <div className="absolute bottom-4 left-4 right-4 z-[500] pointer-events-auto animate-in slide-in-from-bottom-4 fade-in duration-300">
+            <div className="relative rounded-2xl border border-slate-700/80 bg-slate-900/95 shadow-2xl p-4 flex items-center gap-4">
+              <button
+                className="absolute -top-3 left-1/2 -translate-x-1/2 w-10 h-1 bg-slate-300 rounded-full"
+                onClick={() => {
+                  setSelectedBus(null);
+                  setIsSelectingPickup(false);
+                }}
+                aria-label="Dismiss"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{selectedBus.emoji || '🚌'}</span>
+                  <span className="font-semibold text-sm truncate text-white">
+                    {selectedBus.busNumber || 'Driver'}
+                  </span>
+                  <span className="text-xs text-emerald-500 font-medium">● Online</span>
+                </div>
+                <div className="text-xs text-slate-400 mt-1">
+                  {selectedBus.vehicleType || 'Micro Bus'} · {selectedBus.route || 'Local'}
+                </div>
+              </div>
+
+              <Button
+                size="sm"
+                className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-5 h-10 font-semibold text-sm flex items-center gap-2 flex-shrink-0"
+                disabled={hailLoading}
+                onClick={() => handleBusSelect(selectedBus)}
+              >
+                {hailLoading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Navigation className="w-4 h-4" />
+                    {pickupLocation ? 'Hail' : 'Set Pickup & Hail'}
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         )}
 
@@ -1214,7 +1289,7 @@ export default function PassengerDashboard() {
                     {requestStatus === 'on-trip' && 'Trip in progress'}
                   </span>
                 </div>
-                {(etaToPickup !== null || etaToDestination !== null) && (
+                {(etaToPickup !== null || etaToDestination !== null) && ['accepted', 'on-trip'].includes(requestStatus) && (
                   <span className="text-xs font-semibold text-white bg-slate-700/60 px-2.5 py-1 rounded-full">
                     {etaToPickup !== null ? `${etaToPickup} min` : `${etaToDestination} min`}
                   </span>
