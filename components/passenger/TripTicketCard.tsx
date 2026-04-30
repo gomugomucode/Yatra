@@ -37,7 +37,7 @@ export default function TripTicketCard({ booking }: { booking: Booking }) {
 
     return (
         <div
-            className={`relative overflow-hidden rounded-2xl border transition-all duration-300 ${hasReceipt ? 'border-purple-500/30 bg-gradient-to-br from-slate-900 via-purple-950/20 to-slate-900 shadow-lg shadow-purple-500/10' : 'border-slate-800 bg-slate-50/40' }`}
+            className={`relative overflow-hidden rounded-2xl border transition-all duration-300 ${hasReceipt ? 'border-purple-500/30 bg-gradient-to-br from-slate-900 via-purple-950/20 to-white shadow-lg shadow-purple-500/10' : 'border-slate-100 bg-orange-50/40' }`}
         >
             {/* Decorative ticket-hole strip */}
             {hasReceipt && (
@@ -51,7 +51,7 @@ export default function TripTicketCard({ booking }: { booking: Booking }) {
                         <span className="text-3xl" role="img" aria-label="vehicle">{emoji}</span>
                         <div>
                             <p className="font-bold text-white text-sm">{route || 'Trip'}</p>
-                            <p className="text-xs text-slate-500 mt-0.5">
+                            <p className="text-xs text-slate-600 mt-0.5">
                                 {typeof timestamp === 'string' || timestamp instanceof Date
                                     ? new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                                     : 'Unknown date'
@@ -81,7 +81,7 @@ export default function TripTicketCard({ booking }: { booking: Booking }) {
                         </div>
 
                         {/* Mint address */}
-                        <div className="bg-slate-950/50 rounded-xl p-3 border border-slate-800 font-mono text-[11px] text-slate-500 flex items-center justify-between gap-2">
+                        <div className="bg-white/50 rounded-xl p-3 border border-slate-100 font-mono text-[11px] text-slate-600 flex items-center justify-between gap-2">
                             <span className="truncate">
                                 {receipt.mintAddress.slice(0, 8)}...{receipt.mintAddress.slice(-8)}
                             </span>
@@ -90,7 +90,7 @@ export default function TripTicketCard({ booking }: { booking: Booking }) {
 
                         {/* Minted at */}
                         {receipt.mintedAt && (
-                            <p className="text-[11px] text-slate-500">
+                            <p className="text-[11px] text-slate-600">
                                 Minted: {formatTime(receipt.mintedAt)}
                             </p>
                         )}

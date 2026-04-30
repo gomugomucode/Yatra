@@ -2,6 +2,25 @@
 
 All notable changes to the Yatra project will be documented in this file.
 
+## [1.3.0] - 2026-05-01
+### Modern SaaS UI Upgrade & Turbopack Stability
+
+#### Landing Page Redesign
+- **Daylight SaaS Aesthetic**: Completely overhauled the landing page with a modern, high-contrast light theme (Pure White, Charcoal text, Orange accents).
+- **Framer Motion Integration**: Added performant micro-interactions, including staggered entry animations and smooth hover-lift effects on feature cards.
+- **Hero Section**: Implemented a high-conversion hero section with animated CTAs and a subtle orange glow pulse.
+
+#### Stability & Module Remediation
+- **Turbopack Compatibility**: Resolved critical "module factory is not available" errors by simplifying `ScrollReveal` component to avoid `framer-motion` `whileInView` triggers.
+- **Zod Downgrade**: Reverted `zod` from canary v4 to stable `^3.23.8` to fix module instantiation crashes in Next.js 16.
+- **PWA Infrastructure**: Created standard `/public/sw.js` and verified `manifest.json` to eliminate asset 404s and support offline capabilities.
+- **TypeScript Safety**: Added global type declarations for `snarkjs` in `types/snarkjs.d.ts` to resolve build-time errors in the ZK prover.
+
+#### UI & Performance Tweaks
+- **Button Visibility**: Fixed a critical text visibility bug in the driver CTA where black text was layered on a dark background.
+- **Scroll Optimization**: Added `data-scroll-behavior="smooth"` to `RootLayout` for consistent, accessible navigation.
+- **Service Worker**: Implemented a network-first caching strategy in `sw.js` for dynamic transit data reliability.
+
 ## [1.2.0] - 2026-04-30
 ### "Daylight" UI Migration & System Stabilization
 

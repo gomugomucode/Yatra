@@ -12,7 +12,7 @@ const LeafletMap = dynamic(() => import('./LeafletMap'), {
         <div className="w-full h-full min-h-[400px] flex items-center justify-center bg-slate-50">
             <div className="text-center">
                 <Loader2 className="w-10 h-10 text-cyan-500 animate-spin mx-auto mb-3" />
-                <p className="text-slate-500 text-sm">Loading map…</p>
+                <p className="text-slate-600 text-sm">Loading map…</p>
             </div>
         </div>
     ),

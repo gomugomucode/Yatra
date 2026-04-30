@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { z } from 'zod';
 import { Bus, User2, Loader2, Upload, Camera, MapPin, Shield, Phone, Mail, CreditCard, CheckCircle2, ArrowRight, Wallet, Lock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -166,10 +166,10 @@ function ProfilePageContent() {
 
   if (loading || (!currentUser && !isSubmitting)) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-sky-950 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-white flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-orange-400 mx-auto mb-4" />
-          <p className="text-slate-500">Syncing authentication...</p>
+          <p className="text-slate-600">Syncing authentication...</p>
         </div>
       </div>
     );
@@ -379,10 +379,10 @@ function ProfilePageContent() {
   };
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-sky-950 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-white flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-orange-400 mx-auto mb-4" />
-          <p className="text-slate-500">Loading...</p>
+          <p className="text-slate-600">Loading...</p>
         </div>
       </div>
     );
@@ -398,7 +398,7 @@ function ProfilePageContent() {
   const isDriver = effectiveRole === 'driver';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-sky-950 to-slate-900 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-white relative overflow-hidden">
       {/* Animated Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 right-1/4 w-96 h-96 bg-orange-500/20 rounded-full blur-3xl animate-pulse"></div>
@@ -419,7 +419,7 @@ function ProfilePageContent() {
             <h1 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">
               {currentStep === 1 ? 'Welcome!' : `${isDriver ? 'Driver' : 'Passenger'} Profile`}
             </h1>
-            <p className="text-xl text-slate-500">
+            <p className="text-xl text-slate-600">
               {currentStep === 1
                 ? 'Authentication successful! Let\'s set up your profile'
                 : isDriver
@@ -433,10 +433,10 @@ function ProfilePageContent() {
             <div className="flex items-center justify-center gap-4 max-w-2xl mx-auto">
               {/* Step 1: Authentication Complete */}
               <div className="flex items-center gap-3">
-                <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold transition-all ${currentStep >= 1 ? 'bg-gradient-to-br from-orange-500 to-sky-500 text-white shadow-lg shadow-orange-500/30' : 'bg-slate-700 text-slate-500' }`}>
+                <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold transition-all ${currentStep >= 1 ? 'bg-gradient-to-br from-orange-500 to-sky-500 text-white shadow-lg shadow-orange-500/30' : 'bg-slate-700 text-slate-600' }`}>
                   {currentStep > 1 ? <CheckCircle2 className="w-6 h-6" /> : '1'}
                 </div>
-                <span className={`text-sm font-medium hidden sm:inline transition-colors ${currentStep >= 1 ? 'text-white' : 'text-slate-500' }`}>
+                <span className={`text-sm font-medium hidden sm:inline transition-colors ${currentStep >= 1 ? 'text-white' : 'text-slate-600' }`}>
                   Authentication
                 </span>
               </div>
@@ -445,10 +445,10 @@ function ProfilePageContent() {
 
               {/* Step 2: Personal Details */}
               <div className="flex items-center gap-3">
-                <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold transition-all ${currentStep >= 2 ? 'bg-gradient-to-br from-orange-500 to-sky-500 text-white shadow-lg shadow-orange-500/30' : 'bg-slate-700 text-slate-500' }`}>
+                <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold transition-all ${currentStep >= 2 ? 'bg-gradient-to-br from-orange-500 to-sky-500 text-white shadow-lg shadow-orange-500/30' : 'bg-slate-700 text-slate-600' }`}>
                   {currentStep > 2 ? <CheckCircle2 className="w-6 h-6" /> : '2'}
                 </div>
-                <span className={`text-sm font-medium hidden sm:inline transition-colors ${currentStep >= 2 ? 'text-white' : 'text-slate-500' }`}>
+                <span className={`text-sm font-medium hidden sm:inline transition-colors ${currentStep >= 2 ? 'text-white' : 'text-slate-600' }`}>
                   Personal Details
                 </span>
               </div>
@@ -457,10 +457,10 @@ function ProfilePageContent() {
 
               {/* Step 3: Go! */}
               <div className="flex items-center gap-3">
-                <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold transition-all ${currentStep >= 3 ? 'bg-gradient-to-br from-orange-500 to-sky-500 text-white shadow-lg shadow-orange-500/30' : 'bg-slate-700 text-slate-500' }`}>
+                <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold transition-all ${currentStep >= 3 ? 'bg-gradient-to-br from-orange-500 to-sky-500 text-white shadow-lg shadow-orange-500/30' : 'bg-slate-700 text-slate-600' }`}>
                   3
                 </div>
-                <span className={`text-sm font-medium hidden sm:inline transition-colors ${currentStep >= 3 ? 'text-white' : 'text-slate-500' }`}>
+                <span className={`text-sm font-medium hidden sm:inline transition-colors ${currentStep >= 3 ? 'text-white' : 'text-slate-600' }`}>
                   Go!
                 </span>
               </div>
@@ -470,7 +470,7 @@ function ProfilePageContent() {
           {/* Main Card */}
           {currentStep === 1 ? (
             /* Step 1: Authentication Complete */
-            <Card className="bg-slate-50/80 backdrop-blur-xl border-slate-700/50 shadow-2xl">
+            <Card className="bg-slate-50/80 backdrop-blur-xl border-slate-200/50 shadow-2xl">
               <CardContent className="p-12 text-center">
                 <div className="mb-8">
                   <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 mb-6 shadow-2xl shadow-green-500/50">
@@ -479,7 +479,7 @@ function ProfilePageContent() {
                   <h2 className="text-3xl font-bold text-white mb-4">
                     Authentication Complete!
                   </h2>
-                  <p className="text-lg text-slate-500 max-w-md mx-auto mb-8">
+                  <p className="text-lg text-slate-600 max-w-md mx-auto mb-8">
                     You&apos;ve successfully signed in. Now let&apos;s set up your {isDriver ? 'driver' : 'passenger'} profile to get started.
                   </p>
                 </div>
@@ -495,7 +495,7 @@ function ProfilePageContent() {
             </Card>
           ) : (
             /* Step 2 & 3: Profile Form */
-            <Card className="bg-slate-50/80 backdrop-blur-xl border-slate-700/50 shadow-2xl">
+            <Card className="bg-slate-50/80 backdrop-blur-xl border-slate-200/50 shadow-2xl">
               <CardContent className="p-8 md:p-12">
                 {isDriver ? (
                   <form onSubmit={driverForm.handleSubmit(handleDriverSubmit)} className="space-y-8">
@@ -513,7 +513,7 @@ function ProfilePageContent() {
                         <Label className="text-slate-300 text-sm font-medium">Profile Picture</Label>
                         <div className="flex items-center gap-6">
                           <div className="relative group">
-                            <div className="w-28 h-28 rounded-3xl bg-slate-800 border-2 border-slate-700 overflow-hidden shadow-xl">
+                            <div className="w-28 h-28 rounded-3xl bg-slate-100 border-2 border-slate-200 overflow-hidden shadow-xl">
                               {profilePreview ? (
                                 <img src={profilePreview} alt="Profile" className="w-full h-full object-cover" />
                               ) : (
@@ -522,7 +522,7 @@ function ProfilePageContent() {
                                 </div>
                               )}
                             </div>
-                            <label htmlFor="profileImage" className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 rounded-3xl cursor-pointer transition-opacity">
+                            <label htmlFor="profileImage" className="absolute inset-0 flex items-center justify-center bg-white/60 opacity-0 group-hover:opacity-100 rounded-3xl cursor-pointer transition-opacity">
                               <Camera className="w-8 h-8 text-white" />
                             </label>
                             <input
@@ -535,12 +535,12 @@ function ProfilePageContent() {
                           </div>
                           <div className="flex-1">
                             <label htmlFor="profileImage" className="block">
-                              <div className="px-6 py-4 bg-slate-800 border-2 border-dashed border-slate-700 hover:border-orange-400 rounded-2xl cursor-pointer transition-all group">
+                              <div className="px-6 py-4 bg-slate-100 border-2 border-dashed border-slate-200 hover:border-orange-400 rounded-2xl cursor-pointer transition-all group">
                                 <div className="flex items-center gap-3">
-                                  <Upload className="w-5 h-5 text-slate-500 group-hover:text-orange-300 transition-colors" />
+                                  <Upload className="w-5 h-5 text-slate-600 group-hover:text-orange-300 transition-colors" />
                                   <div>
                                     <p className="text-sm font-medium text-slate-300">Upload your photo</p>
-                                    <p className="text-xs text-slate-500 mt-1">Max 5MB • JPG, PNG</p>
+                                    <p className="text-xs text-slate-600 mt-1">Max 5MB • JPG, PNG</p>
                                   </div>
                                 </div>
                               </div>
@@ -555,12 +555,12 @@ function ProfilePageContent() {
                           Full Name <span className="text-red-400">*</span>
                         </Label>
                         <div className="relative">
-                          <User2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                          <User2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600" />
                           <Input
                             id="name"
                             {...driverForm.register('name')}
                             placeholder="Enter your full name"
-                            className="h-14 pl-12 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 rounded-xl focus:border-orange-400 focus:ring-orange-400/20"
+                            className="h-14 pl-12 bg-slate-100 border-slate-200 text-white placeholder:text-slate-600 rounded-xl focus:border-orange-400 focus:ring-orange-400/20"
                           />
                         </div>
                         {driverForm.formState.errors.name && (
@@ -573,7 +573,7 @@ function ProfilePageContent() {
                     </div>
 
                     {/* Vehicle Information */}
-                    <div className="space-y-6 pt-8 border-t border-slate-800">
+                    <div className="space-y-6 pt-8 border-t border-slate-100">
                       <div className="flex items-center gap-3 mb-6">
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-sky-500 flex items-center justify-center">
                           <Bus className="w-5 h-5 text-white" />
@@ -592,10 +592,10 @@ function ProfilePageContent() {
                             driverForm.setValue('vehicleType', value as VehicleTypeId)
                           }
                         >
-                          <SelectTrigger className="h-14 bg-slate-800 border-slate-700 text-white rounded-xl focus:border-orange-400 focus:ring-orange-400/20">
+                          <SelectTrigger className="h-14 bg-slate-100 border-slate-200 text-white rounded-xl focus:border-orange-400 focus:ring-orange-400/20">
                             <SelectValue placeholder="Select vehicle type" />
                           </SelectTrigger>
-                          <SelectContent className="bg-slate-800 border-slate-700">
+                          <SelectContent className="bg-slate-100 border-slate-200">
                             {VEHICLE_TYPES.map((type) => (
                               <SelectItem key={type.id} value={type.id} className="text-white hover:bg-slate-700">
                                 <span className="flex items-center gap-2">
@@ -613,7 +613,7 @@ function ProfilePageContent() {
                         <Label className="text-slate-300 text-sm font-medium">Vehicle Photo</Label>
                         <div className="flex items-center gap-6">
                           <div className="relative group">
-                            <div className="w-32 h-24 rounded-2xl bg-slate-800 border-2 border-slate-700 overflow-hidden shadow-xl">
+                            <div className="w-32 h-24 rounded-2xl bg-slate-100 border-2 border-slate-200 overflow-hidden shadow-xl">
                               {vehiclePreview ? (
                                 <img src={vehiclePreview} alt="Vehicle" className="w-full h-full object-cover" />
                               ) : (
@@ -622,7 +622,7 @@ function ProfilePageContent() {
                                 </div>
                               )}
                             </div>
-                            <label htmlFor="vehicleImage" className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 rounded-2xl cursor-pointer transition-opacity">
+                            <label htmlFor="vehicleImage" className="absolute inset-0 flex items-center justify-center bg-white/60 opacity-0 group-hover:opacity-100 rounded-2xl cursor-pointer transition-opacity">
                               <Camera className="w-6 h-6 text-white" />
                             </label>
                             <input
@@ -635,12 +635,12 @@ function ProfilePageContent() {
                           </div>
                           <div className="flex-1">
                             <label htmlFor="vehicleImage" className="block">
-                              <div className="px-6 py-4 bg-slate-800 border-2 border-dashed border-slate-700 hover:border-sky-400 rounded-2xl cursor-pointer transition-all group">
+                              <div className="px-6 py-4 bg-slate-100 border-2 border-dashed border-slate-200 hover:border-sky-400 rounded-2xl cursor-pointer transition-all group">
                                 <div className="flex items-center gap-3">
-                                  <Upload className="w-5 h-5 text-slate-500 group-hover:text-sky-300 transition-colors" />
+                                  <Upload className="w-5 h-5 text-slate-600 group-hover:text-sky-300 transition-colors" />
                                   <div>
                                     <p className="text-sm font-medium text-slate-300">Upload vehicle photo</p>
-                                    <p className="text-xs text-slate-500 mt-1">Clear photo of your vehicle</p>
+                                    <p className="text-xs text-slate-600 mt-1">Clear photo of your vehicle</p>
                                   </div>
                                 </div>
                               </div>
@@ -657,12 +657,12 @@ function ProfilePageContent() {
                             Vehicle Number <span className="text-red-400">*</span>
                           </Label>
                           <div className="relative">
-                            <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                            <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600" />
                             <Input
                               id="vehicleNumber"
                               {...driverForm.register('vehicleNumber')}
                               placeholder="e.g., Lu 1 Pa 2345"
-                              className="h-14 pl-12 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 rounded-xl focus:border-orange-400 focus:ring-orange-400/20"
+                              className="h-14 pl-12 bg-slate-100 border-slate-200 text-white placeholder:text-slate-600 rounded-xl focus:border-orange-400 focus:ring-orange-400/20"
                             />
                           </div>
                           {driverForm.formState.errors.vehicleNumber && (
@@ -678,12 +678,12 @@ function ProfilePageContent() {
                             Solana Wallet Address <span className="text-red-400">*</span>
                           </Label>
                           <div className="relative">
-                            <Wallet className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                            <Wallet className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600" />
                             <Input
                               id="solanaWallet"
                               {...driverForm.register('solanaWallet')}
                               placeholder="Solana wallet address"
-                              className="h-14 pl-12 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 rounded-xl focus:border-orange-400 focus:ring-orange-400/20"
+                              className="h-14 pl-12 bg-slate-100 border-slate-200 text-white placeholder:text-slate-600 rounded-xl focus:border-orange-400 focus:ring-orange-400/20"
                             />
                           </div>
                           {driverForm.formState.errors.solanaWallet && (
@@ -699,12 +699,12 @@ function ProfilePageContent() {
                             License Number <span className="text-red-400">*</span>
                           </Label>
                           <div className="relative">
-                            <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                            <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600" />
                             <Input
                               id="licenseNumber"
                               {...driverForm.register('licenseNumber')}
                               placeholder="Your license number"
-                              className="h-14 pl-12 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 rounded-xl focus:border-orange-400 focus:ring-orange-400/20"
+                              className="h-14 pl-12 bg-slate-100 border-slate-200 text-white placeholder:text-slate-600 rounded-xl focus:border-orange-400 focus:ring-orange-400/20"
                             />
                           </div>
                           {driverForm.formState.errors.licenseNumber && (
@@ -721,7 +721,7 @@ function ProfilePageContent() {
                           <Label className="text-slate-300 text-sm font-medium">License Front</Label>
                           <div className="flex items-center gap-4">
                             <div className="relative group">
-                              <div className="w-32 h-24 rounded-2xl bg-slate-800 border-2 border-slate-700 overflow-hidden shadow-xl">
+                              <div className="w-32 h-24 rounded-2xl bg-slate-100 border-2 border-slate-200 overflow-hidden shadow-xl">
                                 {licenseFrontPreview ? (
                                   <img src={licenseFrontPreview} alt="License front" className="w-full h-full object-cover" />
                                 ) : (
@@ -730,7 +730,7 @@ function ProfilePageContent() {
                                   </div>
                                 )}
                               </div>
-                              <label htmlFor="licenseFrontImage" className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 rounded-2xl cursor-pointer transition-opacity">
+                              <label htmlFor="licenseFrontImage" className="absolute inset-0 flex items-center justify-center bg-white/60 opacity-0 group-hover:opacity-100 rounded-2xl cursor-pointer transition-opacity">
                                 <Camera className="w-6 h-6 text-white" />
                               </label>
                               <input
@@ -742,12 +742,12 @@ function ProfilePageContent() {
                               />
                             </div>
                             <label htmlFor="licenseFrontImage" className="flex-1 block">
-                              <div className="px-4 py-4 bg-slate-800 border-2 border-dashed border-slate-700 hover:border-orange-400 rounded-2xl cursor-pointer transition-all group">
+                              <div className="px-4 py-4 bg-slate-100 border-2 border-dashed border-slate-200 hover:border-orange-400 rounded-2xl cursor-pointer transition-all group">
                                 <div className="flex items-center gap-3">
-                                  <Upload className="w-5 h-5 text-slate-500 group-hover:text-orange-300 transition-colors" />
+                                  <Upload className="w-5 h-5 text-slate-600 group-hover:text-orange-300 transition-colors" />
                                   <div>
                                     <p className="text-sm font-medium text-slate-300">Upload front side</p>
-                                    <p className="text-xs text-slate-500 mt-1">Photo must be clear and readable</p>
+                                    <p className="text-xs text-slate-600 mt-1">Photo must be clear and readable</p>
                                   </div>
                                 </div>
                               </div>
@@ -759,7 +759,7 @@ function ProfilePageContent() {
                           <Label className="text-slate-300 text-sm font-medium">License Back</Label>
                           <div className="flex items-center gap-4">
                             <div className="relative group">
-                              <div className="w-32 h-24 rounded-2xl bg-slate-800 border-2 border-slate-700 overflow-hidden shadow-xl">
+                              <div className="w-32 h-24 rounded-2xl bg-slate-100 border-2 border-slate-200 overflow-hidden shadow-xl">
                                 {licenseBackPreview ? (
                                   <img src={licenseBackPreview} alt="License back" className="w-full h-full object-cover" />
                                 ) : (
@@ -768,7 +768,7 @@ function ProfilePageContent() {
                                   </div>
                                 )}
                               </div>
-                              <label htmlFor="licenseBackImage" className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 rounded-2xl cursor-pointer transition-opacity">
+                              <label htmlFor="licenseBackImage" className="absolute inset-0 flex items-center justify-center bg-white/60 opacity-0 group-hover:opacity-100 rounded-2xl cursor-pointer transition-opacity">
                                 <Camera className="w-6 h-6 text-white" />
                               </label>
                               <input
@@ -780,12 +780,12 @@ function ProfilePageContent() {
                               />
                             </div>
                             <label htmlFor="licenseBackImage" className="flex-1 block">
-                              <div className="px-4 py-4 bg-slate-800 border-2 border-dashed border-slate-700 hover:border-orange-400 rounded-2xl cursor-pointer transition-all group">
+                              <div className="px-4 py-4 bg-slate-100 border-2 border-dashed border-slate-200 hover:border-orange-400 rounded-2xl cursor-pointer transition-all group">
                                 <div className="flex items-center gap-3">
-                                  <Upload className="w-5 h-5 text-slate-500 group-hover:text-orange-300 transition-colors" />
+                                  <Upload className="w-5 h-5 text-slate-600 group-hover:text-orange-300 transition-colors" />
                                   <div>
                                     <p className="text-sm font-medium text-slate-300">Upload back side</p>
-                                    <p className="text-xs text-slate-500 mt-1">Include renewal/authority details</p>
+                                    <p className="text-xs text-slate-600 mt-1">Include renewal/authority details</p>
                                   </div>
                                 </div>
                               </div>
@@ -800,12 +800,12 @@ function ProfilePageContent() {
                           Primary Route <span className="text-red-400">*</span>
                         </Label>
                         <div className="relative">
-                          <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                          <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600" />
                           <Input
                             id="route"
                             {...driverForm.register('route')}
                             placeholder="e.g., Butwal Main Route"
-                            className="h-14 pl-12 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 rounded-xl focus:border-orange-400 focus:ring-orange-400/20"
+                            className="h-14 pl-12 bg-slate-100 border-slate-200 text-white placeholder:text-slate-600 rounded-xl focus:border-orange-400 focus:ring-orange-400/20"
                           />
                         </div>
                         {driverForm.formState.errors.route && (
@@ -835,7 +835,7 @@ function ProfilePageContent() {
                               Birth Year <span className="text-red-400">*</span>
                             </Label>
                             <div className="relative">
-                              <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                              <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600" />
                               <Input
                                 id="birthYear"
                                 type="number"
@@ -843,7 +843,7 @@ function ProfilePageContent() {
                                 max={2005}
                                 {...driverForm.register('birthYear', { valueAsNumber: true })}
                                 placeholder="e.g., 1995"
-                                className="h-14 pl-12 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 rounded-xl focus:border-amber-500 focus:ring-amber-500/20"
+                                className="h-14 pl-12 bg-slate-100 border-slate-200 text-white placeholder:text-slate-600 rounded-xl focus:border-amber-500 focus:ring-amber-500/20"
                               />
                             </div>
                             {driverForm.formState.errors.birthYear && (
@@ -853,7 +853,7 @@ function ProfilePageContent() {
                             )}
                           </div>
 
-                          <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
+                          <div className="rounded-2xl border border-white/8 bg-white/20 p-4">
                             <div className="flex items-center gap-2 text-amber-300">
                               <Sparkles className="w-4 h-4" />
                               <span className="text-sm font-semibold">Verification checklist</span>
@@ -875,7 +875,7 @@ function ProfilePageContent() {
                                 <span className="text-xs">{!!driverForm.watch('licenseFrontImage') && !!driverForm.watch('licenseBackImage') ? '✓' : '•'}</span>
                                 License front and back uploaded
                               </li>
-                              <li className="flex items-center gap-2 text-slate-500">
+                              <li className="flex items-center gap-2 text-slate-600">
                                 <span className="text-xs">•</span>
                                 Proof is generated on this device before server verification
                               </li>
@@ -883,13 +883,13 @@ function ProfilePageContent() {
                           </div>
                         </div>
 
-                        <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
-                          <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Verification status</p>
+                        <div className="rounded-2xl border border-white/8 bg-white/20 p-4">
+                          <p className="text-[10px] uppercase tracking-[0.2em] text-slate-600 mb-2">Verification status</p>
                           {existingBadge ? (
                             <div className="flex items-center gap-2 text-emerald-300">
                               <CheckCircle2 className="w-4 h-4" />
                               <span className="text-sm font-semibold">Verified</span>
-                              <span className="text-xs text-slate-500">Minted badge is active.</span>
+                              <span className="text-xs text-slate-600">Minted badge is active.</span>
                             </div>
                           ) : verificationState === 'verifying' ? (
                             <div className="flex items-center gap-2 text-amber-300">
@@ -910,7 +910,7 @@ function ProfilePageContent() {
                         </div>
 
                         {(verificationCommitment || existingBadge?.zkCommitment) && (
-                          <div className="rounded-2xl border border-amber-500/20 bg-slate-950/60 p-4">
+                          <div className="rounded-2xl border border-amber-500/20 bg-white/60 p-4">
                             <p className="text-[10px] uppercase tracking-[0.2em] text-amber-300/80 mb-2">Latest ZK commitment</p>
                             <p className="font-mono text-sm text-amber-200 break-all">
                               {formatCommitment(existingBadge?.zkCommitment || verificationCommitment || '')}
@@ -925,14 +925,14 @@ function ProfilePageContent() {
                           Vehicle Capacity <span className="text-red-400">*</span>
                         </Label>
                         <div className="relative">
-                          <User2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                          <User2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600" />
                           <Input
                             id="capacity"
                             type="number"
                             {...driverForm.register('capacity', { valueAsNumber: true })}
                             min={1}
                             max={100}
-                            className="h-14 pl-12 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 rounded-xl focus:border-orange-400 focus:ring-orange-400/20"
+                            className="h-14 pl-12 bg-slate-100 border-slate-200 text-white placeholder:text-slate-600 rounded-xl focus:border-orange-400 focus:ring-orange-400/20"
                           />
                         </div>
                         {driverForm.formState.errors.capacity && (
@@ -984,12 +984,12 @@ function ProfilePageContent() {
                           Full Name <span className="text-red-400">*</span>
                         </Label>
                         <div className="relative">
-                          <User2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                          <User2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600" />
                           <Input
                             id="name"
                             {...passengerForm.register('name')}
                             placeholder="Enter your full name"
-                            className="h-14 pl-12 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 rounded-xl focus:border-orange-400 focus:ring-orange-400/20"
+                            className="h-14 pl-12 bg-slate-100 border-slate-200 text-white placeholder:text-slate-600 rounded-xl focus:border-orange-400 focus:ring-orange-400/20"
                           />
                         </div>
                         {passengerForm.formState.errors.name && (
@@ -1003,16 +1003,16 @@ function ProfilePageContent() {
                       {/* Email */}
                       <div className="space-y-3">
                         <Label htmlFor="email" className="text-slate-300 text-sm font-medium">
-                          Email Address <span className="text-slate-500 text-xs">(Optional)</span>
+                          Email Address <span className="text-slate-600 text-xs">(Optional)</span>
                         </Label>
                         <div className="relative">
-                          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600" />
                           <Input
                             id="email"
                             type="email"
                             {...passengerForm.register('email')}
                             placeholder="your.email@example.com"
-                            className="h-14 pl-12 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 rounded-xl focus:border-orange-400 focus:ring-orange-400/20"
+                            className="h-14 pl-12 bg-slate-100 border-slate-200 text-white placeholder:text-slate-600 rounded-xl focus:border-orange-400 focus:ring-orange-400/20"
                           />
                         </div>
                         {passengerForm.formState.errors.email && (
@@ -1025,15 +1025,15 @@ function ProfilePageContent() {
                       {/* Emergency Contact */}
                       <div className="space-y-3">
                         <Label htmlFor="emergencyContact" className="text-slate-300 text-sm font-medium">
-                          Emergency Contact <span className="text-slate-500 text-xs">(Optional)</span>
+                          Emergency Contact <span className="text-slate-600 text-xs">(Optional)</span>
                         </Label>
                         <div className="relative">
-                          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600" />
                           <Input
                             id="emergencyContact"
                             {...passengerForm.register('emergencyContact')}
                             placeholder="+977 98XXXXXXXX"
-                            className="h-14 pl-12 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 rounded-xl focus:border-orange-400 focus:ring-orange-400/20"
+                            className="h-14 pl-12 bg-slate-100 border-slate-200 text-white placeholder:text-slate-600 rounded-xl focus:border-orange-400 focus:ring-orange-400/20"
                           />
                         </div>
                         {passengerForm.formState.errors.emergencyContact && (
@@ -1046,15 +1046,15 @@ function ProfilePageContent() {
                       {/* Solana Wallet */}
                       <div className="space-y-3">
                         <Label htmlFor="solanaWallet" className="text-slate-300 text-sm font-medium">
-                          Solana Wallet Address <span className="text-slate-500 text-xs">(Optional, for Trip Tickets)</span>
+                          Solana Wallet Address <span className="text-slate-600 text-xs">(Optional, for Trip Tickets)</span>
                         </Label>
                         <div className="relative">
-                          <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                          <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600" />
                           <Input
                             id="solanaWallet"
                             {...passengerForm.register('solanaWallet')}
                             placeholder="e.g., 9xQe... (Phantom Wallet)"
-                            className="h-14 pl-12 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 rounded-xl focus:border-orange-400 focus:ring-orange-400/20"
+                            className="h-14 pl-12 bg-slate-100 border-slate-200 text-white placeholder:text-slate-600 rounded-xl focus:border-orange-400 focus:ring-orange-400/20"
                           />
                         </div>
                         {passengerForm.formState.errors.solanaWallet && (
@@ -1075,7 +1075,7 @@ function ProfilePageContent() {
                         </div>
                         <div>
                           <h3 className="text-white font-semibold mb-2">Your Privacy Matters</h3>
-                          <p className="text-sm text-slate-500 leading-relaxed">
+                          <p className="text-sm text-slate-600 leading-relaxed">
                             Your information is encrypted and secure. We only use it to provide you with the best service.
                           </p>
                         </div>
@@ -1116,10 +1116,10 @@ function ProfilePageContent() {
 export default function ProfilePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-sky-950 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-white flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-orange-400 mx-auto mb-4" />
-          <p className="text-slate-500">Loading...</p>
+          <p className="text-slate-600">Loading...</p>
         </div>
       </div>
     }>

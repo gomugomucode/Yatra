@@ -119,7 +119,7 @@ export default function PassengerList({
 									{getStatusBadge(passenger.status)}
 								</div>
 
-								<div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+								<div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
 									{/* Distance */}
 									{passenger.distanceToPickup != null && (
 										<span className="flex items-center gap-1" style={{
@@ -173,13 +173,13 @@ export default function PassengerList({
 
 				{/* Empty state */}
 				{passengers.length === 0 && (
-					<div className="text-center py-12 px-4 rounded-2xl border-2 border-dashed border-slate-800/50"
+					<div className="text-center py-12 px-4 rounded-2xl border-2 border-dashed border-slate-100/50"
 						style={{ background: 'rgba(11,14,20,0.5)' }}>
-						<div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 border border-slate-800"
+						<div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 border border-slate-100"
 							style={{ background: 'rgba(15,23,42,0.8)' }}>
 							<User className="w-7 h-7 text-slate-700" />
 						</div>
-						<p className="text-slate-500 font-semibold text-sm">No passengers yet</p>
+						<p className="text-slate-600 font-semibold text-sm">No passengers yet</p>
 						<p className="text-xs text-slate-700 mt-1">Bookings will appear here in real-time</p>
 					</div>
 				)}
@@ -187,9 +187,9 @@ export default function PassengerList({
 
 			{/* Revenue counter — glows brighter as it grows */}
 			{passengers.length > 0 && (
-				<div className="flex items-center justify-between px-4 py-3 rounded-2xl border border-slate-800/40"
+				<div className="flex items-center justify-between px-4 py-3 rounded-2xl border border-slate-100/40"
 					style={{ background: 'rgba(11,14,20,0.7)' }}>
-					<span className="text-xs text-slate-500 font-semibold uppercase tracking-widest">Est. Revenue</span>
+					<span className="text-xs text-slate-600 font-semibold uppercase tracking-widest">Est. Revenue</span>
 					<span className="font-black text-xl font-mono transition-all duration-700"
 						style={{ color: revenueColor, textShadow: revenueGlow }}>
 						रु {revenue}

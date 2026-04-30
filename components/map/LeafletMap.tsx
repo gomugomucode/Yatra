@@ -407,7 +407,7 @@ function LeafletMapInner({
                     </div>
                 </div>
                 <p className="text-slate-300 font-semibold text-sm">Acquiring GPS...</p>
-                <p className="text-slate-500 text-xs">Please allow location access</p>
+                <p className="text-slate-600 text-xs">Please allow location access</p>
             </div>
         );
     }

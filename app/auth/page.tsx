@@ -200,7 +200,7 @@ function AuthContent() {
             The future of <br />
             <span className="text-orange-500">Nepal's transit.</span>
           </h2>
-          <p className="text-xl text-slate-500 font-medium leading-relaxed mb-12">
+          <p className="text-xl text-slate-600 font-medium leading-relaxed mb-12">
             Join thousands of passengers and drivers moving smarter every day. 
             Real-time tracking, secure payments, and verified identity.
           </p>
@@ -231,7 +231,7 @@ function AuthContent() {
               <span className="text-xl font-black tracking-tight text-slate-900">Yatra</span>
             </Link>
             <Link href="/">
-              <Button variant="ghost" size="sm" className="font-bold text-slate-500">
+              <Button variant="ghost" size="sm" className="font-bold text-slate-600">
                 <ChevronLeft className="w-4 h-4 mr-1" /> Back
               </Button>
             </Link>
@@ -241,7 +241,7 @@ function AuthContent() {
             <h1 className="text-3xl font-black text-slate-900 mb-2">
               {isSignUp ? 'Create an account' : 'Welcome back'}
             </h1>
-            <p className="text-slate-500 font-medium">
+            <p className="text-slate-600 font-medium">
               {isSignUp 
                 ? 'Join Yatra and start your journey today.' 
                 : 'Enter your credentials to access your portal.'}
@@ -252,13 +252,13 @@ function AuthContent() {
           <div className="flex p-1 rounded-2xl bg-slate-100 mb-8">
             <button
               onClick={() => setSelectedRole('passenger')}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${selectedRole === 'passenger' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${selectedRole === 'passenger' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-700'}`}
             >
               <User2 className="w-4 h-4" /> Passenger
             </button>
             <button
               onClick={() => setSelectedRole('driver')}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${selectedRole === 'driver' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${selectedRole === 'driver' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-700'}`}
             >
               <Bus className="w-4 h-4" /> Driver
             </button>
@@ -283,14 +283,14 @@ function AuthContent() {
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-100" /></div>
-              <div className="relative flex justify-center text-[10px] uppercase tracking-[0.2em] font-black text-slate-400">
+              <div className="relative flex justify-center text-[10px] uppercase tracking-[0.2em] font-black text-slate-600">
                 <span className="bg-white px-4">OR USE EMAIL</span>
               </div>
             </div>
 
             <div className="space-y-4">
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600" />
                 <Input
                   type="email"
                   placeholder="Email Address"
@@ -300,7 +300,7 @@ function AuthContent() {
                 />
               </div>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600" />
                 <Input
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Password"
@@ -310,7 +310,7 @@ function AuthContent() {
                 />
                 <button 
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-500 transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-600 hover:text-orange-500 transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>

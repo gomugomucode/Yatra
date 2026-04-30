@@ -32,7 +32,7 @@ export function Navbar({
             <h1 className="text-base font-black text-slate-900 leading-none tracking-tight">
               {title}
             </h1>
-            <p className="text-[10px] font-bold text-slate-400 leading-none uppercase tracking-widest mt-1">
+            <p className="text-[10px] font-bold text-slate-600 leading-none uppercase tracking-widest mt-1">
               {subtitle}
             </p>
           </div>

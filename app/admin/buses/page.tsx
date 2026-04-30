@@ -47,7 +47,7 @@ export default function BusManagement() {
 
     if (authLoading || loading) {
         return (
-            <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+            <div className="min-h-screen bg-white flex items-center justify-center">
                 <Loader2 className="w-8 h-8 text-cyan-500 animate-spin" />
             </div>
         );
@@ -59,7 +59,7 @@ export default function BusManagement() {
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold text-white mb-2">Bus Management</h1>
-                        <p className="text-slate-500">Manage your fleet and monitor active vehicles.</p>
+                        <p className="text-slate-600">Manage your fleet and monitor active vehicles.</p>
                     </div>
                     <Button className="bg-cyan-600 hover:bg-cyan-500 text-white">
                         Add New Bus
@@ -67,12 +67,12 @@ export default function BusManagement() {
                 </div>
 
                 {/* Filters */}
-                <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-800">
+                <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
                     <div className="relative flex-1 max-w-sm">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
                         <Input
                             placeholder="Search buses..."
-                            className="pl-9 bg-slate-950 border-slate-800 text-white"
+                            className="pl-9 bg-white border-slate-100 text-white"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -80,21 +80,21 @@ export default function BusManagement() {
                 </div>
 
                 {/* Table */}
-                <div className="bg-slate-50 border border-slate-800 rounded-xl overflow-hidden">
+                <div className="bg-slate-50 border border-slate-100 rounded-xl overflow-hidden">
                     <Table>
-                        <TableHeader className="bg-slate-950">
-                            <TableRow className="border-slate-800 hover:bg-slate-950">
-                                <TableHead className="text-slate-500">Bus Number</TableHead>
-                                <TableHead className="text-slate-500">Driver</TableHead>
-                                <TableHead className="text-slate-500">Route</TableHead>
-                                <TableHead className="text-slate-500">Status</TableHead>
-                                <TableHead className="text-slate-500">Seats</TableHead>
-                                <TableHead className="text-slate-500 text-right">Actions</TableHead>
+                        <TableHeader className="bg-white">
+                            <TableRow className="border-slate-100 hover:bg-white">
+                                <TableHead className="text-slate-600">Bus Number</TableHead>
+                                <TableHead className="text-slate-600">Driver</TableHead>
+                                <TableHead className="text-slate-600">Route</TableHead>
+                                <TableHead className="text-slate-600">Status</TableHead>
+                                <TableHead className="text-slate-600">Seats</TableHead>
+                                <TableHead className="text-slate-600 text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {filteredBuses.map((bus) => (
-                                <TableRow key={bus.id} className="border-slate-800 hover:bg-slate-800/50">
+                                <TableRow key={bus.id} className="border-slate-100 hover:bg-slate-100/50">
                                     <TableCell className="font-medium text-white">
                                         <div className="flex items-center gap-2">
                                             <span className="text-xl">{bus.emoji}</span>
@@ -104,7 +104,7 @@ export default function BusManagement() {
                                     <TableCell className="text-slate-300">{bus.driverName}</TableCell>
                                     <TableCell className="text-slate-300">
                                         <div className="flex items-center gap-1">
-                                            <MapPin className="w-3 h-3 text-slate-500" />
+                                            <MapPin className="w-3 h-3 text-slate-600" />
                                             {bus.route}
                                         </div>
                                     </TableCell>
@@ -112,7 +112,7 @@ export default function BusManagement() {
                                         <Badge variant={bus.isActive ? 'default' : 'secondary'} className={
                                             bus.isActive
                                                 ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20'
-                                                : 'bg-slate-800 text-slate-500 hover:bg-slate-700 border-slate-700'
+                                                : 'bg-slate-100 text-slate-600 hover:bg-slate-700 border-slate-200'
                                         }>
                                             {bus.isActive ? 'Active' : 'Offline'}
                                         </Badge>
@@ -123,15 +123,15 @@ export default function BusManagement() {
                                     <TableCell className="text-right">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" className="h-8 w-8 p-0 text-slate-500 hover:text-white">
+                                                <Button variant="ghost" className="h-8 w-8 p-0 text-slate-600 hover:text-white">
                                                     <span className="sr-only">Open menu</span>
                                                     <MoreHorizontal className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="bg-slate-50 border-slate-800 text-white">
+                                            <DropdownMenuContent align="end" className="bg-slate-50 border-slate-100 text-white">
                                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                <DropdownMenuItem className="hover:bg-slate-800 cursor-pointer">View Details</DropdownMenuItem>
-                                                <DropdownMenuItem className="hover:bg-slate-800 cursor-pointer">Edit Bus</DropdownMenuItem>
+                                                <DropdownMenuItem className="hover:bg-slate-100 cursor-pointer">View Details</DropdownMenuItem>
+                                                <DropdownMenuItem className="hover:bg-slate-100 cursor-pointer">Edit Bus</DropdownMenuItem>
                                                 <DropdownMenuItem className="text-red-400 hover:bg-red-500/10 cursor-pointer">Delete Bus</DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>

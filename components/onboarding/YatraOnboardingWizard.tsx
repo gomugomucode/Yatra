@@ -163,11 +163,11 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
         </p>
 
         {/* Progress indicator */}
-        <div className="mt-3 flex items-center gap-3 text-xs font-medium text-slate-500">
+        <div className="mt-3 flex items-center gap-3 text-xs font-medium text-slate-600">
           {[1, 2, 3].map((s) => (
             <div key={s} className="flex items-center gap-2">
               <div
-                className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] transition-all ${ step === s ? 'bg-gradient-to-br from-cyan-500 to-emerald-500 text-white shadow-lg shadow-emerald-500/40' : s < step ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-400/50' : 'bg-slate-800 text-slate-500 border border-slate-600' }`}
+                className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] transition-all ${ step === s ? 'bg-gradient-to-br from-cyan-500 to-emerald-500 text-white shadow-lg shadow-emerald-500/40' : s < step ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-400/50' : 'bg-slate-100 text-slate-600 border border-slate-600' }`}
               >
                 {s < step ? '✓' : s}
               </div>
@@ -182,7 +182,7 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
       </div>
 
       {/* Steps */}
-      <div className="relative overflow-hidden rounded-3xl border border-slate-700/70 bg-gradient-to-br from-slate-950/90 via-slate-900/90 to-slate-950/90 shadow-[0_22px_80px_rgba(15,23,42,0.9)]">
+      <div className="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-gradient-to-br from-white/90 via-slate-900/90 to-slate-950/90 shadow-[0_22px_80px_rgba(15,23,42,0.9)]">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(6,182,212,0.16),transparent_55%),radial-gradient(circle_at_bottom,_rgba(52,211,153,0.12),transparent_55%)] pointer-events-none" />
 
         <div className="relative z-10 p-6 md:p-8">
@@ -207,7 +207,7 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
                   <button
                     type="button"
                     onClick={() => setRole('driver')}
-                    className={`group relative overflow-hidden rounded-2xl border p-5 text-left transition-all ${ role === 'driver' ? 'border-emerald-400/70 bg-emerald-500/10 shadow-[0_0_25px_rgba(16,185,129,0.35)]' : 'border-slate-700/70 bg-slate-50/70 hover:border-emerald-400/50 hover:bg-slate-50' }`}
+                    className={`group relative overflow-hidden rounded-2xl border p-5 text-left transition-all ${ role === 'driver' ? 'border-emerald-400/70 bg-emerald-500/10 shadow-[0_0_25px_rgba(16,185,129,0.35)]' : 'border-slate-200/70 bg-slate-50/70 hover:border-emerald-400/50 hover:bg-slate-50' }`}
                   >
                     <div className="pointer-events-none absolute inset-0 opacity-60 group-hover:opacity-100">
                       <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-emerald-500/15 blur-2xl" />
@@ -238,7 +238,7 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
                   <button
                     type="button"
                     onClick={() => setRole('passenger')}
-                    className={`group relative overflow-hidden rounded-2xl border p-5 text-left transition-all ${ role === 'passenger' ? 'border-cyan-400/70 bg-cyan-500/10 shadow-[0_0_25px_rgba(34,211,238,0.35)]' : 'border-slate-700/70 bg-slate-50/70 hover:border-cyan-400/50 hover:bg-slate-50' }`}
+                    className={`group relative overflow-hidden rounded-2xl border p-5 text-left transition-all ${ role === 'passenger' ? 'border-cyan-400/70 bg-cyan-500/10 shadow-[0_0_25px_rgba(34,211,238,0.35)]' : 'border-slate-200/70 bg-slate-50/70 hover:border-cyan-400/50 hover:bg-slate-50' }`}
                   >
                     <div className="pointer-events-none absolute inset-0 opacity-60 group-hover:opacity-100">
                       <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-cyan-500/15 blur-2xl" />
@@ -293,16 +293,16 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder=" "
-                        className="peer h-14 rounded-2xl border border-slate-700/80 bg-slate-50/70 px-11 text-sm text-white shadow-inner shadow-slate-900/60 placeholder-transparent outline-none transition-all focus:border-cyan-400/70 focus:bg-slate-50 focus:ring-2 focus:ring-cyan-500/20"
+                        className="peer h-14 rounded-2xl border border-slate-200/80 bg-slate-50/70 px-11 text-sm text-white shadow-inner shadow-slate-900/60 placeholder-transparent outline-none transition-all focus:border-cyan-400/70 focus:bg-slate-50 focus:ring-2 focus:ring-cyan-500/20"
                       />
-                      <User2 className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 peer-focus:text-cyan-300" />
+                      <User2 className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600 peer-focus:text-cyan-300" />
                       <label
-                        className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 rounded-full bg-slate-950/80 px-2 text-[11px] text-slate-500 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-500 peer-focus:-top-2 peer-focus:text-[10px] peer-focus:text-cyan-300"
+                        className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 rounded-full bg-white/80 px-2 text-[11px] text-slate-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-600 peer-focus:-top-2 peer-focus:text-[10px] peer-focus:text-cyan-300"
                       >
                         Full name
                       </label>
                     </div>
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-[11px] text-slate-600">
                       This is how we greet you on live tickets and alerts.
                     </p>
                   </div>
@@ -310,8 +310,8 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
                   {/* Phone field */}
                   <div className="space-y-2">
                     <div className="relative">
-                      <span className="pointer-events-none absolute left-3.5 top-1/2 flex -translate-y-1/2 items-center gap-1 text-xs text-slate-500">
-                        <span className="rounded-full bg-slate-800 px-2 py-1 text-[10px] font-semibold text-slate-200">
+                      <span className="pointer-events-none absolute left-3.5 top-1/2 flex -translate-y-1/2 items-center gap-1 text-xs text-slate-600">
+                        <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-200">
                           +977
                         </span>
                       </span>
@@ -320,16 +320,16 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder=" "
                         inputMode="tel"
-                        className="peer h-14 rounded-2xl border border-slate-700/80 bg-slate-50/70 pl-24 pr-4 text-sm text-white shadow-inner shadow-slate-900/60 placeholder-transparent outline-none transition-all focus:border-emerald-400/70 focus:bg-slate-50 focus:ring-2 focus:ring-emerald-500/20"
+                        className="peer h-14 rounded-2xl border border-slate-200/80 bg-slate-50/70 pl-24 pr-4 text-sm text-white shadow-inner shadow-slate-900/60 placeholder-transparent outline-none transition-all focus:border-emerald-400/70 focus:bg-slate-50 focus:ring-2 focus:ring-emerald-500/20"
                       />
-                      <Phone className="pointer-events-none absolute left-[4.9rem] top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 peer-focus:text-emerald-300" />
+                      <Phone className="pointer-events-none absolute left-[4.9rem] top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600 peer-focus:text-emerald-300" />
                       <label
-                        className="pointer-events-none absolute left-[5.8rem] top-1/2 -translate-y-1/2 rounded-full bg-slate-950/80 px-2 text-[11px] text-slate-500 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-500 peer-focus:-top-2 peer-focus:text-[10px] peer-focus:text-emerald-300"
+                        className="pointer-events-none absolute left-[5.8rem] top-1/2 -translate-y-1/2 rounded-full bg-white/80 px-2 text-[11px] text-slate-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-600 peer-focus:-top-2 peer-focus:text-[10px] peer-focus:text-emerald-300"
                       >
                         Phone number
                       </label>
                     </div>
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-[11px] text-slate-600">
                       Used for trip notifications and secure OTP sign-in.
                     </p>
                   </div>
@@ -363,10 +363,10 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
                           value={licenseNumber}
                           onChange={(e) => setLicenseNumber(e.target.value)}
                           placeholder=" "
-                          className={`peer h-12 rounded-xl border bg-slate-50/50 px-11 text-sm text-white outline-none transition-all focus:ring-2 ${errors.license ? 'border-red-500/50 focus:ring-red-500/20' : 'border-slate-700 focus:border-emerald-500/60 focus:ring-emerald-500/20'}`}
+                          className={`peer h-12 rounded-xl border bg-slate-50/50 px-11 text-sm text-white outline-none transition-all focus:ring-2 ${errors.license ? 'border-red-500/50 focus:ring-red-500/20' : 'border-slate-200 focus:border-emerald-500/60 focus:ring-emerald-500/20'}`}
                         />
                         <Shield className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-400" />
-                        <label className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 rounded-full bg-slate-950 px-2 text-[10px] text-slate-500 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-focus:-top-2 peer-focus:text-[10px] peer-focus:text-emerald-300">
+                        <label className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 rounded-full bg-white px-2 text-[10px] text-slate-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-focus:-top-2 peer-focus:text-[10px] peer-focus:text-emerald-300">
                           License Number
                         </label>
                       </div>
@@ -380,10 +380,10 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
                           value={vehicleNumber}
                           onChange={(e) => setVehicleNumber(e.target.value)}
                           placeholder=" "
-                          className={`peer h-12 rounded-xl border bg-slate-50/50 px-11 text-sm text-white outline-none transition-all focus:ring-2 ${errors.vehicle ? 'border-red-500/50 focus:ring-red-500/20' : 'border-slate-700 focus:border-cyan-500/60 focus:ring-cyan-500/20'}`}
+                          className={`peer h-12 rounded-xl border bg-slate-50/50 px-11 text-sm text-white outline-none transition-all focus:ring-2 ${errors.vehicle ? 'border-red-500/50 focus:ring-red-500/20' : 'border-slate-200 focus:border-cyan-500/60 focus:ring-cyan-500/20'}`}
                         />
                         <Bus className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-400" />
-                        <label className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 rounded-full bg-slate-950 px-2 text-[10px] text-slate-500 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-focus:-top-2 peer-focus:text-[10px] peer-focus:text-cyan-300">
+                        <label className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 rounded-full bg-white px-2 text-[10px] text-slate-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-focus:-top-2 peer-focus:text-[10px] peer-focus:text-cyan-300">
                           Vehicle Number
                         </label>
                       </div>
@@ -399,10 +399,10 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
                             value={birthYear}
                             onChange={(e) => setBirthYear(e.target.value)}
                             placeholder=" "
-                            className={`peer h-12 rounded-xl border bg-slate-50/50 px-11 text-sm text-white outline-none transition-all focus:ring-2 ${errors.birthYear ? 'border-red-500/50 focus:ring-red-500/20' : 'border-slate-700 focus:border-amber-500/60 focus:ring-amber-500/20'}`}
+                            className={`peer h-12 rounded-xl border bg-slate-50/50 px-11 text-sm text-white outline-none transition-all focus:ring-2 ${errors.birthYear ? 'border-red-500/50 focus:ring-red-500/20' : 'border-slate-200 focus:border-amber-500/60 focus:ring-amber-500/20'}`}
                           />
                           <Calendar className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-400" />
-                          <label className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 rounded-full bg-slate-950 px-2 text-[10px] text-slate-500 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-focus:-top-2 peer-focus:text-[10px] peer-focus:text-amber-300">
+                          <label className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 rounded-full bg-white px-2 text-[10px] text-slate-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-focus:-top-2 peer-focus:text-[10px] peer-focus:text-amber-300">
                             Birth Year
                           </label>
                         </div>
@@ -416,10 +416,10 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
                             value={solanaWallet}
                             onChange={(e) => setSolanaWallet(e.target.value)}
                             placeholder=" "
-                            className={`peer h-12 rounded-xl border bg-slate-50/50 px-11 text-sm text-white outline-none transition-all focus:ring-2 ${errors.wallet ? 'border-red-500/50 focus:ring-red-500/20' : 'border-slate-700 focus:border-purple-500/60 focus:ring-purple-500/20'}`}
+                            className={`peer h-12 rounded-xl border bg-slate-50/50 px-11 text-sm text-white outline-none transition-all focus:ring-2 ${errors.wallet ? 'border-red-500/50 focus:ring-red-500/20' : 'border-slate-200 focus:border-purple-500/60 focus:ring-purple-500/20'}`}
                           />
                           <Wallet className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-purple-400" />
-                          <label className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 rounded-full bg-slate-950 px-2 text-[10px] text-slate-500 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-focus:-top-2 peer-focus:text-[10px] peer-focus:text-purple-300">
+                          <label className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 rounded-full bg-white px-2 text-[10px] text-slate-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-focus:-top-2 peer-focus:text-[10px] peer-focus:text-purple-300">
                             Solana Wallet
                           </label>
                         </div>
@@ -445,7 +445,7 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
                   </div>
 
                   {/* zk-proof animation or status */}
-                  <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-50/40 p-5 flex flex-col justify-center">
+                  <div className="relative overflow-hidden rounded-2xl border border-slate-100 bg-orange-50/40 p-5 flex flex-col justify-center">
                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-cyan-500/5" />
                     
                     {zkResult ? (
@@ -459,7 +459,7 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
                               <p className="text-[10px] text-emerald-400/70">Groth16 SNARK Generated</p>
                             </div>
                           </div>
-                          <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 font-mono text-[9px] text-emerald-300/80 break-all">
+                          <div className="p-3 rounded-lg bg-white/80 border border-slate-100 font-mono text-[9px] text-emerald-300/80 break-all">
                              <p className="text-slate-600 mb-1 uppercase tracking-tighter">Commitment Hash</p>
                              0x{zkResult.commitment}
                           </div>
@@ -470,17 +470,17 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
                        </div>
                     ) : (
                       <div className="relative z-10 text-center space-y-4 py-4">
-                        <div className="mx-auto w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center">
+                        <div className="mx-auto w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center">
                           <Sparkles className={`w-6 h-6 ${isGeneratingProof ? 'text-cyan-400 animate-pulse' : 'text-slate-600'}`} />
                         </div>
                         <div className="space-y-1">
                           <p className="text-xs font-semibold text-slate-300">Identity Vault Ready</p>
-                          <p className="text-[10px] text-slate-500 max-w-[180px] mx-auto">
+                          <p className="text-[10px] text-slate-600 max-w-[180px] mx-auto">
                             Enter your credentials to generate a zero-knowledge proof.
                           </p>
                         </div>
                         {isGeneratingProof && (
-                          <div className="w-32 mx-auto h-1 bg-slate-800 rounded-full overflow-hidden">
+                          <div className="w-32 mx-auto h-1 bg-slate-100 rounded-full overflow-hidden">
                             <motion.div 
                               className="h-full bg-cyan-500"
                               animate={{ x: [-128, 128] }}
@@ -519,15 +519,15 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
                         value={solanaWallet}
                         onChange={(e) => setSolanaWallet(e.target.value)}
                         placeholder=" "
-                        className={`peer h-14 rounded-2xl border bg-slate-50/70 px-11 text-sm text-white outline-none transition-all focus:ring-2 ${errors.wallet ? 'border-red-500/50 focus:ring-red-500/20' : 'border-slate-700 focus:border-cyan-400 focus:ring-cyan-500/20'}`}
+                        className={`peer h-14 rounded-2xl border bg-slate-50/70 px-11 text-sm text-white outline-none transition-all focus:ring-2 ${errors.wallet ? 'border-red-500/50 focus:ring-red-500/20' : 'border-slate-200 focus:border-cyan-400 focus:ring-cyan-500/20'}`}
                       />
                       <Wallet className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-400" />
-                      <label className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 rounded-full bg-slate-950 px-2 text-[11px] text-slate-500 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-focus:-top-2 peer-focus:text-[10px] peer-focus:text-cyan-300">
+                      <label className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 rounded-full bg-white px-2 text-[11px] text-slate-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-focus:-top-2 peer-focus:text-[10px] peer-focus:text-cyan-300">
                         Solana Wallet Address
                       </label>
                     </div>
                     {errors.wallet && <p className="text-xs text-red-400">{errors.wallet}</p>}
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-[11px] text-slate-600">
                       We use this to mint your soulbound trip tickets and rewards.
                     </p>
                   </div>
@@ -547,7 +547,7 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
               variant="ghost"
               disabled={step === 1}
               onClick={handleBack}
-              className="h-10 rounded-full border border-slate-700/80 bg-slate-50/70 px-4 text-xs font-medium text-slate-300 hover:bg-slate-800 disabled:opacity-40"
+              className="h-10 rounded-full border border-slate-200/80 bg-slate-50/70 px-4 text-xs font-medium text-slate-300 hover:bg-slate-100 disabled:opacity-40"
             >
               Back
             </Button>
