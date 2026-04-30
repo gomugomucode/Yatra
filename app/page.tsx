@@ -39,7 +39,7 @@ export default function Home() {
     }
   };
   return (
-    <div className="min-h-screen premium-dark-web3">
+    <div className="min-h-screen premium-light-web3">
 
       {/* ═══ HERO — Hyper-Modern Transit Cockpit ═══ */}
       <YatraHero
@@ -71,7 +71,7 @@ export default function Home() {
             <h2 className="text-5xl md:text-6xl font-black text-white mb-6 tracking-tight">
               Sovereign Transit. Engineered for Nepal.
             </h2>
-            <p className="text-xl text-slate-400 max-w-2xl mx-auto">
+            <p className="text-xl text-slate-500 max-w-2xl mx-auto">
               Three pillars of a transit revolution — powered by satellite, blockchain, and cryptographic identity.
             </p>
           </div>
@@ -118,7 +118,7 @@ export default function Home() {
                     <span className="text-xs font-bold text-cyan-400 tracking-widest uppercase">Live · 3s refresh</span>
                   </div>
                   <h3 className="text-2xl font-bold text-white mb-3">Real-Time GPS</h3>
-                  <p className="text-slate-400 leading-relaxed">
+                  <p className="text-slate-500 leading-relaxed">
                     A satellite network beams pinpoint signals to a moving dot in Butwal. Know exactly where your bus is — updated every 3 seconds with sub-10m accuracy.
                   </p>
                 </div>
@@ -191,7 +191,7 @@ export default function Home() {
                     <span className="text-xs font-bold tracking-widest uppercase" style={{ color: '#9945ff' }}>Solana · Sub-second finality</span>
                   </div>
                   <h3 className="text-2xl font-bold text-white mb-3">Solana Integration</h3>
-                  <p className="text-slate-400 leading-relaxed">
+                  <p className="text-slate-500 leading-relaxed">
                     Every booking is a cryptographic transaction on Solana. Lightning-fast, tamper-proof, and secured inside a holographic shield of zero-knowledge proofs.
                   </p>
                 </div>
@@ -273,7 +273,7 @@ export default function Home() {
                     <span className="text-xs font-bold tracking-widest uppercase" style={{ color: '#22c55e' }}>ZK-Proof · Privacy-first</span>
                   </div>
                   <h3 className="text-2xl font-bold text-white mb-3">ZK-Civic Identity</h3>
-                  <p className="text-slate-400 leading-relaxed">
+                  <p className="text-slate-500 leading-relaxed">
                     A facial recognition wireframe scans and converts into a digital light checkmark. Your identity is verified without ever revealing your private data.
                   </p>
                 </div>
@@ -296,7 +296,7 @@ export default function Home() {
             <h2 className="text-5xl md:text-6xl font-black text-white mb-6 tracking-tight">
               The Yatra Ecosystem: Connect. Authenticate. Move.
             </h2>
-            <p className="text-xl text-slate-400">
+            <p className="text-xl text-slate-500">
               Three steps to never miss your bus again
             </p>
           </div>
@@ -307,14 +307,14 @@ export default function Home() {
               <div className="shrink-0">
                 <div className="relative w-32 h-32">
                   <div className="absolute inset-0 bg-linear-to-br from-cyan-500 to-blue-600 rounded-full animate-pulse"></div>
-                  <div className="absolute inset-2 bg-slate-900 rounded-full flex items-center justify-center">
+                  <div className="absolute inset-2 bg-slate-50 rounded-full flex items-center justify-center">
                     <span className="text-6xl font-black text-white">1</span>
                   </div>
                 </div>
               </div>
               <div className="flex-1 text-center md:text-left">
                 <h3 className="text-3xl font-bold text-white mb-3">Driver Goes Online</h3>
-                <p className="text-xl text-slate-400 leading-relaxed">
+                <p className="text-xl text-slate-500 leading-relaxed">
                   Bus driver opens the app and starts sharing their location. That's all they need to do.
                 </p>
               </div>
@@ -330,14 +330,14 @@ export default function Home() {
               <div className="shrink-0">
                 <div className="relative w-32 h-32">
                   <div className="absolute inset-0 bg-linear-to-br from-purple-500 to-pink-600 rounded-full animate-pulse delay-300"></div>
-                  <div className="absolute inset-2 bg-slate-900 rounded-full flex items-center justify-center">
+                  <div className="absolute inset-2 bg-slate-50 rounded-full flex items-center justify-center">
                     <span className="text-6xl font-black text-white">2</span>
                   </div>
                 </div>
               </div>
               <div className="flex-1 text-center md:text-right">
                 <h3 className="text-3xl font-bold text-white mb-3">You See the Bus</h3>
-                <p className="text-xl text-slate-400 leading-relaxed">
+                <p className="text-xl text-slate-500 leading-relaxed">
                   The bus appears on your map instantly. Watch it move in real-time as it approaches.
                 </p>
               </div>
@@ -353,14 +353,14 @@ export default function Home() {
               <div className="shrink-0">
                 <div className="relative w-32 h-32">
                   <div className="absolute inset-0 bg-linear-to-br from-green-500 to-emerald-600 rounded-full animate-pulse delay-700"></div>
-                  <div className="absolute inset-2 bg-slate-900 rounded-full flex items-center justify-center">
+                  <div className="absolute inset-2 bg-slate-50 rounded-full flex items-center justify-center">
                     <span className="text-6xl font-black text-white">3</span>
                   </div>
                 </div>
               </div>
               <div className="flex-1 text-center md:text-left">
                 <h3 className="text-3xl font-bold text-white mb-3">Tap to Book</h3>
-                <p className="text-xl text-slate-400 leading-relaxed">
+                <p className="text-xl text-slate-500 leading-relaxed">
                   Click the bus icon on the map. You're booked. The driver gets notified immediately.
                 </p>
               </div>
@@ -375,7 +375,7 @@ export default function Home() {
       </div>
 
       {/* Final CTA */}
-      <div className="relative bg-slate-900 py-24 md:py-32">
+      <div className="relative bg-slate-50 py-24 md:py-32">
         <div className="absolute inset-0 bg-linear-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10"></div>
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="mb-12">
@@ -465,11 +465,10 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <div className="relative inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-slate-900/80 border border-cyan-500/30 shadow-[0_0_30px_rgba(56,189,248,0.30)]">
+              <div className="relative inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-slate-50/80 border border-cyan-500/30 shadow-[0_0_30px_rgba(56,189,248,0.30)]">
                 <span className="relative inline-flex h-3 w-3">
                   <span
-                    className={`absolute inset-0 rounded-full ${onlineBuses && onlineBuses > 0 ? 'bg-emerald-400' : 'bg-slate-600'
-                      }`}
+                    className={`absolute inset-0 rounded-full ${onlineBuses && onlineBuses > 0 ? 'bg-emerald-400' : 'bg-slate-600' }`}
                     style={{
                       boxShadow:
                         onlineBuses && onlineBuses > 0

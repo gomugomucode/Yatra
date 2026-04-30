@@ -139,7 +139,7 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
             </div>            {wallet && (
               <div className="mt-5 flex items-center gap-2 rounded-xl bg-black/40 border border-slate-800 px-4 py-3">
                 <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
-                <span className="text-xs font-medium text-slate-400">Connected Wallet</span>
+                <span className="text-xs font-medium text-slate-500">Connected Wallet</span>
                 <span className="text-xs font-mono text-cyan-400 ml-auto">{truncateAddress(wallet)}</span>
               </div>
             )}
@@ -153,7 +153,7 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
             </h3>
             <div className="rounded-xl bg-[#161e2d] border border-slate-800 p-5 space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-400">Balance</span>
+                <span className="text-sm text-slate-500">Balance</span>
                 <span className="text-white font-bold text-base">0.00 SOL · 0 YTR</span>
               </div>
               <div className="flex gap-3">
@@ -187,7 +187,7 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
             </h3>
             <div className="overflow-x-auto pb-2 -mx-1 flex gap-4 snap-x snap-mandatory">
               {bookingsWithReceipts.length === 0 ? (
-                <div className="w-full py-8 text-center rounded-xl bg-slate-900/50 border border-dashed border-slate-800">
+                <div className="w-full py-8 text-center rounded-xl bg-slate-50/50 border border-dashed border-slate-800">
                   <p className="text-xs text-slate-500 uppercase tracking-tighter">No tickets minted yet</p>
                 </div>
               ) : (
@@ -197,10 +197,9 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
                   return (
                     <div
                       key={booking.id}
-                      className={`flex-shrink-0 w-48 snap-center rounded-xl border p-4 bg-[#1c2537] shadow-lg ${longDistance ? 'border-amber-500/50' : 'border-cyan-500/40'
-                        }`}
+                      className={`flex-shrink-0 w-48 snap-center rounded-xl border p-4 bg-[#1c2537] shadow-lg ${longDistance ? 'border-amber-500/50' : 'border-cyan-500/40' }`}
                     >
-                      <p className="text-[10px] text-slate-400 font-bold uppercase">MAR 06, 2026</p>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase">MAR 06, 2026</p>
                       <p className="text-sm font-bold text-white mt-1 truncate">Butwal ➔ KTM</p>
                       <div className="mt-3 flex items-center justify-between">
                         <span className="text-[10px] font-bold text-emerald-400">+{carbon}kg CO₂</span>

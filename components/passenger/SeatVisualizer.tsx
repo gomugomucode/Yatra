@@ -49,7 +49,7 @@ export default function SeatVisualizer({ bus, compact = false }: SeatVisualizerP
                         </span>
                     ))}
                 </div>
-                <span className="text-xs text-slate-400 font-medium">
+                <span className="text-xs text-slate-500 font-medium">
                     {bus.availableSeats}/{bus.capacity}
                 </span>
             </div>
@@ -64,12 +64,7 @@ export default function SeatVisualizer({ bus, compact = false }: SeatVisualizerP
                     {seats.map((seat, idx) => (
                         <div
                             key={idx}
-                            className={`h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-lg text-lg transition-transform hover:scale-110 cursor-default ${seat.type === 'available'
-                                    ? 'bg-slate-800/50 border border-slate-700 hover:bg-slate-700'
-                                    : seat.type === 'online'
-                                        ? 'bg-blue-500/20 border border-blue-500/30'
-                                        : 'bg-yellow-500/20 border border-yellow-500/30'
-                                }`}
+                            className={`h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-lg text-lg transition-transform hover:scale-110 cursor-default ${seat.type === 'available' ? 'bg-slate-800/50 border border-slate-700 hover:bg-slate-700' : seat.type === 'online' ? 'bg-blue-500/20 border border-blue-500/30' : 'bg-yellow-500/20 border border-yellow-500/30' }`}
                             title={
                                 seat.type === 'online'
                                     ? 'Online Booked'
@@ -115,15 +110,15 @@ export default function SeatVisualizer({ bus, compact = false }: SeatVisualizerP
             <div className="border-t border-slate-800 pt-3 flex items-center justify-center gap-6">
                 <div className="flex items-center gap-2 text-sm">
                     <span className="text-lg">🟦</span>
-                    <span className="text-slate-400 text-xs font-medium uppercase tracking-wide">Online</span>
+                    <span className="text-slate-500 text-xs font-medium uppercase tracking-wide">Online</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                     <span className="text-lg">🟨</span>
-                    <span className="text-slate-400 text-xs font-medium uppercase tracking-wide">Offline</span>
+                    <span className="text-slate-500 text-xs font-medium uppercase tracking-wide">Offline</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                     <span className="text-lg">⚪</span>
-                    <span className="text-slate-400 text-xs font-medium uppercase tracking-wide">Empty</span>
+                    <span className="text-slate-500 text-xs font-medium uppercase tracking-wide">Empty</span>
                 </div>
             </div>
         </div>

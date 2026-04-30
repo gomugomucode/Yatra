@@ -73,14 +73,14 @@ export default function TripRequestPanel({
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 120, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="fixed bottom-0 left-0 right-0 z-[1300] bg-slate-900 border-t border-slate-700/60 shadow-2xl px-4 pt-4 pb-24"
+        className="fixed bottom-0 left-0 right-0 z-[1300] bg-slate-50 border-t border-slate-700/60 shadow-2xl px-4 pt-4 pb-24"
       >
         {tripStatus === 'requested' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-white font-bold text-lg">{request.passengerName}</p>
-                <div className="flex items-center gap-2 text-slate-400 text-sm mt-0.5">
+                <div className="flex items-center gap-2 text-slate-500 text-sm mt-0.5">
                   <MapPin className="w-3.5 h-3.5 text-cyan-400" />
                   <span>{distanceText} to pickup</span>
                 </div>

@@ -912,7 +912,7 @@ export default function DriverDashboard() {
               <BusIcon className="w-10 h-10 text-white animate-pulse" />
             </div>
           </div>
-          <p className="text-slate-400 text-lg font-medium">Initializing Command Center...</p>
+          <p className="text-slate-500 text-lg font-medium">Initializing Command Center...</p>
         </div>
       </div>
     );
@@ -974,11 +974,7 @@ export default function DriverDashboard() {
             <button
               type="button"
               onClick={() => handleLocationToggle(!locationEnabled)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all active:scale-95 ${
-                locationEnabled
-                  ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300'
-                  : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-600'
-              }`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all active:scale-95 ${ locationEnabled ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300' : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-600' }`}
             >
               <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${locationEnabled ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
               {locationEnabled ? 'LIVE' : 'GO LIVE'}
@@ -1051,7 +1047,7 @@ export default function DriverDashboard() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-white font-semibold text-sm">{activeTripRequest.passengerName}</p>
-                  <p className="text-slate-400 text-xs">
+                  <p className="text-slate-500 text-xs">
                     {activeTripRequest.status === 'requested' && 'Waiting for response'}
                     {activeTripRequest.status === 'accepted' && 'On the way'}
                     {activeTripRequest.status === 'arrived' && 'At pickup point'}
@@ -1167,7 +1163,7 @@ export default function DriverDashboard() {
       <div className="fixed inset-x-0 bottom-0 z-1200 border-t border-slate-800/60 backdrop-blur-md px-4 py-2.5 flex items-center justify-between" style={{ background: 'rgba(9,17,31,0.97)' }}>
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-400' : 'bg-slate-600'}`} />
-          <span className="text-[11px] font-medium text-slate-400">{isOnline ? 'Live tracking active' : 'Offline'}</span>
+          <span className="text-[11px] font-medium text-slate-500">{isOnline ? 'Live tracking active' : 'Offline'}</span>
         </div>
         <Dialog>
           <DialogTrigger asChild>
@@ -1176,10 +1172,10 @@ export default function DriverDashboard() {
               SOS
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-slate-900 border-slate-800 text-white sm:max-w-md rounded-2xl">
+          <DialogContent className="bg-slate-50 border-slate-800 text-white sm:max-w-md rounded-2xl">
             <DialogHeader>
               <DialogTitle className="text-red-400 flex items-center gap-2"><AlertTriangle className="w-5 h-5" /> Emergency Report</DialogTitle>
-              <DialogDescription className="text-slate-400">This will immediately alert the admin team. Use only in emergencies.</DialogDescription>
+              <DialogDescription className="text-slate-500">This will immediately alert the admin team. Use only in emergencies.</DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-2 gap-4 py-4">
               <Button variant="outline" className="h-24 flex flex-col gap-2 border-slate-700 hover:bg-red-950 hover:border-red-500 hover:text-red-400 rounded-xl" onClick={() => handleReportEmergency('accident')}>
@@ -1190,7 +1186,7 @@ export default function DriverDashboard() {
               </Button>
             </div>
             <DialogFooter>
-              <DialogClose asChild><Button variant="ghost" className="text-slate-400">Cancel</Button></DialogClose>
+              <DialogClose asChild><Button variant="ghost" className="text-slate-500">Cancel</Button></DialogClose>
             </DialogFooter>
           </DialogContent>
         </Dialog>

@@ -152,7 +152,7 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
             {wallet && (
               <div className="mt-5 flex items-center gap-2 rounded-xl bg-black/40 border border-slate-800 px-4 py-3">
                 <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
-                <span className="text-xs font-medium text-slate-400">Connected Wallet</span>
+                <span className="text-xs font-medium text-slate-500">Connected Wallet</span>
                 <span className="text-xs font-mono text-emerald-400 ml-auto">{truncateAddress(wallet)}</span>
               </div>
             )}
@@ -169,7 +169,7 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
                 <div className="absolute -right-4 -top-4 w-16 h-16 bg-yellow-500/5 rounded-full blur-xl group-hover:bg-yellow-500/10 transition-all"></div>
                 <div className="flex items-center gap-2 mb-1 relative z-10">
                   <Star className="w-4 h-4 text-yellow-500" />
-                  <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">TRRL Score</span>
+                  <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">TRRL Score</span>
                 </div>
                 <div className="text-2xl font-black text-white relative z-10">{reputationScore}<span className="text-sm text-slate-500 font-medium">/1000</span></div>
               </div>
@@ -177,7 +177,7 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
                 <div className="absolute -right-4 -top-4 w-16 h-16 bg-cyan-500/5 rounded-full blur-xl group-hover:bg-cyan-500/10 transition-all"></div>
                 <div className="flex items-center gap-2 mb-1 relative z-10">
                   <Activity className="w-4 h-4 text-cyan-400" />
-                  <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Total Trips</span>
+                  <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Total Trips</span>
                 </div>
                 <div className="text-2xl font-black text-white relative z-10">{totalTrips}</div>
               </div>
@@ -192,7 +192,7 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
             </h3>
             <div className="overflow-x-auto pb-2 -mx-1 flex gap-4 snap-x snap-mandatory custom-scrollbar">
               {recentBookings.length === 0 ? (
-                <div className="w-full py-8 text-center rounded-xl bg-slate-900/50 border border-dashed border-slate-800">
+                <div className="w-full py-8 text-center rounded-xl bg-slate-50/50 border border-dashed border-slate-800">
                   <p className="text-xs text-slate-500 uppercase tracking-tighter">No trips completed yet</p>
                 </div>
               ) : (
@@ -204,7 +204,7 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
                       key={booking.id}
                       className="flex-shrink-0 w-48 snap-center rounded-xl border p-4 bg-gradient-to-br from-[#1c2537] to-[#0f172a] shadow-lg border-emerald-500/30 hover:border-emerald-500/60 transition-colors"
                     >
-                      <p className="text-[10px] text-slate-400 font-bold uppercase">{date}</p>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase">{date}</p>
                       <p className="text-sm font-bold text-white mt-1 truncate">{booking.passengerName || 'Passenger'}</p>
                       <div className="mt-3 flex items-center justify-between">
                         <span className="text-[12px] font-black text-emerald-400">रु {fare}</span>
@@ -227,7 +227,7 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
             </h3>
             <div className="rounded-xl bg-[#161e2d] border border-slate-800 p-5 space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-400">Balance</span>
+                <span className="text-sm text-slate-500">Balance</span>
                 <span className="text-white font-bold text-base">0.00 USDC · 0 SOL</span>
               </div>
               <div className="flex gap-3">

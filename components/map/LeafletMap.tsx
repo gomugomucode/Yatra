@@ -240,7 +240,7 @@ class MapErrorBoundary extends Component<{ children: ReactNode, onRetry?: () => 
     static getDerivedStateFromError(error: Error) { return { hasError: true, message: error.message }; }
     render() {
         if (this.state.hasError) return (
-            <div className="w-full h-full min-h-[300px] flex items-center justify-center bg-slate-900 text-center">
+            <div className="w-full h-full min-h-[300px] flex items-center justify-center bg-slate-50 text-center">
                 <div><p className="text-red-400 font-medium text-sm">Unable to load map.</p><button onClick={() => { this.setState({ hasError: false }); this.props.onRetry?.(); }} className="mt-2 bg-slate-700 text-white px-4 py-1 rounded text-sm">Retry</button></div>
             </div>
         );
@@ -399,7 +399,7 @@ function LeafletMapInner({
     // Show GPS acquiring screen until we have a real location
     if (!isMapReady) {
         return (
-            <div className="w-full h-full min-h-[300px] bg-slate-900 flex flex-col items-center justify-center gap-4">
+            <div className="w-full h-full min-h-[300px] bg-slate-50 flex flex-col items-center justify-center gap-4">
                 <div className="relative w-16 h-16">
                     <div className="absolute inset-0 bg-cyan-500/30 rounded-full animate-ping" />
                     <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-xl">

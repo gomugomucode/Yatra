@@ -78,12 +78,12 @@ export default function LocationSearch({ onLocationSelect, placeholder = "Search
     return (
         <div ref={wrapperRef} className={`relative ${className}`}>
             <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <Input
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder={placeholder}
-                    className="pl-9 bg-slate-900/80 border-slate-700 text-white placeholder:text-slate-500 focus:ring-cyan-500"
+                    className="pl-9 bg-slate-50/80 border-slate-700 text-white placeholder:text-slate-500 focus:ring-cyan-500"
                 />
                 {loading && (
                     <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-500 animate-spin" />
@@ -91,7 +91,7 @@ export default function LocationSearch({ onLocationSelect, placeholder = "Search
             </div>
 
             {isOpen && results.length > 0 && (
-                <Card className="absolute top-full left-0 right-0 mt-2 z-50 bg-slate-900 border-slate-700 overflow-hidden shadow-xl">
+                <Card className="absolute top-full left-0 right-0 mt-2 z-50 bg-slate-50 border-slate-700 overflow-hidden shadow-xl">
                     <ul className="max-h-60 overflow-y-auto">
                         {results.map((result) => (
                             <li key={result.place_id}>

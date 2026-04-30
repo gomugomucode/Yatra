@@ -142,38 +142,32 @@ export default function DetailedBookingModal() {
 
                             {/* Where are you going? Dropdown */}
                             <div className="space-y-2">
-                                <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
+                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
                                     Where are you going?
                                 </label>
                                 <div className="relative">
                                     <button
                                         type="button"
                                         onClick={() => setDropdownOpen(o => !o)}
-                                        className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl border text-left transition-all ${destination
-                                                ? 'bg-cyan-500/10 border-cyan-500/40 text-white'
-                                                : 'bg-slate-900 border-slate-700 text-slate-400'
-                                            } hover:border-cyan-500/60 focus:outline-none focus:border-cyan-500`}
+                                        className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl border text-left transition-all ${destination ? 'bg-cyan-500/10 border-cyan-500/40 text-white' : 'bg-slate-50 border-slate-700 text-slate-500' } hover:border-cyan-500/60 focus:outline-none focus:border-cyan-500`}
                                     >
                                         <span className="flex items-center gap-2 font-medium">
                                             <MapPin className={`w-4 h-4 ${destination ? 'text-cyan-400' : 'text-slate-500'}`} />
                                             {selectedCity?.name || 'Select a city...'}
                                         </span>
-                                        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
+                                        <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
                                     </button>
 
                                     {/* Dropdown list */}
                                     {dropdownOpen && (
-                                        <div className="absolute z-50 mt-2 w-full bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden">
+                                        <div className="absolute z-50 mt-2 w-full bg-slate-50 border border-slate-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden">
                                             <div className="max-h-52 overflow-y-auto">
                                                 {NEPALI_CITIES.map((city) => (
                                                     <button
                                                         key={city.id}
                                                         type="button"
                                                         onClick={() => { setDestination(city.id); setDropdownOpen(false); }}
-                                                        className={`w-full flex items-center justify-between px-4 py-3 text-left text-sm transition-colors ${destination === city.id
-                                                                ? 'bg-cyan-500/15 text-cyan-300'
-                                                                : 'text-slate-300 hover:bg-slate-800'
-                                                            }`}
+                                                        className={`w-full flex items-center justify-between px-4 py-3 text-left text-sm transition-colors ${destination === city.id ? 'bg-cyan-500/15 text-cyan-300' : 'text-slate-300 hover:bg-slate-800' }`}
                                                     >
                                                         <span className="flex items-center gap-2">
                                                             {destination === city.id && (
@@ -195,17 +189,14 @@ export default function DetailedBookingModal() {
 
                             {/* Vehicle Type */}
                             <div className="space-y-2">
-                                <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Vehicle Type</label>
+                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Vehicle Type</label>
                                 <div className="grid grid-cols-3 gap-2">
                                     {VEHICLE_TYPES.map(v => (
                                         <button
                                             key={v.id}
                                             type="button"
                                             onClick={() => setVehicleType(v.id)}
-                                            className={`flex flex-col items-center gap-2 py-3 px-2 rounded-2xl border-2 transition-all ${vehicleType === v.id
-                                                    ? 'border-cyan-500 bg-cyan-500/10 text-cyan-300'
-                                                    : 'border-slate-800 bg-slate-900/50 text-slate-400 hover:border-slate-700'
-                                                }`}
+                                            className={`flex flex-col items-center gap-2 py-3 px-2 rounded-2xl border-2 transition-all ${vehicleType === v.id ? 'border-cyan-500 bg-cyan-500/10 text-cyan-300' : 'border-slate-800 bg-slate-50/50 text-slate-500 hover:border-slate-700' }`}
                                         >
                                             <span>{v.icon}</span>
                                             <span className="text-xs font-bold">{v.name}</span>
@@ -216,17 +207,14 @@ export default function DetailedBookingModal() {
 
                             {/* Passengers */}
                             <div className="space-y-2">
-                                <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Passengers</label>
+                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Passengers</label>
                                 <div className="flex gap-2">
                                     {[1, 2, 3, 4, 5].map(num => (
                                         <button
                                             key={num}
                                             type="button"
                                             onClick={() => setPassengers(num)}
-                                            className={`flex-1 h-10 rounded-xl text-sm font-bold border-2 transition-all ${passengers === num
-                                                    ? 'border-cyan-500 bg-cyan-500/15 text-cyan-300'
-                                                    : 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-600'
-                                                }`}
+                                            className={`flex-1 h-10 rounded-xl text-sm font-bold border-2 transition-all ${passengers === num ? 'border-cyan-500 bg-cyan-500/15 text-cyan-300' : 'border-slate-800 bg-slate-50 text-slate-500 hover:border-slate-600' }`}
                                         >
                                             {num}
                                         </button>
@@ -235,19 +223,19 @@ export default function DetailedBookingModal() {
                             </div>
 
                             {/* Trip Summary */}
-                            <div className="bg-slate-900/60 rounded-2xl p-4 border border-slate-800 space-y-2">
+                            <div className="bg-slate-50/60 rounded-2xl p-4 border border-slate-800 space-y-2">
                                 <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Trip Summary</p>
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-slate-400">Vehicle</span>
+                                    <span className="text-slate-500">Vehicle</span>
                                     <span className="font-semibold text-white capitalize">{selectedVehicle?.name}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-slate-400">Passengers</span>
+                                    <span className="text-slate-500">Passengers</span>
                                     <span className="font-semibold text-white">{passengers}</span>
                                 </div>
                                 {selectedCity && (
                                     <div className="flex justify-between text-sm">
-                                        <span className="text-slate-400">Destination</span>
+                                        <span className="text-slate-500">Destination</span>
                                         <span className="font-semibold text-cyan-300">{selectedCity.name}</span>
                                     </div>
                                 )}
@@ -267,12 +255,9 @@ export default function DetailedBookingModal() {
                                     key={method.id}
                                     type="button"
                                     onClick={() => setPaymentMethod(method.id)}
-                                    className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all ${paymentMethod === method.id
-                                            ? 'border-cyan-500 bg-cyan-500/10'
-                                            : 'border-slate-800 bg-slate-900/50 hover:border-slate-700'
-                                        }`}
+                                    className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all ${paymentMethod === method.id ? 'border-cyan-500 bg-cyan-500/10' : 'border-slate-800 bg-slate-50/50 hover:border-slate-700' }`}
                                 >
-                                    <div className="p-2 rounded-xl bg-slate-900 border border-slate-800">{method.icon}</div>
+                                    <div className="p-2 rounded-xl bg-slate-50 border border-slate-800">{method.icon}</div>
                                     <div className="flex-1">
                                         <p className="font-bold text-white text-sm">{method.name}</p>
                                         <p className="text-xs text-slate-500">{method.id === 'cash' ? 'Pay directly to driver' : 'Secure digital payment'}</p>
@@ -296,7 +281,7 @@ export default function DetailedBookingModal() {
                             </div>
                             <div className="text-center">
                                 <h3 className="text-xl font-bold text-white">Booking Confirmed!</h3>
-                                <p className="text-slate-400 text-sm mt-1">Your ride to <span className="text-cyan-300 font-semibold">{selectedCity?.name}</span> is scheduled.</p>
+                                <p className="text-slate-500 text-sm mt-1">Your ride to <span className="text-cyan-300 font-semibold">{selectedCity?.name}</span> is scheduled.</p>
                             </div>
                             <div className="bg-white p-4 rounded-2xl shadow-xl shadow-white/5">
                                 <img
@@ -323,10 +308,7 @@ export default function DetailedBookingModal() {
                     {step === 1 && (
                         <Button
                             onClick={handleNext}
-                            className={`flex-1 h-12 text-sm font-bold rounded-2xl text-white transition-all duration-300 ${destination
-                                    ? 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 shadow-lg shadow-cyan-500/30 animate-pulse-subtle'
-                                    : 'bg-slate-800 text-slate-400 cursor-not-allowed'
-                                }`}
+                            className={`flex-1 h-12 text-sm font-bold rounded-2xl text-white transition-all duration-300 ${destination ? 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 shadow-lg shadow-cyan-500/30 animate-pulse-subtle' : 'bg-slate-800 text-slate-500 cursor-not-allowed' }`}
                             style={{
                                 animation: destination ? 'pulse-glow 2s ease-in-out infinite' : 'none',
                             }}

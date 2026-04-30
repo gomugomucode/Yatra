@@ -49,31 +49,31 @@
   /* Warm travel-inspired palette */
   --radius: 0.625rem;
 
-  --background: #09111f;
-  --foreground: #fff8f1;
+  --background: #FFFFFF;
+  --foreground: #111827;
 
-  --card: #101a2d;
-  --card-foreground: #fff8f1;
+  --card: #F9FAFB;
+  --card-foreground: #111827;
 
-  --popover: #101a2d;
-  --popover-foreground: #fff8f1;
+  --popover: #F9FAFB;
+  --popover-foreground: #111827;
 
   --primary: #f97316;
-  --primary-foreground: #fff8f1;
+  --primary-foreground: #FFFFFF;
 
-  --secondary: #0ea5e9;
-  --secondary-foreground: #09111f;
+  --secondary: #F3F4F6;
+  --secondary-foreground: #1F2937;
 
-  --muted: #162235;
-  --muted-foreground: #c3cfdf;
+  --muted: #F3F4F6;
+  --muted-foreground: #6B7280;
 
-  --accent: #fb923c;
-  --accent-foreground: #09111f;
+  --accent: #FFF7ED;
+  --accent-foreground: #C2410C;
 
-  --destructive: #f97373;
+  --destructive: #EF4444;
 
-  --border: #24344d;
-  --input: #24344d;
+  --border: #E5E7EB;
+  --input: #E5E7EB;
   --ring: #fb923c;
 
   --chart-1: #f97316;
@@ -82,13 +82,13 @@
   --chart-4: #38bdf8;
   --chart-5: #fb7185;
 
-  --sidebar: #09111f;
-  --sidebar-foreground: #eef4ff;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #111827;
   --sidebar-primary: #f97316;
   --sidebar-primary-foreground: #fff8f1;
-  --sidebar-accent: #162235;
-  --sidebar-accent-foreground: #eef4ff;
-  --sidebar-border: #24344d;
+  --sidebar-accent: #F3F4F6;
+  --sidebar-accent-foreground: #1F2937;
+  --sidebar-border: #E5E7EB;
   --sidebar-ring: #fb923c;
 }
 
@@ -98,15 +98,12 @@
   }
 
   html {
-    background-color: #09111f;
+    background-color: #FFFFFF;
   }
 
   body {
     @apply text-foreground;
-    background:
-      radial-gradient(circle at top, rgba(249, 115, 22, 0.14) 0, transparent 28%),
-      radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.14) 0, transparent 32%),
-      linear-gradient(180deg, #0c1627 0%, #09111f 45%, #070d18 100%);
+    background: #FFFFFF;
   }
 }
 
@@ -117,16 +114,16 @@
 }
 
 ::-webkit-scrollbar-track {
-  background-color: #09111f;
+  background-color: #FFFFFF;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: #31425d;
+  background-color: #D1D5DB;
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #4d6489;
+  background-color: #9CA3AF;
 }
 
 /* Cyber-accented typography helpers */
@@ -157,12 +154,12 @@
    PREMIUM DARK WEB3 — Background Grid + Radial Mask
    ════════════════════════════════════════════════════ */
 
-.premium-dark-web3 {
+.premium-light-web3 {
   position: relative;
-  background: #09111f;
+  background: #FFFFFF;
 }
 
-.premium-dark-web3::before {
+.premium-light-web3::before {
   content: '';
   position: fixed;
   inset: 0;
@@ -186,7 +183,7 @@
   z-index: 0;
 }
 
-.premium-dark-web3 > * {
+.premium-light-web3 > * {
   position: relative;
   z-index: 1;
 }
@@ -254,14 +251,11 @@
 
 /* ── Background ── */
 .yatra-hero {
-  background: #030b1a;
+  background: #FFFFFF;
 }
 
 .yatra-bg {
-  background:
-    radial-gradient(ellipse 80% 50% at 20% 20%, rgba(0, 210, 255, 0.07) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 60% at 80% 80%, rgba(124, 58, 237, 0.08) 0%, transparent 60%),
-    linear-gradient(170deg, #030b1a 0%, #060d1f 40%, #050c1b 100%);
+  background: #FFFFFF;
 }
 
 .yatra-grid {
@@ -272,11 +266,11 @@
 }
 
 .yatra-glow-cyan {
-  background: radial-gradient(circle, #00f5ff, transparent 70%);
+  background: #FFFFFF;
 }
 
 .yatra-glow-purple {
-  background: radial-gradient(circle, #7c3aed, transparent 70%);
+  background: #FFFFFF;
 }
 
 /* ── Floating particles ── */
@@ -391,7 +385,7 @@
   font-size: clamp(1.25rem, 3vw, 2rem);
   font-weight: 700;
   letter-spacing: -0.01em;
-  background: linear-gradient(90deg, #e2e8f0, #94a3b8);
+  background: linear-gradient(90deg, #4B5563, #6B7280);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -399,7 +393,7 @@
 
 .yatra-body {
   font-size: 1.05rem;
-  color: rgba(148, 163, 184, 0.9);
+  color: #4B5563;
   max-width: 540px;
   margin-left: auto;
   margin-right: auto;
@@ -413,10 +407,8 @@
 }
 
 .yatra-cockpit {
-  background: linear-gradient(135deg,
-      rgba(0, 20, 50, 0.7) 0%,
-      rgba(5, 15, 35, 0.8) 100%);
-  border: 1px solid rgba(0, 245, 255, 0.15);
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
   border-radius: 20px;
   padding: 16px;
   backdrop-filter: blur(20px);
@@ -682,8 +674,8 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   color: #ffffff;
-  background: linear-gradient(135deg, rgba(0, 180, 255, 0.2), rgba(0, 100, 200, 0.3));
-  border: 1px solid rgba(0, 245, 255, 0.45);
+  background: var(--primary);
+  border: 1px solid var(--primary);
   backdrop-filter: blur(12px);
   overflow: hidden;
   cursor: pointer;
@@ -728,10 +720,10 @@
   font-size: 1rem;
   font-weight: 700;
   letter-spacing: 0.04em;
-  color: #94a3b8;
-  background: linear-gradient(135deg, rgba(15, 20, 30, 0.8), rgba(10, 15, 25, 0.9));
+  color: var(--primary);
+  background: #FFFFFF;
   /* Carbon-fiber border simulation */
-  border: 1px solid rgba(100, 116, 139, 0.4);
+  border: 2px solid var(--primary);
   backdrop-filter: blur(12px);
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease, color 0.2s ease, border-color 0.2s ease;
@@ -834,8 +826,8 @@
 /* ── Shared bento card base ── */
 .bento-card {
   position: relative;
-  background: linear-gradient(135deg, rgba(5, 15, 35, 0.9) 0%, rgba(10, 20, 50, 0.8) 100%);
-  border: 1px solid rgba(0, 245, 255, 0.12);
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
   border-radius: 24px;
   overflow: hidden;
   transition: border-color 0.4s ease, box-shadow 0.4s ease, transform 0.3s ease;
@@ -877,7 +869,7 @@
   height: 64px;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #0ea5e9, #0c4a6e 50%, #082f49);
+  background: #FFFFFF;
   box-shadow: 0 0 24px rgba(14, 165, 233, 0.5), inset -8px -4px 12px rgba(0, 0, 0, 0.4);
   animation: globePulse 3s ease-in-out infinite;
   z-index: 2;

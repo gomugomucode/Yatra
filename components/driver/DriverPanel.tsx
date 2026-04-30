@@ -61,9 +61,7 @@ export default function DriverPanel({
 						<span className="text-[10px] font-bold tracking-widest text-cyan-500 uppercase">Vehicle Status Report</span>
 					</div>
 					<Badge variant="outline"
-						className={`text-[10px] px-2 py-0 ${bus.isActive
-							? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-							: 'bg-slate-800 text-slate-400 border-slate-700'}`}>
+						className={`text-[10px] px-2 py-0 ${bus.isActive ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-800 text-slate-500 border-slate-700'}`}>
 						{bus.isActive ? 'ACTIVE' : 'INACTIVE'}
 					</Badge>
 				</div>

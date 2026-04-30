@@ -80,11 +80,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             )}
 
             {/* Sidebar */}
-            <aside className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-slate-900/90 backdrop-blur-md border-r border-slate-800 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:shrink-0
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        ${activeAlert ? 'mt-16' : ''} 
-      `}>
+            <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-50/90 backdrop-blur-md border-r border-slate-800 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:shrink-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${activeAlert ? 'mt-16' : ''}`}>
                 <div className="h-16 flex items-center justify-between px-6 border-b border-slate-800">
                     <span className="text-xl font-black bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
                         DriveUp Admin
@@ -101,10 +97,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <Link
                                 key={item.href}
                                 href={item.href}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${isActive
-                                    ? 'bg-cyan-500/10 text-cyan-400 font-bold'
-                                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                                    }`}
+                                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${isActive ? 'bg-cyan-500/10 text-cyan-400 font-bold' : 'text-slate-500 hover:bg-slate-800 hover:text-white' }`}
                                 onClick={() => setSidebarOpen(false)}
                             >
                                 <item.icon className="w-5 h-5" />

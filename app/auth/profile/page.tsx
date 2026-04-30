@@ -169,7 +169,7 @@ function ProfilePageContent() {
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-sky-950 to-slate-900 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-orange-400 mx-auto mb-4" />
-          <p className="text-slate-400">Syncing authentication...</p>
+          <p className="text-slate-500">Syncing authentication...</p>
         </div>
       </div>
     );
@@ -382,7 +382,7 @@ function ProfilePageContent() {
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-sky-950 to-slate-900 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-orange-400 mx-auto mb-4" />
-          <p className="text-slate-400">Loading...</p>
+          <p className="text-slate-500">Loading...</p>
         </div>
       </div>
     );
@@ -419,7 +419,7 @@ function ProfilePageContent() {
             <h1 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">
               {currentStep === 1 ? 'Welcome!' : `${isDriver ? 'Driver' : 'Passenger'} Profile`}
             </h1>
-            <p className="text-xl text-slate-400">
+            <p className="text-xl text-slate-500">
               {currentStep === 1
                 ? 'Authentication successful! Let\'s set up your profile'
                 : isDriver
@@ -433,48 +433,34 @@ function ProfilePageContent() {
             <div className="flex items-center justify-center gap-4 max-w-2xl mx-auto">
               {/* Step 1: Authentication Complete */}
               <div className="flex items-center gap-3">
-                <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold transition-all ${currentStep >= 1
-                  ? 'bg-gradient-to-br from-orange-500 to-sky-500 text-white shadow-lg shadow-orange-500/30'
-                  : 'bg-slate-700 text-slate-400'
-                  }`}>
+                <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold transition-all ${currentStep >= 1 ? 'bg-gradient-to-br from-orange-500 to-sky-500 text-white shadow-lg shadow-orange-500/30' : 'bg-slate-700 text-slate-500' }`}>
                   {currentStep > 1 ? <CheckCircle2 className="w-6 h-6" /> : '1'}
                 </div>
-                <span className={`text-sm font-medium hidden sm:inline transition-colors ${currentStep >= 1 ? 'text-white' : 'text-slate-400'
-                  }`}>
+                <span className={`text-sm font-medium hidden sm:inline transition-colors ${currentStep >= 1 ? 'text-white' : 'text-slate-500' }`}>
                   Authentication
                 </span>
               </div>
 
-              <div className={`w-16 h-1 rounded-full transition-colors ${currentStep >= 2 ? 'bg-gradient-to-r from-orange-500 to-sky-500' : 'bg-slate-700'
-                }`}></div>
+              <div className={`w-16 h-1 rounded-full transition-colors ${currentStep >= 2 ? 'bg-gradient-to-r from-orange-500 to-sky-500' : 'bg-slate-700' }`}></div>
 
               {/* Step 2: Personal Details */}
               <div className="flex items-center gap-3">
-                <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold transition-all ${currentStep >= 2
-                  ? 'bg-gradient-to-br from-orange-500 to-sky-500 text-white shadow-lg shadow-orange-500/30'
-                  : 'bg-slate-700 text-slate-400'
-                  }`}>
+                <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold transition-all ${currentStep >= 2 ? 'bg-gradient-to-br from-orange-500 to-sky-500 text-white shadow-lg shadow-orange-500/30' : 'bg-slate-700 text-slate-500' }`}>
                   {currentStep > 2 ? <CheckCircle2 className="w-6 h-6" /> : '2'}
                 </div>
-                <span className={`text-sm font-medium hidden sm:inline transition-colors ${currentStep >= 2 ? 'text-white' : 'text-slate-400'
-                  }`}>
+                <span className={`text-sm font-medium hidden sm:inline transition-colors ${currentStep >= 2 ? 'text-white' : 'text-slate-500' }`}>
                   Personal Details
                 </span>
               </div>
 
-              <div className={`w-16 h-1 rounded-full transition-colors ${currentStep >= 3 ? 'bg-gradient-to-r from-orange-500 to-sky-500' : 'bg-slate-700'
-                }`}></div>
+              <div className={`w-16 h-1 rounded-full transition-colors ${currentStep >= 3 ? 'bg-gradient-to-r from-orange-500 to-sky-500' : 'bg-slate-700' }`}></div>
 
               {/* Step 3: Go! */}
               <div className="flex items-center gap-3">
-                <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold transition-all ${currentStep >= 3
-                  ? 'bg-gradient-to-br from-orange-500 to-sky-500 text-white shadow-lg shadow-orange-500/30'
-                  : 'bg-slate-700 text-slate-400'
-                  }`}>
+                <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold transition-all ${currentStep >= 3 ? 'bg-gradient-to-br from-orange-500 to-sky-500 text-white shadow-lg shadow-orange-500/30' : 'bg-slate-700 text-slate-500' }`}>
                   3
                 </div>
-                <span className={`text-sm font-medium hidden sm:inline transition-colors ${currentStep >= 3 ? 'text-white' : 'text-slate-400'
-                  }`}>
+                <span className={`text-sm font-medium hidden sm:inline transition-colors ${currentStep >= 3 ? 'text-white' : 'text-slate-500' }`}>
                   Go!
                 </span>
               </div>
@@ -484,7 +470,7 @@ function ProfilePageContent() {
           {/* Main Card */}
           {currentStep === 1 ? (
             /* Step 1: Authentication Complete */
-            <Card className="bg-slate-900/80 backdrop-blur-xl border-slate-700/50 shadow-2xl">
+            <Card className="bg-slate-50/80 backdrop-blur-xl border-slate-700/50 shadow-2xl">
               <CardContent className="p-12 text-center">
                 <div className="mb-8">
                   <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 mb-6 shadow-2xl shadow-green-500/50">
@@ -493,7 +479,7 @@ function ProfilePageContent() {
                   <h2 className="text-3xl font-bold text-white mb-4">
                     Authentication Complete!
                   </h2>
-                  <p className="text-lg text-slate-400 max-w-md mx-auto mb-8">
+                  <p className="text-lg text-slate-500 max-w-md mx-auto mb-8">
                     You&apos;ve successfully signed in. Now let&apos;s set up your {isDriver ? 'driver' : 'passenger'} profile to get started.
                   </p>
                 </div>
@@ -509,7 +495,7 @@ function ProfilePageContent() {
             </Card>
           ) : (
             /* Step 2 & 3: Profile Form */
-            <Card className="bg-slate-900/80 backdrop-blur-xl border-slate-700/50 shadow-2xl">
+            <Card className="bg-slate-50/80 backdrop-blur-xl border-slate-700/50 shadow-2xl">
               <CardContent className="p-8 md:p-12">
                 {isDriver ? (
                   <form onSubmit={driverForm.handleSubmit(handleDriverSubmit)} className="space-y-8">
@@ -551,7 +537,7 @@ function ProfilePageContent() {
                             <label htmlFor="profileImage" className="block">
                               <div className="px-6 py-4 bg-slate-800 border-2 border-dashed border-slate-700 hover:border-orange-400 rounded-2xl cursor-pointer transition-all group">
                                 <div className="flex items-center gap-3">
-                                  <Upload className="w-5 h-5 text-slate-400 group-hover:text-orange-300 transition-colors" />
+                                  <Upload className="w-5 h-5 text-slate-500 group-hover:text-orange-300 transition-colors" />
                                   <div>
                                     <p className="text-sm font-medium text-slate-300">Upload your photo</p>
                                     <p className="text-xs text-slate-500 mt-1">Max 5MB • JPG, PNG</p>
@@ -651,7 +637,7 @@ function ProfilePageContent() {
                             <label htmlFor="vehicleImage" className="block">
                               <div className="px-6 py-4 bg-slate-800 border-2 border-dashed border-slate-700 hover:border-sky-400 rounded-2xl cursor-pointer transition-all group">
                                 <div className="flex items-center gap-3">
-                                  <Upload className="w-5 h-5 text-slate-400 group-hover:text-sky-300 transition-colors" />
+                                  <Upload className="w-5 h-5 text-slate-500 group-hover:text-sky-300 transition-colors" />
                                   <div>
                                     <p className="text-sm font-medium text-slate-300">Upload vehicle photo</p>
                                     <p className="text-xs text-slate-500 mt-1">Clear photo of your vehicle</p>
@@ -758,7 +744,7 @@ function ProfilePageContent() {
                             <label htmlFor="licenseFrontImage" className="flex-1 block">
                               <div className="px-4 py-4 bg-slate-800 border-2 border-dashed border-slate-700 hover:border-orange-400 rounded-2xl cursor-pointer transition-all group">
                                 <div className="flex items-center gap-3">
-                                  <Upload className="w-5 h-5 text-slate-400 group-hover:text-orange-300 transition-colors" />
+                                  <Upload className="w-5 h-5 text-slate-500 group-hover:text-orange-300 transition-colors" />
                                   <div>
                                     <p className="text-sm font-medium text-slate-300">Upload front side</p>
                                     <p className="text-xs text-slate-500 mt-1">Photo must be clear and readable</p>
@@ -796,7 +782,7 @@ function ProfilePageContent() {
                             <label htmlFor="licenseBackImage" className="flex-1 block">
                               <div className="px-4 py-4 bg-slate-800 border-2 border-dashed border-slate-700 hover:border-orange-400 rounded-2xl cursor-pointer transition-all group">
                                 <div className="flex items-center gap-3">
-                                  <Upload className="w-5 h-5 text-slate-400 group-hover:text-orange-300 transition-colors" />
+                                  <Upload className="w-5 h-5 text-slate-500 group-hover:text-orange-300 transition-colors" />
                                   <div>
                                     <p className="text-sm font-medium text-slate-300">Upload back side</p>
                                     <p className="text-xs text-slate-500 mt-1">Include renewal/authority details</p>
@@ -889,7 +875,7 @@ function ProfilePageContent() {
                                 <span className="text-xs">{!!driverForm.watch('licenseFrontImage') && !!driverForm.watch('licenseBackImage') ? '✓' : '•'}</span>
                                 License front and back uploaded
                               </li>
-                              <li className="flex items-center gap-2 text-slate-400">
+                              <li className="flex items-center gap-2 text-slate-500">
                                 <span className="text-xs">•</span>
                                 Proof is generated on this device before server verification
                               </li>
@@ -898,12 +884,12 @@ function ProfilePageContent() {
                         </div>
 
                         <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
-                          <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-2">Verification status</p>
+                          <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Verification status</p>
                           {existingBadge ? (
                             <div className="flex items-center gap-2 text-emerald-300">
                               <CheckCircle2 className="w-4 h-4" />
                               <span className="text-sm font-semibold">Verified</span>
-                              <span className="text-xs text-slate-400">Minted badge is active.</span>
+                              <span className="text-xs text-slate-500">Minted badge is active.</span>
                             </div>
                           ) : verificationState === 'verifying' ? (
                             <div className="flex items-center gap-2 text-amber-300">
@@ -1089,7 +1075,7 @@ function ProfilePageContent() {
                         </div>
                         <div>
                           <h3 className="text-white font-semibold mb-2">Your Privacy Matters</h3>
-                          <p className="text-sm text-slate-400 leading-relaxed">
+                          <p className="text-sm text-slate-500 leading-relaxed">
                             Your information is encrypted and secure. We only use it to provide you with the best service.
                           </p>
                         </div>
@@ -1133,7 +1119,7 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-sky-950 to-slate-900 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-orange-400 mx-auto mb-4" />
-          <p className="text-slate-400">Loading...</p>
+          <p className="text-slate-500">Loading...</p>
         </div>
       </div>
     }>

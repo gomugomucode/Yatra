@@ -125,7 +125,7 @@ export default function BookingPanel({
 	};
 
 	return (
-		<Card className="bg-slate-900/60 backdrop-blur-xl border-slate-700/50 shadow-xl overflow-hidden">
+		<Card className="bg-slate-50/60 backdrop-blur-xl border-slate-700/50 shadow-xl overflow-hidden">
 			<CardHeader className="pb-4 bg-gradient-to-r from-slate-900/50 to-slate-800/50">
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-3">
@@ -134,7 +134,7 @@ export default function BookingPanel({
 						</div>
 						<div>
 							<CardTitle className="text-lg font-bold text-white">Ride Request</CardTitle>
-							<CardDescription className="text-slate-400 mt-1 flex flex-col gap-1">
+							<CardDescription className="text-slate-500 mt-1 flex flex-col gap-1">
 								{selectedBus ? (
 									<>
 										<span>Bus {selectedBus.busNumber} Selected</span>
@@ -161,7 +161,7 @@ export default function BookingPanel({
 							variant="ghost"
 							size="icon"
 							onClick={onReset}
-							className="h-8 w-8 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white"
+							className="h-8 w-8 rounded-full hover:bg-slate-800 text-slate-500 hover:text-white"
 						>
 							<X className="w-4 h-4" />
 							<span className="sr-only">Cancel Selection</span>
@@ -176,7 +176,7 @@ export default function BookingPanel({
 						{/* Quick Info */}
 						<div className="flex items-center justify-between p-3 bg-slate-800/30 rounded-xl border border-slate-700/50">
 							<div>
-								<p className="text-xs text-slate-400 uppercase font-bold">ETA</p>
+								<p className="text-xs text-slate-500 uppercase font-bold">ETA</p>
 								<p className="text-lg font-bold text-emerald-400">
 									{busToPickupDistance && busToPickupDistance < 1000
 										? `${Math.round(busToPickupDistance)}m`
@@ -186,45 +186,45 @@ export default function BookingPanel({
 								</p>
 							</div>
 							<div className="text-right">
-								<p className="text-xs text-slate-400 uppercase font-bold">Seats</p>
+								<p className="text-xs text-slate-500 uppercase font-bold">Seats</p>
 								<p className="text-lg font-bold text-white">{selectedBus.availableSeats}</p>
 							</div>
 						</div>
 
 						{/* Optional Details Accordion */}
 						<details className="group">
-							<summary className="flex items-center justify-center gap-2 text-xs font-medium text-slate-400 cursor-pointer hover:text-white transition-colors py-2">
+							<summary className="flex items-center justify-center gap-2 text-xs font-medium text-slate-500 cursor-pointer hover:text-white transition-colors py-2">
 								<span>BOOK Now</span>
 								<div className="w-4 h-4 transition-transform group-open:rotate-180">▼</div>
 							</summary>
 							<div className="pt-4 space-y-4 border-t border-slate-800 mt-2">
 								<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 									<div className="space-y-2">
-										<Label htmlFor="name" className="text-xs font-bold text-slate-400 uppercase tracking-wider">Name</Label>
+										<Label htmlFor="name" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Name</Label>
 										<Input
 											id="name"
 											placeholder="Your Name"
 											value={passengerName}
 											onChange={(e) => setPassengerName(e.target.value)}
-											className={`bg-slate-900/50 border-slate-800 text-white h-10 ${validationErrors.name ? 'border-red-500' : ''}`}
+											className={`bg-slate-50/50 border-slate-800 text-white h-10 ${validationErrors.name ? 'border-red-500' : ''}`}
 										/>
 										{validationErrors.name && <p className="text-xs text-red-500">{validationErrors.name}</p>}
 									</div>
 									<div className="space-y-2">
-										<Label htmlFor="phone" className="text-xs font-bold text-slate-400 uppercase tracking-wider">Phone</Label>
+										<Label htmlFor="phone" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Phone</Label>
 										<Input
 											id="phone"
 											type="tel"
 											placeholder="Phone Number"
 											value={phoneNumber}
 											onChange={(e) => setPhoneNumber(e.target.value)}
-											className={`bg-slate-900/50 border-slate-800 text-white h-10 ${validationErrors.phone ? 'border-red-500' : ''}`}
+											className={`bg-slate-50/50 border-slate-800 text-white h-10 ${validationErrors.phone ? 'border-red-500' : ''}`}
 										/>
 										{validationErrors.phone && <p className="text-xs text-red-500">{validationErrors.phone}</p>}
 									</div>
 								</div>
 								<div className="space-y-2">
-									<Label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Passengers</Label>
+									<Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Passengers</Label>
 									<div className="flex flex-wrap gap-2">
 										{Array.from({ length: 5 }).map((_, idx) => (
 											<Button
@@ -232,7 +232,7 @@ export default function BookingPanel({
 												type="button"
 												size="sm"
 												variant={idx + 1 === numberOfPassengers ? 'default' : 'outline'}
-												className={`h-8 w-8 p-0 ${idx + 1 === numberOfPassengers ? 'bg-blue-600' : 'bg-slate-900 border-slate-700'}`}
+												className={`h-8 w-8 p-0 ${idx + 1 === numberOfPassengers ? 'bg-blue-600' : 'bg-slate-50 border-slate-700'}`}
 												onClick={() => setNumberOfPassengers(idx + 1)}
 											>
 												{idx + 1}
@@ -253,11 +253,11 @@ export default function BookingPanel({
 					</div>
 				) : (
 					/* Empty State */
-					<div className="text-center py-8 px-4 border-2 border-dashed border-slate-800 rounded-xl bg-slate-900/20">
+					<div className="text-center py-8 px-4 border-2 border-dashed border-slate-800 rounded-xl bg-slate-50/20">
 						<div className="w-12 h-12 rounded-full bg-slate-800/50 flex items-center justify-center mx-auto mb-3">
 							<Navigation className="w-6 h-6 text-slate-600" />
 						</div>
-						<p className="text-slate-400 font-medium mb-2">Select a Bus</p>
+						<p className="text-slate-500 font-medium mb-2">Select a Bus</p>
 						<p className="text-xs text-slate-500 max-w-[200px] mx-auto">
 							Tap any bus on the map to hail it instantly.
 						</p>

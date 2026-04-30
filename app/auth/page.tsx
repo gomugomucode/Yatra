@@ -232,14 +232,14 @@ function AuthContent() {
       <div className="w-full max-w-md space-y-6 relative z-10">
         {/* Header */}
         <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-2 rounded-full border border-orange-400/30 bg-slate-900/60 backdrop-blur-md px-4 py-2">
+          <div className="inline-flex items-center gap-2 rounded-full border border-orange-400/30 bg-slate-50/60 backdrop-blur-md px-4 py-2">
             <ShieldCheck className="w-4 h-4 text-orange-300" />
             <span className="text-sm font-medium text-orange-200">Secure Access</span>
           </div>
           <h1 className="text-4xl font-black text-white tracking-tight">
             Yatra <span className="text-orange-300">Portal</span>
           </h1>
-          <p className="text-slate-400 text-sm">
+          <p className="text-slate-500 text-sm">
             {isSignUp ? 'Create your account to start moving.' : 'Welcome back! Please enter your details.'}
           </p>
         </div>
@@ -248,7 +248,7 @@ function AuthContent() {
             If role is in URL, we show a locked confirmation badge.
             If NO role is in URL, we show the switchable tabs. */}
         {roleInUrl ? (
-          <div className="flex items-center justify-between px-5 py-4 rounded-2xl bg-slate-900/50 border border-orange-400/20 backdrop-blur-md animate-in fade-in zoom-in duration-300">
+          <div className="flex items-center justify-between px-5 py-4 rounded-2xl bg-slate-50/50 border border-orange-400/20 backdrop-blur-md animate-in fade-in zoom-in duration-300">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-orange-500/10 border border-orange-400/20">
                 {selectedRole === 'driver' ? (
@@ -273,24 +273,18 @@ function AuthContent() {
             </Link>
           </div>
         ) : (
-          <div className="flex p-1 rounded-2xl bg-slate-900/60 border border-slate-700/60 backdrop-blur-md">
+          <div className="flex p-1 rounded-2xl bg-slate-50/60 border border-slate-700/60 backdrop-blur-md">
             <button
               type="button"
               onClick={() => { setSelectedRole('passenger'); setRoleInUrl('passenger'); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${selectedRole === 'passenger'
-                ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25'
-                : 'text-slate-400 hover:text-slate-200'
-                }`}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${selectedRole === 'passenger' ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25' : 'text-slate-500 hover:text-slate-200' }`}
             >
               <User2 className="w-4 h-4" /> Passenger
             </button>
             <button
               type="button"
               onClick={() => { setSelectedRole('driver'); setRoleInUrl('driver'); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${selectedRole === 'driver'
-                ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25'
-                : 'text-slate-400 hover:text-slate-200'
-                }`}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${selectedRole === 'driver' ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25' : 'text-slate-500 hover:text-slate-200' }`}
             >
               <Bus className="w-4 h-4" /> Driver
             </button>
@@ -298,7 +292,7 @@ function AuthContent() {
         )}
 
         {/* Auth Form Card */}
-        <div className="rounded-3xl border border-slate-700/60 bg-slate-900/70 backdrop-blur-xl shadow-2xl p-6 space-y-6">
+        <div className="rounded-3xl border border-slate-700/60 bg-slate-50/70 backdrop-blur-xl shadow-2xl p-6 space-y-6">
           <Button
             type="button"
             onClick={handleGoogleSignIn}
@@ -320,7 +314,7 @@ function AuthContent() {
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-700/60" /></div>
-            <div className="relative flex justify-center text-[10px] uppercase tracking-widest"><span className="bg-slate-900/70 px-4 text-slate-500 font-bold">Secure Email Login</span></div>
+            <div className="relative flex justify-center text-[10px] uppercase tracking-widest"><span className="bg-slate-50/70 px-4 text-slate-500 font-bold">Secure Email Login</span></div>
           </div>
 
           <div className="flex gap-2 p-1 rounded-xl bg-slate-800/40 border border-slate-700/50">
