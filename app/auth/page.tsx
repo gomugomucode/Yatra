@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { FirebaseError } from 'firebase/app';
-import { User2, Bus, Mail, Lock, Eye, EyeOff, Loader2, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { User2, Bus, Mail, Lock, Eye, EyeOff, Loader2, ShieldCheck, ArrowLeft, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/contexts/AuthContext';
@@ -43,18 +43,9 @@ const mapFirebaseError = (err: unknown): string => {
         return err.message;
     }
   }
-  if (typeof err === 'string') return err;
-  if (err && typeof err === 'object' && 'message' in err) {
-    return String((err as { message: unknown }).message);
-  }
   return 'Something went wrong. Please try again.';
 };
 
-/**
- * After Firebase login: resolves where to send the user.
- * Verified/completed users go to their dashboard, while incomplete users return
- * to the profile setup flow to finish onboarding.
- */
 async function resolvePostLoginRedirect(
   uid: string,
   selectedRole: Role,
@@ -66,9 +57,7 @@ async function resolvePostLoginRedirect(
   let userData: Record<string, unknown> | null = null;
   try {
     userData = await getUserProfile(uid);
-  } catch {
-    // treat as new user
-  }
+  } catch { }
 
   const hasProfile = userData != null && checkProfileCompletion(userData);
   const role = hasProfile ? (userData!.role as Role) : selectedRole;
@@ -86,8 +75,6 @@ async function resolvePostLoginRedirect(
 
   setRole(role);
 
-  // Existing sign-ins should still respect profile completion, especially for
-  // drivers who now must finish zk verification during setup.
   if (isSignIn && hasProfile) {
     window.location.assign(role === 'driver' ? '/driver' : '/passenger');
     return 'dashboard';
@@ -113,11 +100,10 @@ function AuthContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(searchParams.get('isSignUp') === 'true');
   const [loading, setLoading] = useState<'idle' | 'google' | 'email'>('idle');
   const isSigningInRef = useRef(false);
 
-  // Sync role from URL query parameter
   const roleInUrl = searchParams.get('role') as Role | null;
 
   useEffect(() => {
@@ -126,10 +112,9 @@ function AuthContent() {
     }
   }, [roleInUrl]);
 
-  // Handle automatic redirection if already logged in
   useEffect(() => {
     if (authLoading || !currentUser || pathname !== '/auth') return;
-    if (isSigningInRef.current) return; // don't race with an in-progress sign-in
+    if (isSigningInRef.current) return;
     if (userData === undefined) return;
 
     if (userData === null) {
@@ -147,12 +132,6 @@ function AuthContent() {
     }
   }, [authLoading, currentUser, userData, role, selectedRole, router, pathname]);
 
-  const setRoleInUrl = (role: Role) => {
-    const params = new URLSearchParams(Array.from(searchParams.entries()));
-    params.set('role', role);
-    router.replace(`/auth?${params.toString()}`, { scroll: false });
-  };
-
   const handleGoogleSignIn = async () => {
     if (loading !== 'idle') return;
     isSigningInRef.current = true;
@@ -163,7 +142,7 @@ function AuthContent() {
       const idToken = await user.getIdToken(true);
       const isNewUser = user.metadata.creationTime === user.metadata.lastSignInTime;
       await resolvePostLoginRedirect(user.uid, selectedRole, idToken, setRole, router, !isNewUser);
-      toast({ title: 'Welcome to Yatra', description: "You're signed in." });
+      toast({ title: 'Welcome to Yatra' });
     } catch (err: unknown) {
       isSigningInRef.current = false;
       toast({ variant: 'destructive', title: 'Sign-in failed', description: mapFirebaseError(err) });
@@ -175,7 +154,7 @@ function AuthContent() {
   const handleEmailAuth = async () => {
     if (loading !== 'idle' || !email || !password) return;
     if (password.length < 6) {
-      toast({ variant: 'destructive', title: 'Weak password', description: 'Password must be at least 6 characters.' });
+      toast({ variant: 'destructive', title: 'Weak password', description: 'At least 6 characters required.' });
       return;
     }
     isSigningInRef.current = true;
@@ -183,190 +162,185 @@ function AuthContent() {
     try {
       let userCredential;
       if (isSignUp) {
-        // Sign-up: create account then go through profile setup
         userCredential = await createUserWithEmail(email, password);
         const idToken = await userCredential.user.getIdToken();
         await resolvePostLoginRedirect(userCredential.user.uid, selectedRole, idToken, setRole, router, false);
       } else {
-        // Sign-in: passengers go directly to dashboard, drivers check profile
         userCredential = await signInWithEmail(email, password);
         const idToken = await userCredential.user.getIdToken();
         await resolvePostLoginRedirect(userCredential.user.uid, selectedRole, idToken, setRole, router, true);
       }
     } catch (err: unknown) {
       isSigningInRef.current = false;
-      if (isSignUp && err instanceof FirebaseError && err.code === 'auth/email-already-in-use') {
-        setIsSignUp(false);
-        toast({ title: 'Account already exists', description: 'Switching to sign in mode.' });
-      } else {
-        toast({ variant: 'destructive', title: isSignUp ? 'Sign up failed' : 'Sign in failed', description: mapFirebaseError(err) });
-      }
+      toast({ variant: 'destructive', title: 'Authentication failed', description: mapFirebaseError(err) });
     } finally {
       setLoading('idle');
-    }
-  };
-
-  const handleForgotPassword = async () => {
-    if (!email) {
-      toast({ variant: 'destructive', title: 'Email required', description: 'Enter your email address first.' });
-      return;
-    }
-    try {
-      await sendPasswordReset(email);
-      toast({ title: 'Check your email', description: 'Password reset instructions sent.' });
-    } catch (err: unknown) {
-      toast({ variant: 'destructive', title: 'Failed to send reset email', description: mapFirebaseError(err) });
     }
   };
 
   const isBusy = loading !== 'idle';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-sky-950 to-slate-900 flex items-center justify-center px-4 py-8 relative overflow-hidden">
-      {/* Background Decor */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-[480px] h-[480px] bg-orange-500/12 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-sky-500/12 rounded-full blur-3xl" />
+    <div className="min-h-screen bg-white flex flex-col md:flex-row">
+      
+      {/* Left side: Visuals (Desktop only) */}
+      <div className="hidden md:flex md:w-1/2 bg-slate-50 items-center justify-center p-12 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500/5 rounded-full blur-[80px]" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/5 rounded-full blur-[100px]" />
+        
+        <div className="relative z-10 max-w-lg">
+          <Link href="/" className="inline-flex items-center gap-2 mb-12">
+            <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-200">
+              <Bus className="text-white w-6 h-6" />
+            </div>
+            <span className="text-2xl font-black tracking-tight text-slate-900">Yatra</span>
+          </Link>
+          
+          <h2 className="text-5xl font-black text-slate-900 leading-tight mb-6">
+            The future of <br />
+            <span className="text-orange-500">Nepal's transit.</span>
+          </h2>
+          <p className="text-xl text-slate-500 font-medium leading-relaxed mb-12">
+            Join thousands of passengers and drivers moving smarter every day. 
+            Real-time tracking, secure payments, and verified identity.
+          </p>
+          
+          <div className="space-y-6">
+            {[
+              { icon: <ShieldCheck className="w-6 h-6 text-orange-500" />, text: "ZK-Verified Secure Identity" },
+              { icon: <Bus className="w-6 h-6 text-orange-500" />, text: "Real-time Live GPS Tracking" },
+              { icon: <Loader2 className="w-6 h-6 text-orange-500" />, text: "Instant Paperless Booking" }
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                {item.icon}
+                <span className="font-bold text-slate-700">{item.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <div className="w-full max-w-md space-y-6 relative z-10">
-        {/* Header */}
-        <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-2 rounded-full border border-orange-400/30 bg-slate-50/60 backdrop-blur-md px-4 py-2">
-            <ShieldCheck className="w-4 h-4 text-orange-300" />
-            <span className="text-sm font-medium text-orange-200">Secure Access</span>
-          </div>
-          <h1 className="text-4xl font-black text-white tracking-tight">
-            Yatra <span className="text-orange-300">Portal</span>
-          </h1>
-          <p className="text-slate-500 text-sm">
-            {isSignUp ? 'Create your account to start moving.' : 'Welcome back! Please enter your details.'}
-          </p>
-        </div>
-
-        {/* 🚦 ROLE INDICATOR / SELECTOR
-            If role is in URL, we show a locked confirmation badge.
-            If NO role is in URL, we show the switchable tabs. */}
-        {roleInUrl ? (
-          <div className="flex items-center justify-between px-5 py-4 rounded-2xl bg-slate-50/50 border border-orange-400/20 backdrop-blur-md animate-in fade-in zoom-in duration-300">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-orange-500/10 border border-orange-400/20">
-                {selectedRole === 'driver' ? (
-                  <Bus className="w-5 h-5 text-orange-300" />
-                ) : (
-                  <User2 className="w-5 h-5 text-orange-300" />
-                )}
+      {/* Right side: Auth Form */}
+      <div className="w-full md:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-white">
+        <div className="w-full max-w-md">
+          <div className="md:hidden mb-12 flex justify-between items-center">
+            <Link href="/" className="inline-flex items-center gap-2">
+              <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+                <Bus className="text-white w-5 h-5" />
               </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-bold">Portal Access</p>
-                <p className="text-sm font-bold text-white">
-                  Yatra <span className="text-emerald-400 capitalize">{selectedRole}</span>
-                </p>
-              </div>
-            </div>
-            <Link
-              href="/"
-              className="group flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-3 h-3 group-hover:-translate-x-1 transition-transform" />
-              Change
+              <span className="text-xl font-black tracking-tight text-slate-900">Yatra</span>
+            </Link>
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="font-bold text-slate-500">
+                <ChevronLeft className="w-4 h-4 mr-1" /> Back
+              </Button>
             </Link>
           </div>
-        ) : (
-          <div className="flex p-1 rounded-2xl bg-slate-50/60 border border-slate-700/60 backdrop-blur-md">
+
+          <div className="mb-10">
+            <h1 className="text-3xl font-black text-slate-900 mb-2">
+              {isSignUp ? 'Create an account' : 'Welcome back'}
+            </h1>
+            <p className="text-slate-500 font-medium">
+              {isSignUp 
+                ? 'Join Yatra and start your journey today.' 
+                : 'Enter your credentials to access your portal.'}
+            </p>
+          </div>
+
+          {/* Role Selector */}
+          <div className="flex p-1 rounded-2xl bg-slate-100 mb-8">
             <button
-              type="button"
-              onClick={() => { setSelectedRole('passenger'); setRoleInUrl('passenger'); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${selectedRole === 'passenger' ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25' : 'text-slate-500 hover:text-slate-200' }`}
+              onClick={() => setSelectedRole('passenger')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${selectedRole === 'passenger' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
               <User2 className="w-4 h-4" /> Passenger
             </button>
             <button
-              type="button"
-              onClick={() => { setSelectedRole('driver'); setRoleInUrl('driver'); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${selectedRole === 'driver' ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25' : 'text-slate-500 hover:text-slate-200' }`}
+              onClick={() => setSelectedRole('driver')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${selectedRole === 'driver' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
               <Bus className="w-4 h-4" /> Driver
             </button>
           </div>
-        )}
 
-        {/* Auth Form Card */}
-        <div className="rounded-3xl border border-slate-700/60 bg-slate-50/70 backdrop-blur-xl shadow-2xl p-6 space-y-6">
-          <Button
-            type="button"
-            onClick={handleGoogleSignIn}
-            disabled={isBusy}
-            className="w-full h-12 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-bold border-0 shadow-md flex items-center justify-center gap-3"
-          >
-            {loading === 'google' ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-              </svg>
-            )}
-            Continue with Google
-          </Button>
+          <div className="space-y-6">
+            <Button
+              onClick={handleGoogleSignIn}
+              disabled={isBusy}
+              className="w-full h-14 rounded-2xl bg-white hover:bg-slate-50 text-slate-900 font-bold border-2 border-slate-100 shadow-sm flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
+            >
+              {loading === 'google' ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                </svg>
+              )}
+              Continue with Google
+            </Button>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-700/60" /></div>
-            <div className="relative flex justify-center text-[10px] uppercase tracking-widest"><span className="bg-slate-50/70 px-4 text-slate-500 font-bold">Secure Email Login</span></div>
-          </div>
-
-          <div className="flex gap-2 p-1 rounded-xl bg-slate-800/40 border border-slate-700/50">
-            <button type="button" onClick={() => setIsSignUp(false)} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${!isSignUp ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}>SIGN IN</button>
-            <button type="button" onClick={() => setIsSignUp(true)} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${isSignUp ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}>SIGN UP</button>
-          </div>
-
-          <div className="space-y-4">
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-              <Input
-                type="email"
-                placeholder="Email Address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="h-12 pl-11 rounded-xl bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-600 focus:border-emerald-500/50 focus:ring-emerald-500/10"
-              />
+              <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-100" /></div>
+              <div className="relative flex justify-center text-[10px] uppercase tracking-[0.2em] font-black text-slate-400">
+                <span className="bg-white px-4">OR USE EMAIL</span>
+              </div>
             </div>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-              <Input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-12 pl-11 pr-11 rounded-xl bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-600 focus:border-emerald-500/50 focus:ring-emerald-500/10"
-              />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-emerald-400 transition-colors">
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+
+            <div className="space-y-4">
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Input
+                  type="email"
+                  placeholder="Email Address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-14 pl-12 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-orange-500/50 focus:ring-orange-500/10 transition-all font-medium"
+                />
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-14 pl-12 pr-12 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-orange-500/50 focus:ring-orange-500/10 transition-all font-medium"
+                />
+                <button 
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-500 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            <Button
+              onClick={handleEmailAuth}
+              disabled={isBusy || !email || !password}
+              className="w-full h-14 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-black text-lg shadow-xl shadow-orange-200 transition-all active:scale-[0.98]"
+            >
+              {loading === 'email' ? <Loader2 className="w-6 h-6 animate-spin" /> : (isSignUp ? 'Create Account' : 'Sign In')}
+            </Button>
+
+            <div className="text-center pt-4">
+              <button
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="text-sm font-bold text-slate-600 hover:text-orange-500 transition-colors"
+              >
+                {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
               </button>
             </div>
           </div>
-
-          <Button
-            type="button"
-            onClick={handleEmailAuth}
-            disabled={isBusy || !email || !password}
-            className="w-full h-13 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold shadow-xl shadow-emerald-900/20 transition-all active:scale-[0.98]"
-          >
-            {loading === 'email' ? <Loader2 className="w-5 h-5 animate-spin" /> : (isSignUp ? 'Create Yatra Account' : 'Sign In')}
-          </Button>
-
-          {!isSignUp && (
-            <button type="button" onClick={handleForgotPassword} className="w-full text-xs text-slate-500 hover:text-emerald-400 transition-colors font-medium">
-              Lost your password? <span className="text-emerald-500 underline underline-offset-4">Reset here</span>
-            </button>
-          )}
+          
+          <div className="mt-12 text-center">
+            <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.25em]">
+              Secured by Groth16 & ZK-Proofs
+            </p>
+          </div>
         </div>
-
-        <p className="text-center text-[10px] text-slate-600 uppercase tracking-widest font-bold">
-          Protected by Groth16 Proofs & ZK-Identity
-        </p>
       </div>
     </div>
   );
@@ -374,7 +348,7 @@ function AuthContent() {
 
 export default function AuthPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-orange-400" /></div>}>
+    <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-orange-500" /></div>}>
       <AuthContent />
     </Suspense>
   );

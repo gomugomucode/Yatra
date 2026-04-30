@@ -1,7 +1,8 @@
 'use client';
-import { Bell, ShieldAlert } from 'lucide-react';
+import { Bell, ShieldAlert, Bus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusChip } from './StatusChip';
+import Link from 'next/link';
 
 interface NavbarProps {
   title?: string;
@@ -21,21 +22,24 @@ export function Navbar({
   children
 }: NavbarProps) {
   return (
-    <nav className="sticky top-0 z-50 w-full h-[56px] bg-y-surface border-b-[1.5px] border-y-border flex items-center justify-between px-4">
+    <nav className="sticky top-0 z-50 w-full h-16 bg-white border-b border-slate-100 flex items-center justify-between px-4 sm:px-6">
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-y-primary flex items-center justify-center text-white font-black text-xs shadow-lg shadow-y-primary/20">
-          Y
-        </div>
-        <div className="flex flex-col">
-          <h1 className="text-[15px] font-black text-y-text1 leading-tight tracking-tight uppercase headline-transit">
-            {title}
-          </h1>
-          <p className="text-[11px] font-bold text-y-text2 leading-tight uppercase tracking-wider">
-            {subtitle}
-          </p>
-        </div>
+        <Link href="/" className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-100">
+            <Bus className="w-5 h-5" />
+          </div>
+          <div className="flex flex-col">
+            <h1 className="text-base font-black text-slate-900 leading-none tracking-tight">
+              {title}
+            </h1>
+            <p className="text-[10px] font-bold text-slate-400 leading-none uppercase tracking-widest mt-1">
+              {subtitle}
+            </p>
+          </div>
+        </Link>
       </div>
-      <div className="flex items-center gap-2">
+      
+      <div className="flex items-center gap-3">
         {isOnline && (
           <StatusChip status="online" />
         )}
@@ -43,9 +47,10 @@ export function Navbar({
         {showSos && (
           <Button
             onClick={onSosClick}
-            className="h-[38px] px-3 bg-y-red-bg border-[1.5px] border-y-red text-y-red-text hover:bg-y-red/10 font-black text-[11px] uppercase tracking-wider rounded-xl"
+            variant="destructive"
+            className="h-10 px-4 bg-red-500 hover:bg-red-600 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-lg shadow-red-100 border-none"
           >
-            <ShieldAlert className="w-4 h-4 mr-1.5" />
+            <ShieldAlert className="w-4 h-4 mr-2" />
             SOS
           </Button>
         )}
