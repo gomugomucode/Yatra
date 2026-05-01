@@ -66,7 +66,7 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
       parseInt(birthYear) <= 2005 &&
       !!zkResult
     ) : (
-      isValidSolana(solanaWallet.trim())
+      !solanaWallet.trim() || isValidSolana(solanaWallet.trim())
     )));
 
   const handleGenerateProof = async () => {
@@ -117,7 +117,7 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
         phone: phone.replace(/\D/g, ''),
         licenseNumber: isDriver ? licenseNumber.trim() : undefined,
         vehicleNumber: isDriver ? vehicleNumber.trim() : undefined,
-        solanaWallet: isDriver ? solanaWallet.trim() : undefined,
+        solanaWallet: solanaWallet.trim() || undefined,
         zkProof: zkResult?.proof,
         zkPublicSignals: zkResult?.publicSignals,
         zkCommitment: zkResult?.commitment,
@@ -436,7 +436,7 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
                       {isGeneratingProof ? (
                         <><Sparkles className="w-4 h-4 mr-2 animate-spin" /> Sealing Vault...</>
                       ) : zkResult ? (
-                        <><Shield className="w-4 h-4 mr-2 text-emerald-400" /> Identity Sealed</>
+                        <><Shield className="w-4 h-4 mr-2 text-emerald-400" /> Proof Ready</>
                       ) : (
                         <><LockIcon className="w-4 h-4 mr-2" /> Generate ZK Proof</>
                       )}
@@ -455,8 +455,8 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
                               <Shield className="w-5 h-5 text-emerald-400" />
                             </div>
                             <div>
-                              <p className="text-xs font-bold text-white uppercase tracking-wider">Proof Verified</p>
-                              <p className="text-[10px] text-emerald-400/70">Groth16 SNARK Generated</p>
+                              <p className="text-xs font-bold text-white uppercase tracking-wider">Proof Generated Locally</p>
+                              <p className="text-[10px] text-emerald-400/70">Server verification happens during onboarding submit</p>
                             </div>
                           </div>
                           <div className="p-3 rounded-lg bg-white/80 border border-slate-100 font-mono text-[9px] text-emerald-300/80 break-all">

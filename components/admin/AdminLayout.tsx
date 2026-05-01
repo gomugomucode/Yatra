@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Bus, Users, Settings, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Bus, LogOut, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
@@ -15,8 +15,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const navItems = [
         { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
         { href: '/admin/buses', label: 'Bus Management', icon: Bus },
-        { href: '/admin/users', label: 'Users', icon: Users },
-        { href: '/admin/settings', label: 'Settings', icon: Settings },
     ];
 
     const [activeAlert, setActiveAlert] = useState<import('@/lib/types').Alert | null>(null);
@@ -37,7 +35,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     };
 
     return (
-        <div className="min-h-screen bg-white text-white flex">
+        <div className="min-h-screen bg-white text-slate-900 flex">
             {/* Alert Banner */}
             {activeAlert && (
                 <div className="fixed top-0 left-0 right-0 z-[100] bg-red-600 text-white px-4 py-3 shadow-lg animate-pulse flex items-center justify-between">
@@ -82,8 +80,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Sidebar */}
             <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-50/90 backdrop-blur-md border-r border-slate-100 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:shrink-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${activeAlert ? 'mt-16' : ''}`}>
                 <div className="h-16 flex items-center justify-between px-6 border-b border-slate-100">
-                    <span className="text-xl font-black bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-                        DriveUp Admin
+                    <span className="text-xl font-black bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">
+                        Yatra Admin
                     </span>
                     <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(false)}>
                         <X className="w-5 h-5" />
@@ -97,7 +95,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <Link
                                 key={item.href}
                                 href={item.href}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${isActive ? 'bg-cyan-500/10 text-cyan-400 font-bold' : 'text-slate-600 hover:bg-slate-100 hover:text-white' }`}
+                                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${isActive ? 'bg-cyan-500/10 text-cyan-700 font-bold' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }`}
                                 onClick={() => setSidebarOpen(false)}
                             >
                                 <item.icon className="w-5 h-5" />
@@ -110,7 +108,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-100">
                     <Button
                         variant="ghost"
-                        className="w-full justify-start gap-3 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                        className="w-full justify-start gap-3 text-red-600 hover:text-red-700 hover:bg-red-50"
                         onClick={() => signOut()}
                     >
                         <LogOut className="w-5 h-5" />
@@ -131,7 +129,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <div className="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400 font-bold">
                                 A
                             </div>
-                            <span className="text-sm font-medium hidden sm:block">Admin User</span>
+                            <span className="text-sm font-medium hidden sm:block text-slate-700">Admin User</span>
                         </div>
                     </div>
                 </header>

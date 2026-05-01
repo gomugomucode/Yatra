@@ -13,10 +13,13 @@ export async function verifyDriverProof(
     publicSignals: any
 ): Promise<ZKVerifyResult> {
     try {
+        if (!proof || !publicSignals || !Array.isArray(publicSignals) || publicSignals.length < 2) {
+            return { isValid: false, error: 'Invalid proof payload' };
+        }
+
         const isValid = await snarkjs.groth16.verify(vKey, publicSignals, proof);
 
         if (!isValid) {
-            console.warn('[ZK Verifier] Groth16 verification failed — invalid proof');
             return { isValid: false, error: 'Groth16 proof invalid' };
         }
 
@@ -25,15 +28,12 @@ export async function verifyDriverProof(
         const ageValid = ageValidSignal === '1';
 
         if (!ageValid) {
-            console.warn('[ZK Verifier] Proof valid but ageValid=0 — driver underage');
             return { isValid: false, commitment, ageValid: false, error: 'Age requirement not met' };
         }
 
-        console.log(`[ZK Verifier] Proof verified — commitment: ${commitment.slice(0, 10)}...`);
         return { isValid: true, commitment, ageValid: true };
 
     } catch (error: any) {
-        console.error('[ZK Verifier] Exception during verification:', error.message);
         return { isValid: false, error: error.message };
     }
 }

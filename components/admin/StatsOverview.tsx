@@ -32,10 +32,10 @@ export default function StatsOverview({
             bg: 'bg-purple-500/10',
         },
         {
-            title: 'Active Users',
-            value: '1,234', // Mock for now
+            title: 'Active Buses',
+            value: activeBuses,
             icon: Users,
-            description: 'Currently online',
+            description: 'Currently sharing GPS',
             color: 'text-emerald-400',
             bg: 'bg-emerald-500/10',
         },
@@ -62,7 +62,7 @@ export default function StatsOverview({
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-white">{stat.value}</div>
+                        <div className="text-2xl font-bold text-slate-900">{stat.value}</div>
                         <p className="text-xs text-slate-600 mt-1">{stat.description}</p>
                     </CardContent>
                 </Card>

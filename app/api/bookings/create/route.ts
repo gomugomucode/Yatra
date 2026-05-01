@@ -192,9 +192,19 @@ export async function POST(request: Request) {
         
         // Fetch driver wallet from the bus data (which we have from Step 1)
         const driverWallet = initialBusData.driverWalletAddress;
+        const passengerProfileSnap = await db.ref(`users/${passengerId}`).once('value');
+        const passengerWallet = passengerProfileSnap.exists()
+          ? passengerProfileSnap.val()?.solanaWallet
+          : null;
         
-        if (!driverWallet) {
-          console.warn(`[Escrow] Driver ${busId} has no linked Solana wallet. Escrow skipped.`);
+        if (!driverWallet || !passengerWallet) {
+          console.warn(`[Escrow] Missing wallet linkage (driver=${!!driverWallet}, passenger=${!!passengerWallet}). Escrow skipped.`);
+          await newBookingRef.update({
+            escrowStatus: 'locked',
+            escrowError: !passengerWallet
+              ? 'Passenger wallet not linked'
+              : 'Driver wallet not linked',
+          });
         } else {
           // Internal call to escrow API or direct lib call
           // Since we are in an API route, we'll use a direct fetch to the local escrow create endpoint
@@ -202,19 +212,37 @@ export async function POST(request: Request) {
           const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
           const host = request.headers.get('host');
           
-          fetch(`${protocol}://${host}/api/solana/escrow/create`, {
+          const escrowRes = await fetch(`${protocol}://${host}/api/solana/escrow/create`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               tripId: bookingWithId.id,
-              passengerWallet: decoded.solanaWallet || 'PASSENGER_WALLET_PLACEHOLDER', // Fallback if not in token
+              passengerWallet: passengerWallet,
               driverWallet: driverWallet,
               amountNPR: fare
             })
-          }).catch(err => console.error('[Escrow] API Call Failed:', err));
+          });
+
+          if (!escrowRes.ok) {
+            const escrowData = await escrowRes.json().catch(() => ({}));
+            await newBookingRef.update({
+              escrowStatus: 'locked',
+              escrowError: escrowData?.error || 'Escrow initialization failed',
+            });
+          } else {
+            await newBookingRef.update({
+              escrowStatus: 'locked',
+              passengerWalletAddress: passengerWallet,
+              driverWalletAddress: driverWallet,
+            });
+          }
         }
       } catch (escrowErr) {
         console.error('[Escrow] Integration failed:', escrowErr);
+        await newBookingRef.update({
+          escrowStatus: 'locked',
+          escrowError: escrowErr instanceof Error ? escrowErr.message : 'Escrow integration failed',
+        });
       }
     }
 

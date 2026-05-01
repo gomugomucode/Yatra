@@ -117,7 +117,6 @@ export async function generateDriverProof(input: DriverProofInput): Promise<Driv
             ageValid: publicSignals[1] === '1' // Index 1 is the 'ageValid' signal in the circuit
         };
     } catch (err: any) {
-        console.error('[ZK Prover] fullProve failed:', err);
         throw new Error(`ZK Proof generation failed: ${err.message || 'Check if driverIdentity.wasm/zkey exist in /public/zk/'}`);
     }
 }

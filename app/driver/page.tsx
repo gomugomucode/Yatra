@@ -60,7 +60,10 @@ interface BrowserAudioContextWindow extends Window {
 interface DriverBookingLookup {
   id?: string;
   passengerId?: string;
+  paymentMethod?: 'cash' | 'digital';
+  escrowStatus?: 'locked' | 'released' | 'reclaimed';
   fare?: number;
+  route?: string;
 }
 
 export default function DriverDashboard() {
@@ -456,6 +459,17 @@ export default function DriverDashboard() {
     }
   };
 
+  const handleExpireTrip = async () => {
+    if (!activeTripRequest) return;
+    try {
+      await updateTripStatus(activeTripRequest.id, 'expired');
+      setActiveTripRequest(null);
+      toast({ title: 'Trip request expired' });
+    } catch {
+      toast({ title: 'Failed to expire trip', description: 'Check your connection and try again.', variant: 'destructive' });
+    }
+  };
+
   const handlePassengerBoarded = async () => {
     if (!activeTripRequest) return;
     try {
@@ -812,34 +826,30 @@ export default function DriverDashboard() {
       const { getFirebaseApp } = await import('@/lib/firebase');
       const db = getDatabase(getFirebaseApp());
 
-      // The `passengerId` argument here is actually the booking ID coming from the UI List
+      // The `passengerId` argument here is the booking ID coming from PassengerList.
       const bookingId = passengerId;
-
-      // We need to find the `bookings/*/bookingId` to get the true passengerId
-      // Actually, since bookings are stored under `bookings/{passengerId}/{bookingId}` or `bookings/{busId}/{bookingId}`,
-      // Yatra's `subscribeToBookings` fetches all `bookings` and filters. Let's fetch `bookings` root and find it.
-      const bookingsRef = ref(db, 'bookings');
-      const bookingsSnap = await get(bookingsRef);
-
-      let truePassengerId: string | null = null;
-      let actualFare = 75;
-
-      if (bookingsSnap.exists()) {
-        const allBookingsData = bookingsSnap.val();
-        // Since Yatra bookings might be stored as flat objects or under child keys, we iterate
-        for (const [key, bData] of Object.entries(allBookingsData as Record<string, DriverBookingLookup>)) {
-          if (bData.id === bookingId || key === bookingId) {
-            truePassengerId = bData.passengerId ?? null;
-            actualFare = bData.fare || 75;
-            break;
-          }
-        }
+      const bookingSnap = await get(ref(db, `bookings/${bookingId}`));
+      if (!bookingSnap.exists()) {
+        toast({
+          title: 'Receipt skipped',
+          description: 'Booking record missing. Unable to mint receipt.',
+          variant: 'destructive',
+        });
+        return;
       }
 
+      const bookingData = bookingSnap.val() as DriverBookingLookup;
+      const truePassengerId = bookingData.passengerId ?? null;
+      const actualFare = bookingData.fare || 75;
+      const bookingRoute = bookingData.route || selectedBus.route || 'Local Trip';
+
       if (!truePassengerId) {
-        console.log(`[Trip Ticket] Could not find original booking for ${bookingId}`);
-        // Fallback just in case `passengerId` was correct
-        truePassengerId = passengerId;
+        toast({
+          title: 'Receipt skipped',
+          description: 'Passenger record missing from booking.',
+          variant: 'destructive',
+        });
+        return;
       }
 
       // Firebase lookup for passenger's Solana wallet
@@ -847,7 +857,11 @@ export default function DriverDashboard() {
       const passengerSnap = await get(passengerRef);
 
       if (!passengerSnap.exists()) {
-        console.log(`[Trip Ticket] Passenger ${truePassengerId} does not exist.`);
+        toast({
+          title: 'Receipt skipped',
+          description: 'Passenger profile not found.',
+          variant: 'destructive',
+        });
         return;
       }
 
@@ -855,39 +869,68 @@ export default function DriverDashboard() {
       const passengerWallet = passengerData.solanaWallet;
 
       if (!passengerWallet) {
-        console.log(`[Trip Ticket] Passenger ${truePassengerId} has no linked Solana Wallet.`);
-        return; // Silently exit if no wallet
+        toast({
+          title: 'No passenger wallet',
+          description: 'Passenger has not linked a Solana wallet yet.',
+        });
+        return;
       }
 
       const payload = {
         passengerId: truePassengerId,
-        passengerWallet,
         bookingId,
         fare: actualFare,
-        route: selectedBus.route || 'Local Trip',
+        route: bookingRoute,
         driverName: selectedBus.driverName || 'Yatra Driver',
       };
 
       // Call internal Next.js API route to perform the minting securely
-      fetch('/api/solana/mint-ticket', {
+      const mintRes = await fetch('/api/solana/mint-ticket', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
-      }).then(async (res) => {
-        const data = await res.json();
-        if (data.success) {
-          toast({
-            title: 'Trip Ticket Minted! 🎉',
-            description: `Sent to ${passengerWallet.slice(0, 4)}...${passengerWallet.slice(-4)}`,
-          });
-        } else {
-          console.error('[Trip Ticket] Minting API Error:', data.error);
-        }
-      }).catch(err => {
-        console.error('[Trip Ticket] Fetch Error:', err);
       });
+      const mintData = await mintRes.json();
+      if (mintData?.success) {
+        toast({
+          title: 'Trip Ticket Minted! 🎉',
+          description: `Sent to ${passengerWallet.slice(0, 4)}...${passengerWallet.slice(-4)}`,
+        });
+      } else if (mintData?.reason === 'no_wallet') {
+        toast({
+          title: 'Receipt not minted',
+          description: 'Passenger has no verified wallet linked.',
+        });
+      } else {
+        toast({
+          title: 'Receipt mint failed',
+          description: mintData?.error || 'Unable to mint trip receipt.',
+          variant: 'destructive',
+        });
+      }
+
+      if (bookingData.paymentMethod === 'digital' && bookingData.escrowStatus === 'locked') {
+        try {
+          const releaseRes = await fetch('/api/solana/escrow/release', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tripId: bookingId }),
+          });
+          const releaseData = await releaseRes.json();
+          if (!releaseRes.ok || !releaseData?.success) {
+            throw new Error(releaseData?.error || 'Escrow release failed');
+          }
+          toast({ title: 'Payment Released', description: 'Escrow released to driver wallet.' });
+        } catch (releaseErr: any) {
+          toast({
+            title: 'Escrow release failed',
+            description: releaseErr?.message || 'Funds remain locked. Retry from support flow.',
+            variant: 'destructive',
+          });
+        }
+      }
 
     } catch (error) {
       console.error('[Trip Ticket] Unexpected error during dropoff flow:', error);
@@ -1199,6 +1242,7 @@ export default function DriverDashboard() {
           tripStatus={activeTripRequest.status as TripStatus}
           onAccept={handleAcceptTrip}
           onReject={handleRejectTrip}
+          onExpire={handleExpireTrip}
           onPassengerBoarded={handlePassengerBoarded}
           onCompleteTrip={handleCompleteTrip}
         />

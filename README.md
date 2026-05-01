@@ -194,10 +194,10 @@ base  = (completed_trips / total_trips) × 400        // Completion rate
 
 ### Cross-Platform Integration
 
-Any dApp, insurance protocol, or lending platform can query a driver's reputation:
+Third-party integrations can query a driver's reputation through the typed SDK layer:
 
 ```typescript
-import { YatraProtocol } from '@yatra/sdk';
+import { YatraProtocol } from '@/lib/sdk';
 
 const rep = await new YatraProtocol().getDriverReputation(driverWallet);
 // {
@@ -449,7 +449,7 @@ yatra/
 - [ ] ZK verifier wired to `snarkjs.groth16.verify()`
 - [ ] Fare escrow with GPS-verified release
 - [ ] Transport office dashboard (number plate → live map)
-- [ ] `@yatra/sdk` npm package for third-party integration
+- [x] Typed SDK query layer (`lib/sdk`) for third-party integration
 - [ ] SparrowSMS integration for real notifications
 - [ ] Mainnet deployment
 

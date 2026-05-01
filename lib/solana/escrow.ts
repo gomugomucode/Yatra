@@ -52,8 +52,6 @@ export async function createEscrowAccount(
     driverWallet: string,
     amountNPR: number
 ) {
-    console.log(`🛠️ [Escrow] Initializing Escrow for Trip: ${tripId}`);
-    
     // Convert NPR to SOL 
     // Mock rate: 1 SOL ≈ $130 (devnet stability). 1 USD ≈ 130 NPR.
     // So 1 NPR ≈ 0.00006 SOL.
@@ -83,14 +81,12 @@ export async function createEscrowAccount(
             { commitment: 'confirmed' }
         );
 
-        console.log(`✅ [Escrow] Funds locked in PDA: ${escrowPDA.toBase58()}`);
         return {
             escrowAddress: escrowPDA.toBase58(),
             signature,
             amountLamports
         };
     } catch (error: any) {
-        console.error('❌ [Escrow] Initialization failed:', error.message);
         throw error;
     }
 }
@@ -105,8 +101,6 @@ export async function releaseEscrow(
     driverWallet: string,
     amountLamports: number
 ) {
-    console.log(`💸 [Escrow] Releasing funds to Driver: ${driverWallet}`);
-    
     // Note: Since PDAs are not real wallets, in this simulation the server 
     // (which holds the funds for the trip) transfers them to the driver.
     
@@ -128,10 +122,8 @@ export async function releaseEscrow(
             { commitment: 'confirmed' }
         );
 
-        console.log(`✅ [Escrow] Payment released! Sig: ${signature}`);
         return signature;
     } catch (error: any) {
-        console.error('❌ [Escrow] Release failed:', error.message);
         throw error;
     }
 }
@@ -146,8 +138,6 @@ export async function reclaimEscrow(
     passengerWallet: string,
     amountLamports: number
 ) {
-    console.log(`↩️ [Escrow] Reclaiming funds for Passenger: ${passengerWallet}`);
-    
     const passengerPubkey = new PublicKey(passengerWallet);
     
     const transaction = new Transaction().add(
@@ -166,10 +156,8 @@ export async function reclaimEscrow(
             { commitment: 'confirmed' }
         );
 
-        console.log(`✅ [Escrow] Refund processed! Sig: ${signature}`);
         return signature;
     } catch (error: any) {
-        console.error('❌ [Escrow] Reclaim failed:', error.message);
         throw error;
     }
 }

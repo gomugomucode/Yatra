@@ -2,6 +2,66 @@
 
 All notable changes to the Yatra project will be documented in this file.
 
+## [1.7.3] - 2026-05-01
+### Final Production Hardening (Security, Integrity, Determinism)
+
+#### Firebase Rules Hardening
+- Tightened `database.rules.json` with stricter least-privilege behavior for critical paths: `bookings`, `trips`, `tripRequests`, and `alerts`.
+- Added/expanded `.validate` schema checks on critical nodes so writes are shape-safe and reject malformed payloads.
+- Removed broad client mutation on booking records (`bookings/$bookingId/.write` locked), preventing passenger-side post-creation tampering.
+- Added immutable guards on sensitive trip fields (`driverId`, `busId`, and escrow fields/signatures/amounts) to block unauthorized state edits.
+- Added query-scoped root read guards to align list access with indexed user-specific queries rather than broad root reads.
+
+#### API Integrity and Exploit Prevention
+- Hardened `/api/solana/escrow/release` with strict preconditions: trip+booking existence, status consistency, escrow lock-state consistency, GPS-backed completion proof, and amount/participant integrity checks.
+- Hardened `/api/solana/escrow/reclaim` with dual-record consistency checks plus deterministic reclaim-policy enforcement before on-chain refund.
+- Hardened `/api/solana/mint-ticket` with stricter fare validation, booking existence checks, and passenger-booking ownership enforcement.
+- Hardened `/api/solana/verify-driver` with stricter payload/wallet validation and explicit safe error responses.
+
+#### State Integrity Guarantees
+- Updated `lib/firebaseDb.ts` so trip status updates synchronize linked booking status to prevent booking/trip divergence.
+- Upgraded GPS completion flow (`autoCompleteTripByGPS`) to persist explicit completion evidence (`completionMethod`, `gpsVerifiedAt`) and keep booking/trip completion in sync.
+- Replaced silent failure in trip location publishing with explicit errors for invalid coordinates.
+
+#### Reliability Tests (Integration-Level)
+- Added deterministic integration tests in `tests/solana-api.integration.test.ts` for:
+  - `/api/solana/mint-ticket`
+  - `/api/solana/escrow/release`
+  - `/api/solana/escrow/reclaim`
+  - `/api/solana/verify-driver`
+- Fully mocked Firebase Admin and Solana boundaries to ensure zero network dependency and deterministic pass/fail behavior.
+- Expanded `tests/database-rules.test.ts` to validate critical schema and immutability constraints in hardened Firebase rules.
+
+#### Cleanup
+- Removed noisy production debug logs from escrow execution paths in `lib/solana/escrow.ts`.
+- Standardized explicit, safe error surfaces for security-sensitive API failures.
+
+## [1.7.2] - 2026-05-01
+### Reliability, Security Tightening, and Verification Truthfulness
+
+#### Tests and Verification
+- Added deterministic Vitest-based test setup (`vitest.config.ts`, `npm run test`).
+- Added coverage for trip transition matrix, escrow reclaim policy edge cases, mint-ticket input/persistence invariants, and Firebase rules privacy assumptions.
+- Extracted reusable core policies for testing and runtime consistency:
+  - `lib/tripStateMachine.ts`
+  - `lib/solana/escrowPolicy.ts`
+
+#### ZK Identity UX and Server Validation
+- Removed misleading "verified" wording from onboarding proof generation UI in `components/onboarding/YatraOnboardingWizard.tsx`; proof generation is now clearly labeled as local-only until server verification.
+- Tightened verifier input checks in `lib/zk/verifier.ts` to reject malformed proof payloads early.
+- Hardened `/api/solana/verify-driver` request validation and reduced noisy logs, while preserving explicit error reporting.
+
+#### Least-Privilege Firebase Alignment
+- Tightened `database.rules.json` for `bookings`, `trips`, `users`, and `alerts` to better enforce participant/admin scope and reduce broad write exposure.
+- Updated `subscribeToBookings` in `lib/firebaseDb.ts` to use role-scoped Firebase queries instead of root reads, aligning client behavior with least-privilege rules.
+
+#### Landing Motion Polish
+- Upgraded landing interactions in `app/page.tsx` with smoother scroll-reactive hero motion, refined CTA shimmer treatment, and improved tactile card feedback while preserving the Daylight aesthetic and performance.
+
+#### Cleanup
+- Reduced noisy logs in production-sensitive paths (`lib/zk/prover.ts`, `lib/firebaseDb.ts`, `lib/utils/sms.ts`).
+- Added mint-ticket persistence helper utilities to keep receipt write path behavior explicit and testable.
+
 ## [1.7.1] - 2026-05-01
 ### Infrastructure Finalization & Escrow Hardening
 
