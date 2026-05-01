@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 // Nepal outline path (simplified but recognizable shape)
 const NEPAL_PATH = `M 60,140 L 80,130 L 110,125 L 140,120 L 160,115 L 190,110
@@ -107,36 +108,17 @@ export default function YatraHero({
           <span className="yatra-badge-chip">BETA</span>
         </div>
 
-        {/* YATRA Typography — Custom SVG Logotype (Orange → Sky) */}
+        {/* YATRA Logo */}
         <div className={`text-center transition-all duration-700 delay-100 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-          <h1 className="inline-block w-full max-w-[min(90vw,420px)]" aria-label="YATRA">
-            <svg
-              viewBox="0 0 320 80"
-              className="w-full max-w-[min(90vw,420px)] h-auto mx-auto"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <defs>
-                <linearGradient id="yatra-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#fb923c" />
-                  <stop offset="50%" stopColor="#f97316" />
-                  <stop offset="100%" stopColor="#38bdf8" />
-                </linearGradient>
-              </defs>
-              <text
-                x="50%"
-                y="62"
-                textAnchor="middle"
-                fontSize="72"
-                fontWeight="900"
-                letterSpacing="-0.03em"
-                fill="url(#yatra-gradient)"
-                style={{ filter: 'drop-shadow(0 0 40px rgba(249, 115, 22, 0.28))' }}
-                fontFamily="var(--font-outfit), system-ui, sans-serif"
-              >
-                YATRA
-              </text>
-            </svg>
+          <h1 className="flex justify-center" aria-label="YATRA">
+            <Image
+              src="/yatra-logo.png"
+              alt="Yatra"
+              width={220}
+              height={220}
+              className="drop-shadow-[0_0_40px_rgba(139,92,246,0.4)]"
+              priority
+            />
           </h1>
           <p className="yatra-subtitle">Nepal&apos;s Transit, Tokenized.</p>
           <p className="yatra-body mt-3">

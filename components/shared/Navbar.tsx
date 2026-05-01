@@ -1,8 +1,9 @@
 'use client';
-import { Bell, ShieldAlert, Bus } from 'lucide-react';
+import { Bell, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusChip } from './StatusChip';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface NavbarProps {
   title?: string;
@@ -25,9 +26,7 @@ export function Navbar({
     <nav className="sticky top-0 z-50 w-full h-16 bg-white border-b border-slate-100 flex items-center justify-between px-4 sm:px-6">
       <div className="flex items-center gap-3">
         <Link href="/" className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-100">
-            <Bus className="w-5 h-5" />
-          </div>
+          <Image src="/yatra-logo.png" alt="Yatra" width={40} height={40} className="rounded-xl" priority />
           <div className="flex flex-col">
             <h1 className="text-base font-black text-slate-900 leading-none tracking-tight">
               {title}

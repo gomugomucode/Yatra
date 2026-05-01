@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import {
   Bus,
@@ -78,10 +79,7 @@ export default function Home() {
               animate={{ opacity: 1, x: 0 }}
               className="flex items-center gap-2"
             >
-              <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-200">
-                <Bus className="text-white w-6 h-6" />
-              </div>
-              <span className="text-2xl font-black tracking-tight text-slate-900">Yatra</span>
+              <Image src="/yatra-logo.png" alt="Yatra" width={64} height={64} className="rounded-xl" priority />
             </motion.div>
 
             {/* Center: Desktop Nav */}
@@ -544,10 +542,7 @@ export default function Home() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-16 mb-24">
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-8">
-                <div className="w-9 h-9 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-100">
-                  <Bus className="text-white w-5 h-5" />
-                </div>
-                <span className="text-2xl font-black tracking-tighter text-slate-900">Yatra</span>
+                <Image src="/yatra-logo.png" alt="Yatra" width={40} height={40} className="rounded-xl" />
               </div>
               <p className="text-slate-500 text-base leading-relaxed mb-8 font-medium opacity-80">
                 Modernizing Nepal's transit ecosystem with real-time tracking and secure identity.

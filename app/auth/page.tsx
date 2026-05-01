@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { FirebaseError } from 'firebase/app';
+import Image from 'next/image';
 import { User2, Bus, Mail, Lock, Eye, EyeOff, Loader2, ShieldCheck, ArrowLeft, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -190,9 +191,7 @@ function AuthContent() {
         
         <div className="relative z-10 max-w-lg">
           <Link href="/" className="inline-flex items-center gap-2 mb-12">
-            <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-200">
-              <Bus className="text-white w-6 h-6" />
-            </div>
+            <Image src="/yatra-logo.png" alt="Yatra" width={44} height={44} className="rounded-xl" priority />
             <span className="text-2xl font-black tracking-tight text-slate-900">Yatra</span>
           </Link>
           
@@ -225,9 +224,7 @@ function AuthContent() {
         <div className="w-full max-w-md">
           <div className="md:hidden mb-12 flex justify-between items-center">
             <Link href="/" className="inline-flex items-center gap-2">
-              <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
-                <Bus className="text-white w-5 h-5" />
-              </div>
+              <Image src="/yatra-logo.png" alt="Yatra" width={36} height={36} className="rounded-lg" />
               <span className="text-xl font-black tracking-tight text-slate-900">Yatra</span>
             </Link>
             <Link href="/">
