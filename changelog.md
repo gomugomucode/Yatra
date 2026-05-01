@@ -2,6 +2,21 @@
 
 All notable changes to the Yatra project will be documented in this file.
 
+## [1.6.0] - 2026-05-01
+### Stability & Console Cleanup
+
+#### Wallet Infrastructure
+- **Redundant Adapter Removal**: Removed explicit `PhantomWalletAdapter` from `WalletProviderWrapper.tsx`. The application now relies on the **Solana Wallet Standard**, which automatically detects Phantom and other modern wallets without redundant library overhead.
+
+#### Push Notification Stability
+- **Graceful Registration**: Wrapped service worker and push token registration in `lib/push.ts` with robust `try/catch` blocks and browser feature guards.
+- **AbortError Suppression**: Suppressed noisy `AbortError` logs that occur when registration is interrupted or unsupported by the browser environment.
+- **Permission Guards**: Added strict checks for `PushManager` and `Notification.permission` before attempting registration, eliminating console warnings in non-compliant browsers.
+
+#### Runtime Optimization
+- **Console Noise Reduction**: Purged over 15+ verbose `console.log` and `console.warn` calls from the driver and passenger dashboards.
+- **Production Logging**: Replaced noisy developmental logs with meaningful `console.debug` calls for non-critical failures and retained only critical error reporting.
+
 ## [1.5.0] - 2026-05-01
 ### ZK Infrastructure & Project Licensing
 

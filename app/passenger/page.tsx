@@ -215,8 +215,6 @@ export default function PassengerDashboard() {
   const selectedDriverName = selectedBus?.driverName ?? '';
 
   useEffect(() => {
-    console.log('[PASSENGER] Setting up location listeners for active buses');
-
     const unsubscribes: (() => void)[] = [];
 
     if (hailedDriverId) {
@@ -235,8 +233,6 @@ export default function PassengerDashboard() {
 
     targetBuses.forEach(bus => {
       if (bus.isActive) {
-        console.log('[PASSENGER] Subscribing to bus location:', bus.id);
-
         const unsubscribe = subscribeToBusLocation(bus.id, (location) => {
           if (location) {
             setBusLocations(prev => {
@@ -255,7 +251,6 @@ export default function PassengerDashboard() {
     });
 
     return () => {
-      console.log('[PASSENGER] Cleaning up location listeners');
       unsubscribes.forEach(unsub => unsub());
     };
   // targetBuses excluded: it's a new array reference on every buses change, which would re-run

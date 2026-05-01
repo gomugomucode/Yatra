@@ -154,11 +154,19 @@ export default function DriverDashboard() {
 
     const run = async () => {
       try {
+        // Robust guards for push token registration
+        if (typeof window === 'undefined') return;
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+        if (Notification.permission !== 'granted') return;
+
         const token = await getPushTokenFromBrowser();
         if (!token) return;
         await registerPushToken(currentUser.uid, token);
-      } catch (error) {
-        console.warn('[Driver] Push token registration skipped:', error);
+      } catch (error: any) {
+        // Silent failure for non-critical push registration
+        if (error?.name !== 'AbortError') {
+          console.debug('[Driver] Push token registration skipped:', error?.message || error);
+        }
       }
     };
 
@@ -669,7 +677,6 @@ export default function DriverDashboard() {
         if (!enabled) {
           await setDriverOffline(selectedBus.id, driverWalletAddress);
         }
-        console.log('[Driver] Location sharing', enabled ? 'enabled' : 'disabled');
 
         toast({
           title: enabled ? 'You are now online' : 'You are now offline',
