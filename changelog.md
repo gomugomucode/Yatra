@@ -2,6 +2,17 @@
 
 All notable changes to the Yatra project will be documented in this file.
 
+## [1.5.0] - 2026-05-01
+### ZK Infrastructure & Project Licensing
+
+#### ZK Asset Standardization
+- **Public Asset Migration**: Relocated ZK circuit build outputs to a standardized public path (`/public/zk/`) to ensure reliable client-side fetching.
+- **Path Reconciliation**: Updated `lib/zk/prover.ts` to use standardized paths (`/zk/driverIdentity.wasm`, `/zk/driverIdentity.zkey`).
+- **Error Resilience**: Implemented graceful failure handling in the ZK prover. The system now provides clear, descriptive error messages if cryptographic assets are missing, preventing application crashes during verification.
+
+#### Project Governance
+- **MIT License**: Added official MIT License file to the project root with 2026 Yatra copyright for GitHub compatibility and open-source compliance.
+
 ## [1.4.0] - 2026-05-01
 ### Final Daylight UI Audit & Component Refactoring
 
