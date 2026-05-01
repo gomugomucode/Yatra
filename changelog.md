@@ -2,6 +2,21 @@
 
 All notable changes to the Yatra project will be documented in this file.
 
+## [1.7.4] - 2026-05-01
+### Runtime Warning Remediation (Radix A11y + Firebase Indexing)
+
+#### Accessibility (Radix Dialog)
+- Fixed Radix runtime warning `Missing Description or aria-describedby={undefined} for {DialogContent}` by adding a required `DialogDescription` to `components/passenger/DetailedBookingModal.tsx`.
+- Kept the description visually hidden with `sr-only` so accessibility semantics are satisfied without changing the existing UI layout.
+
+#### Firebase Realtime Database Query Performance
+- Fixed RTDB warning `Using an unspecified index... driverId at /trips` by moving `.indexOn` from `trips/$tripId` to the correct collection node `trips` in `database.rules.json`.
+- Preserved the existing query pattern in `lib/firebaseDb.ts` (`orderByChild('driverId')` + `equalTo(busId)`), which is already the correct index-using query shape.
+
+#### Solana Dependency Runtime Note
+- Investigated `bigint: Failed to load bindings, pure JS will be used` and confirmed it is emitted by `bigint-buffer` (transitive dependency in Solana packages via `@solana/buffer-layout-utils`).
+- No functional code-path changes were required; behavior remains correct with JS fallback, with optional native rebuild for lower runtime noise and better performance.
+
 ## [1.7.3] - 2026-05-01
 ### Final Production Hardening (Security, Integrity, Determinism)
 

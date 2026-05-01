@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
@@ -133,6 +134,9 @@ export default function DetailedBookingModal() {
                         {step === 3 && (<><CheckCircle className="w-5 h-5 text-cyan-400" /> Confirm Booking</>)}
                         {step === 4 && (<><CheckCircle className="w-5 h-5 text-emerald-400" /> Booking Confirmed!</>)}
                     </DialogTitle>
+                    <DialogDescription className="sr-only">
+                        Multi-step ride booking flow for selecting destination, payment method, and confirmation.
+                    </DialogDescription>
                 </DialogHeader>
 
                 <div>
