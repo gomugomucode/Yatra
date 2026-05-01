@@ -66,7 +66,7 @@ export default function ActiveBusMap() {
     }, [buses.map(b => b.id).join(',')]); // Re-subscribe if bus list changes
 
     return (
-        <div className="w-full h-full rounded-xl overflow-hidden border border-slate-800 relative">
+        <div className="w-full h-full rounded-xl overflow-hidden border border-slate-100 relative">
             <MapWrapper
                 role="admin"
                 buses={buses}

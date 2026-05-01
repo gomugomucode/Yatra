@@ -30,10 +30,10 @@ export function NotificationToast({
         <BusIcon className="h-4 w-4" />
       </div>
       <div className="flex-1 space-y-1">
-        <div className="text-sm font-semibold">{title}</div>
-        <div className="text-xs text-gray-700">{message}</div>
+        <div className="text-sm font-black text-slate-900">{title}</div>
+        <div className="text-xs text-slate-700">{message}</div>
         {distanceText && (
-          <div className="flex items-center gap-1 text-[11px] text-gray-500">
+          <div className="flex items-center gap-1 text-[11px] text-slate-500 font-bold">
             <MapPin className="h-3 w-3" />
             <span>{distanceText}</span>
           </div>
@@ -42,7 +42,7 @@ export function NotificationToast({
           <Button
             size="sm"
             variant="outline"
-            className="mt-1 h-7 px-2 text-[11px]"
+            className="mt-1 h-7 px-3 text-[11px] font-black rounded-lg border-slate-200 bg-white hover:bg-slate-50"
             onClick={onViewMap}
           >
             View on Map

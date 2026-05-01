@@ -50,7 +50,7 @@ export default function AdminDashboard() {
 
     if (authLoading || loading) {
         return (
-            <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+            <div className="min-h-screen bg-white flex items-center justify-center">
                 <Loader2 className="w-8 h-8 text-cyan-500 animate-spin" />
             </div>
         );
@@ -65,7 +65,7 @@ export default function AdminDashboard() {
             <div className="space-y-8">
                 <div>
                     <h1 className="text-3xl font-bold text-white mb-2">Dashboard Overview</h1>
-                    <p className="text-slate-400">Welcome back, Admin. Here's what's happening today.</p>
+                    <p className="text-slate-600">Welcome back, Admin. Here's what's happening today.</p>
                 </div>
 
                 <StatsOverview
@@ -77,40 +77,39 @@ export default function AdminDashboard() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Live Map - Takes up 2 columns */}
-                    <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-4 h-125 flex flex-col">
+                    <div className="lg:col-span-2 bg-slate-50 border border-slate-100 rounded-xl p-4 h-125 flex flex-col">
                         <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                             Live Fleet Map
                         </h2>
-                        <div className="flex-1 rounded-lg overflow-hidden border border-slate-800">
+                        <div className="flex-1 rounded-lg overflow-hidden border border-slate-100">
                             <ActiveBusMap />
                         </div>
                     </div>
 
                     {/* Recent Activity / Quick Actions - Takes up 1 column */}
                     <div className="space-y-8">
-                        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                        <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
                             <h2 className="text-lg font-bold text-white mb-4">Recent Bookings</h2>
                             <div className="space-y-4">
                                 {bookings.slice(-5).reverse().map((booking) => (
-                                    <div key={booking.id} className="flex items-center justify-between p-3 bg-slate-950/50 rounded-lg border border-slate-800/50">
+                                    <div key={booking.id} className="flex items-center justify-between p-3 bg-white/50 rounded-lg border border-slate-100/50">
                                         <div>
                                             <p className="font-medium text-slate-200">{booking.passengerName}</p>
-                                            <p className="text-xs text-slate-500">
+                                            <p className="text-xs text-slate-600">
                                                 {new Date(booking.timestamp).toLocaleTimeString()} • {booking.paymentMethod || 'Cash'}
                                             </p>
                                         </div>
                                         <div className="text-right">
                                             <p className="font-bold text-emerald-400">Rs. {booking.fare}</p>
-                                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${booking.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800 text-slate-400'
-                                                }`}>
+                                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${booking.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-100 text-slate-600' }`}>
                                                 {booking.status}
                                             </span>
                                         </div>
                                     </div>
                                 ))}
                                 {bookings.length === 0 && (
-                                    <p className="text-slate-500 text-sm text-center py-4">No bookings yet.</p>
+                                    <p className="text-slate-600 text-sm text-center py-4">No bookings yet.</p>
                                 )}
                             </div>
                         </div>

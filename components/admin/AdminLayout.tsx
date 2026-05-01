@@ -37,7 +37,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 text-white flex">
+        <div className="min-h-screen bg-white text-white flex">
             {/* Alert Banner */}
             {activeAlert && (
                 <div className="fixed top-0 left-0 right-0 z-[100] bg-red-600 text-white px-4 py-3 shadow-lg animate-pulse flex items-center justify-between">
@@ -74,18 +74,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Mobile Sidebar Overlay */}
             {sidebarOpen && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                    className="fixed inset-0 bg-white/50 z-40 lg:hidden"
                     onClick={() => setSidebarOpen(false)}
                 />
             )}
 
             {/* Sidebar */}
-            <aside className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-slate-900/90 backdrop-blur-md border-r border-slate-800 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:shrink-0
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        ${activeAlert ? 'mt-16' : ''} 
-      `}>
-                <div className="h-16 flex items-center justify-between px-6 border-b border-slate-800">
+            <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-50/90 backdrop-blur-md border-r border-slate-100 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:shrink-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${activeAlert ? 'mt-16' : ''}`}>
+                <div className="h-16 flex items-center justify-between px-6 border-b border-slate-100">
                     <span className="text-xl font-black bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
                         DriveUp Admin
                     </span>
@@ -101,10 +97,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <Link
                                 key={item.href}
                                 href={item.href}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${isActive
-                                    ? 'bg-cyan-500/10 text-cyan-400 font-bold'
-                                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                                    }`}
+                                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${isActive ? 'bg-cyan-500/10 text-cyan-400 font-bold' : 'text-slate-600 hover:bg-slate-100 hover:text-white' }`}
                                 onClick={() => setSidebarOpen(false)}
                             >
                                 <item.icon className="w-5 h-5" />
@@ -114,7 +107,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     })}
                 </nav>
 
-                <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-800">
+                <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-100">
                     <Button
                         variant="ghost"
                         className="w-full justify-start gap-3 text-red-400 hover:text-red-300 hover:bg-red-500/10"
@@ -129,7 +122,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Main Content */}
             <main className={`flex-1 flex flex-col min-w-0 overflow-hidden ${activeAlert ? 'mt-16' : ''}`}>
                 {/* Header */}
-                <header className="h-16 border-b border-slate-800 bg-slate-950/80 backdrop-blur-md flex items-center justify-between px-4 lg:px-8 sticky top-0 z-30">
+                <header className="h-16 border-b border-slate-100 bg-white/80 backdrop-blur-md flex items-center justify-between px-4 lg:px-8 sticky top-0 z-30">
                     <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
                         <Menu className="w-5 h-5" />
                     </Button>

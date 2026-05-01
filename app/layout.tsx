@@ -25,7 +25,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#09111F",
+  themeColor: "#FFFFFF",
 };
 
 export const metadata: Metadata = {
@@ -53,9 +53,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body
-        className={`${outfit.variable} ${jetbrainsMono.variable} ${mukta.variable} antialiased font-sans`}
+        className={`${outfit.variable} ${jetbrainsMono.variable} ${mukta.variable} antialiased font-sans bg-white text-slate-900`}
       >
         <AuthProvider>
           <ClientWalletProvider>

@@ -49,7 +49,7 @@ export default function SeatVisualizer({ bus, compact = false }: SeatVisualizerP
                         </span>
                     ))}
                 </div>
-                <span className="text-xs text-slate-400 font-medium">
+                <span className="text-xs text-slate-600 font-medium">
                     {bus.availableSeats}/{bus.capacity}
                 </span>
             </div>
@@ -59,17 +59,12 @@ export default function SeatVisualizer({ bus, compact = false }: SeatVisualizerP
     return (
         <div className="space-y-4">
             {/* Seat Grid */}
-            <div className="bg-slate-950/50 rounded-xl p-4 border border-slate-800 shadow-inner">
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-inner">
                 <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2 justify-center">
                     {seats.map((seat, idx) => (
                         <div
                             key={idx}
-                            className={`h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-lg text-lg transition-transform hover:scale-110 cursor-default ${seat.type === 'available'
-                                    ? 'bg-slate-800/50 border border-slate-700 hover:bg-slate-700'
-                                    : seat.type === 'online'
-                                        ? 'bg-blue-500/20 border border-blue-500/30'
-                                        : 'bg-yellow-500/20 border border-yellow-500/30'
-                                }`}
+                            className={`h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-lg text-lg transition-transform hover:scale-110 cursor-default ${seat.type === 'available' ? 'bg-white border border-slate-200 hover:bg-slate-100' : seat.type === 'online' ? 'bg-blue-50 border border-blue-200' : 'bg-yellow-50 border border-yellow-200' }`}
                             title={
                                 seat.type === 'online'
                                     ? 'Online Booked'
@@ -86,44 +81,44 @@ export default function SeatVisualizer({ bus, compact = false }: SeatVisualizerP
 
             {/* Seat Statistics */}
             <div className="grid grid-cols-3 gap-3 text-center text-xs sm:text-sm">
-                <div className="bg-blue-500/10 rounded-xl p-3 border border-blue-500/20">
-                    <div className="text-2xl font-bold text-blue-400">
+                <div className="bg-blue-50 rounded-xl p-3 border border-blue-200 shadow-sm">
+                    <div className="text-2xl font-black text-blue-700">
                         {bus.onlineBookedSeats || 0}
                     </div>
-                    <div className="text-[10px] uppercase tracking-wider text-blue-300/70 font-semibold mt-1">Online</div>
+                    <div className="text-[10px] uppercase tracking-wider text-blue-800 font-black mt-1">Online</div>
                 </div>
-                <div className="bg-yellow-500/10 rounded-xl p-3 border border-yellow-500/20">
-                    <div className="text-2xl font-bold text-yellow-400">
+                <div className="bg-yellow-50 rounded-xl p-3 border border-yellow-200 shadow-sm">
+                    <div className="text-2xl font-black text-yellow-700">
                         {bus.offlineOccupiedSeats || 0}
                     </div>
-                    <div className="text-[10px] uppercase tracking-wider text-yellow-300/70 font-semibold mt-1">Offline</div>
+                    <div className="text-[10px] uppercase tracking-wider text-yellow-800 font-black mt-1">Offline</div>
                 </div>
-                <div className="bg-emerald-500/10 rounded-xl p-3 border border-emerald-500/20">
-                    <div className="text-2xl font-bold text-emerald-400">
+                <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-200 shadow-sm">
+                    <div className="text-2xl font-black text-emerald-700">
                         {bus.availableSeats || 0}
                     </div>
-                    <div className="text-[10px] uppercase tracking-wider text-emerald-300/70 font-semibold mt-1">Available</div>
+                    <div className="text-[10px] uppercase tracking-wider text-emerald-800 font-black mt-1">Available</div>
                 </div>
             </div>
 
             {/* Last Update */}
-            <div className="flex items-center justify-between text-xs text-slate-500 px-1">
+            <div className="flex items-center justify-between text-xs text-slate-600 px-1">
                 <p>Updated {lastUpdate}</p>
             </div>
 
             {/* Legend */}
-            <div className="border-t border-slate-800 pt-3 flex items-center justify-center gap-6">
+            <div className="border-t border-slate-100 pt-3 flex items-center justify-center gap-6">
                 <div className="flex items-center gap-2 text-sm">
                     <span className="text-lg">🟦</span>
-                    <span className="text-slate-400 text-xs font-medium uppercase tracking-wide">Online</span>
+                    <span className="text-slate-600 text-xs font-medium uppercase tracking-wide">Online</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                     <span className="text-lg">🟨</span>
-                    <span className="text-slate-400 text-xs font-medium uppercase tracking-wide">Offline</span>
+                    <span className="text-slate-600 text-xs font-medium uppercase tracking-wide">Offline</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                     <span className="text-lg">⚪</span>
-                    <span className="text-slate-400 text-xs font-medium uppercase tracking-wide">Empty</span>
+                    <span className="text-slate-600 text-xs font-medium uppercase tracking-wide">Empty</span>
                 </div>
             </div>
         </div>

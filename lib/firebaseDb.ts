@@ -658,6 +658,29 @@ export async function updateTripStatus(
     });
 }
 
+/**
+ * GPS-verified trip completion.
+ * Updates status and handles cleanup of real-time location data.
+ */
+export async function autoCompleteTripByGPS(
+    tripId: string,
+    extraFields?: Record<string, unknown>
+): Promise<void> {
+    const db = getDb();
+    const now = new Date().toISOString();
+    
+    // 1. Update main trip record
+    await update(ref(db, `trips/${tripId}`), {
+        status: 'completed',
+        completedAt: now,
+        updatedAt: now,
+        ...extraFields,
+    });
+
+    // 2. Cleanup trip-specific location data
+    await cleanupTripLocation(tripId);
+}
+
 export async function publishTripLocation(
     tripId: string,
     role: 'driver' | 'passenger',

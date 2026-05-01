@@ -109,7 +109,7 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
           <Button
             variant="ghost"
             size="icon"
-            className="w-10 h-10 rounded-full bg-[#0b0f1a] border border-slate-700 text-cyan-300 hover:bg-slate-800 shadow-md"
+            className="w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-900 hover:bg-slate-50 shadow-md"
           >
             <span className="text-sm font-bold">{initial}</span>
           </Button>
@@ -117,7 +117,7 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
       )}
       <SheetContent
         side="right"
-        className="w-full max-w-md border-l border-emerald-500/30 bg-[#0f172a] p-0 flex flex-col overflow-hidden z-[10000] shadow-[0_0_50px_rgba(0,0,0,1)]"
+        className="w-full max-w-md border-l border-slate-200 bg-white p-0 flex flex-col overflow-hidden z-[10000] shadow-2xl"
       >
         <SheetHeader className="sr-only">
           <SheetTitle>Driver Profile</SheetTitle>
@@ -130,19 +130,19 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
           className="flex flex-col h-full max-h-screen overflow-y-auto custom-scrollbar"
         >
           {/* Profile Card */}
-          <div className="p-6 bg-slate-800/40 border-b border-slate-700/50">
+          <div className="p-6 bg-slate-50 border-b border-slate-200">
             <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-600 flex items-center justify-center text-2xl font-black text-white shadow-lg shadow-emerald-500/40 ring-2 ring-white/10">
+              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center text-2xl font-black text-white shadow-lg shadow-emerald-200 ring-2 ring-white">
                 {initial}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-xl text-white tracking-tight">{displayName}</p>
+                <p className="font-bold text-xl text-slate-900 tracking-tight">{displayName}</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="inline-flex items-center rounded-full bg-emerald-400/10 border border-emerald-400/20 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400 tracking-widest uppercase">
+                  <span className="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-black text-emerald-700 tracking-widest uppercase">
                     DRIVER
                   </span>
                   {isZkVerified && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 text-[10px] font-bold text-blue-400 tracking-widest uppercase">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-black text-blue-700 tracking-widest uppercase">
                       <ShieldCheck className="w-3 h-3" /> ZK Verified
                     </span>
                   )}
@@ -150,50 +150,50 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
               </div>
             </div>
             {wallet && (
-              <div className="mt-5 flex items-center gap-2 rounded-xl bg-black/40 border border-slate-800 px-4 py-3">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
-                <span className="text-xs font-medium text-slate-400">Connected Wallet</span>
-                <span className="text-xs font-mono text-emerald-400 ml-auto">{truncateAddress(wallet)}</span>
+              <div className="mt-5 flex items-center gap-2 rounded-xl bg-white border border-slate-200 px-4 py-3">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs font-bold text-slate-600">Connected Wallet</span>
+                <span className="text-xs font-mono font-bold text-emerald-700 ml-auto">{truncateAddress(wallet)}</span>
               </div>
             )}
           </div>
 
           {/* TRRL Performance Dashboard */}
-          <div className="p-6 border-b border-slate-800">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+          <div className="p-6 border-b border-slate-100">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-600 mb-4 flex items-center gap-2">
               <Award className="w-3.5 h-3.5" />
               Reputation & Performance
             </h3>
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl bg-gradient-to-br from-[#161e2d] to-[#0f172a] border border-slate-800 p-4 flex flex-col justify-center relative overflow-hidden group hover:border-yellow-500/30 transition-colors">
+              <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 flex flex-col justify-center relative overflow-hidden group hover:border-yellow-500 transition-colors">
                 <div className="absolute -right-4 -top-4 w-16 h-16 bg-yellow-500/5 rounded-full blur-xl group-hover:bg-yellow-500/10 transition-all"></div>
                 <div className="flex items-center gap-2 mb-1 relative z-10">
-                  <Star className="w-4 h-4 text-yellow-500" />
-                  <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">TRRL Score</span>
+                  <Star className="w-4 h-4 text-yellow-600" />
+                  <span className="text-xs text-slate-600 uppercase tracking-wider font-bold">TRRL Score</span>
                 </div>
-                <div className="text-2xl font-black text-white relative z-10">{reputationScore}<span className="text-sm text-slate-500 font-medium">/1000</span></div>
+                <div className="text-2xl font-black text-slate-900 relative z-10">{reputationScore}<span className="text-sm text-slate-500 font-bold">/1000</span></div>
               </div>
-              <div className="rounded-xl bg-gradient-to-br from-[#161e2d] to-[#0f172a] border border-slate-800 p-4 flex flex-col justify-center relative overflow-hidden group hover:border-cyan-500/30 transition-colors">
+              <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 flex flex-col justify-center relative overflow-hidden group hover:border-cyan-500 transition-colors">
                 <div className="absolute -right-4 -top-4 w-16 h-16 bg-cyan-500/5 rounded-full blur-xl group-hover:bg-cyan-500/10 transition-all"></div>
                 <div className="flex items-center gap-2 mb-1 relative z-10">
-                  <Activity className="w-4 h-4 text-cyan-400" />
-                  <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Total Trips</span>
+                  <Activity className="w-4 h-4 text-cyan-600" />
+                  <span className="text-xs text-slate-600 uppercase tracking-wider font-bold">Total Trips</span>
                 </div>
-                <div className="text-2xl font-black text-white relative z-10">{totalTrips}</div>
+                <div className="text-2xl font-black text-slate-900 relative z-10">{totalTrips}</div>
               </div>
             </div>
           </div>
 
           {/* Recent Trips Slider */}
-          <div className="p-6 border-b border-slate-800">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+          <div className="p-6 border-b border-slate-100">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-600 mb-4 flex items-center gap-2">
               <History className="w-3.5 h-3.5" />
               Recent Trips
             </h3>
             <div className="overflow-x-auto pb-2 -mx-1 flex gap-4 snap-x snap-mandatory custom-scrollbar">
               {recentBookings.length === 0 ? (
-                <div className="w-full py-8 text-center rounded-xl bg-slate-900/50 border border-dashed border-slate-800">
-                  <p className="text-xs text-slate-500 uppercase tracking-tighter">No trips completed yet</p>
+                <div className="w-full py-8 text-center rounded-xl bg-slate-50/50 border border-dashed border-slate-100">
+                  <p className="text-xs text-slate-600 uppercase tracking-tighter">No trips completed yet</p>
                 </div>
               ) : (
                 recentBookings.map((booking) => {
@@ -202,14 +202,14 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
                   return (
                     <div
                       key={booking.id}
-                      className="flex-shrink-0 w-48 snap-center rounded-xl border p-4 bg-gradient-to-br from-[#1c2537] to-[#0f172a] shadow-lg border-emerald-500/30 hover:border-emerald-500/60 transition-colors"
+                      className="flex-shrink-0 w-48 snap-center rounded-xl border p-4 bg-white shadow-sm border-slate-200 hover:border-emerald-500 transition-colors"
                     >
-                      <p className="text-[10px] text-slate-400 font-bold uppercase">{date}</p>
-                      <p className="text-sm font-bold text-white mt-1 truncate">{booking.passengerName || 'Passenger'}</p>
+                      <p className="text-[10px] text-slate-500 font-black uppercase">{date}</p>
+                      <p className="text-sm font-bold text-slate-900 mt-1 truncate">{booking.passengerName || 'Passenger'}</p>
                       <div className="mt-3 flex items-center justify-between">
-                        <span className="text-[12px] font-black text-emerald-400">रु {fare}</span>
-                        <div className="bg-emerald-500/10 text-emerald-400 p-1 rounded-md">
-                           <History className="w-3 h-3" />
+                        <span className="text-[12px] font-black text-emerald-700">रु {fare}</span>
+                        <div className="bg-emerald-50 text-emerald-600 p-1.5 rounded-lg">
+                           <History className="w-3.5 h-3.5" />
                         </div>
                       </div>
                     </div>
@@ -220,21 +220,21 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
           </div>
 
           {/* Digital wallet */}
-          <div className="p-6 border-b border-slate-800">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+          <div className="p-6 border-b border-slate-100">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-600 mb-4 flex items-center gap-2">
               <Wallet className="w-3.5 h-3.5" />
               Digital Wallet
             </h3>
-            <div className="rounded-xl bg-[#161e2d] border border-slate-800 p-5 space-y-4">
+            <div className="rounded-xl bg-slate-50 border border-slate-200 p-5 space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-400">Balance</span>
-                <span className="text-white font-bold text-base">0.00 USDC · 0 SOL</span>
+                <span className="text-sm text-slate-600 font-bold">Balance</span>
+                <span className="text-slate-900 font-black text-base">0.00 USDC · 0 SOL</span>
               </div>
               <div className="flex gap-3">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1 h-10 border-slate-700 bg-slate-800/50 text-slate-200 hover:bg-slate-700"
+                  className="flex-1 h-10 border-slate-200 bg-white text-slate-900 hover:bg-slate-50 font-bold"
                   onClick={handleCopyAddress}
                   disabled={!wallet}
                 >
@@ -244,7 +244,7 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1 h-10 border-emerald-500/30 bg-emerald-500/5 text-emerald-400 hover:bg-emerald-500/10"
+                  className="flex-1 h-10 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold"
                 >
                   <PlusCircle className="w-3.5 h-3.5 mr-2" />
                   Cash Out
@@ -254,7 +254,7 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
           </div>
 
           {/* Action list */}
-          <div className="p-6 flex-1 bg-[#0b0f1a]">
+          <div className="p-6 flex-1 bg-white">
             <nav className="space-y-2">
               {[
                 {
@@ -276,15 +276,15 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
                 <button
                   key={item.label}
                   onClick={item.onClick}
-                  className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/50 hover:text-white transition-all group"
+                  className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all group"
                 >
-                  <item.icon className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 transition-colors" />
+                  <item.icon className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 transition-colors" />
                   {item.label}
                 </button>
               ))}
             </nav>
 
-            <div className="mt-8 pt-6 border-t border-slate-800">
+            <div className="mt-8 pt-6 border-t border-slate-100">
               <Button
                 variant="ghost"
                 className="w-full justify-start gap-4 px-4 h-12 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl"

@@ -95,24 +95,29 @@ export async function generateDriverProof(input: DriverProofInput): Promise<Driv
 
     // ── 3. Run Groth16 Prover ──────────────────────────────────────────────
     // The browser fetches these from the /public/zk/ directory
-    const { proof, publicSignals } = await snarkjs.groth16.fullProve(
-        {
-            licenseHash: licenseHash.toString(),
-            birthYear: birthYear.toString(),
-            salt: salt.toString()
-        },
-        '/zk/driverIdentity.wasm',
-        '/zk/driverIdentity_final.zkey'
-    );
+    try {
+        const { proof, publicSignals } = await snarkjs.groth16.fullProve(
+            {
+                licenseHash: licenseHash.toString(),
+                birthYear: birthYear.toString(),
+                salt: salt.toString()
+            },
+            '/zk/driverIdentity.wasm',
+            '/zk/driverIdentity.zkey'
+        );
 
-    // ── 4. Serialization ───────────────────────────────────────────────────
-    // Using the internal helper to ensure all BigInts are stringified correctly
-    const editedProof = stringifyBigInts(proof);
+        // ── 4. Serialization ───────────────────────────────────────────────────
+        // Using the internal helper to ensure all BigInts are stringified correctly
+        const editedProof = stringifyBigInts(proof);
 
-    return {
-        proof: editedProof,
-        publicSignals,
-        commitment: localCommitment.toString(16),
-        ageValid: publicSignals[1] === '1' // Index 1 is the 'ageValid' signal in the circuit
-    };
+        return {
+            proof: editedProof,
+            publicSignals,
+            commitment: localCommitment.toString(16),
+            ageValid: publicSignals[1] === '1' // Index 1 is the 'ageValid' signal in the circuit
+        };
+    } catch (err: any) {
+        console.error('[ZK Prover] fullProve failed:', err);
+        throw new Error(`ZK Proof generation failed: ${err.message || 'Check if driverIdentity.wasm/zkey exist in /public/zk/'}`);
+    }
 }

@@ -52,9 +52,9 @@ export default function StatsOverview({
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {stats.map((stat, index) => (
-                <Card key={index} className="bg-slate-900 border-slate-800">
+                <Card key={index} className="bg-slate-50 border-slate-100">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-slate-400">
+                        <CardTitle className="text-sm font-medium text-slate-600">
                             {stat.title}
                         </CardTitle>
                         <div className={`p-2 rounded-lg ${stat.bg}`}>
@@ -63,7 +63,7 @@ export default function StatsOverview({
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-white">{stat.value}</div>
-                        <p className="text-xs text-slate-500 mt-1">{stat.description}</p>
+                        <p className="text-xs text-slate-600 mt-1">{stat.description}</p>
                     </CardContent>
                 </Card>
             ))}

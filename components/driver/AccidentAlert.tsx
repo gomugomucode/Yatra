@@ -61,32 +61,32 @@ export default function AccidentAlert({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
-            <DialogContent className="bg-red-950 border-red-500 text-white sm:max-w-md border-2 shadow-[0_0_50px_rgba(239,68,68,0.5)] animate-pulse-slow">
+            <DialogContent className="bg-white border-red-500 text-slate-900 sm:max-w-md border-2 shadow-2xl">
                 <DialogHeader>
-                    <DialogTitle className="text-3xl font-black text-red-500 flex items-center gap-3 uppercase tracking-wider">
+                    <DialogTitle className="text-3xl font-black text-red-600 flex items-center gap-3 uppercase tracking-wider">
                         <AlertTriangle className="w-10 h-10 animate-bounce" />
                         Crash Detected
                     </DialogTitle>
-                    <DialogDescription className="text-red-200 text-lg font-medium">
+                    <DialogDescription className="text-red-700 text-lg font-black">
                         We detected a possible accident. Are you safe?
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="py-6 space-y-6">
                     <div className="text-center">
-                        <div className="text-6xl font-black text-white mb-2 font-mono">
+                        <div className="text-6xl font-black text-slate-900 mb-2 font-mono">
                             {secondsLeft}
                         </div>
-                        <p className="text-red-300 text-sm uppercase tracking-widest">Seconds to Auto-Alert</p>
+                        <p className="text-red-700 text-sm uppercase tracking-widest font-black">Seconds to Auto-Alert</p>
                     </div>
 
-                    <Progress value={progress} className="h-4 bg-red-900" />
+                    <Progress value={progress} className="h-4 bg-red-50 [&>div]:bg-red-600" />
                 </div>
 
                 <DialogFooter className="flex-col sm:flex-row gap-3 sm:gap-0">
                     <Button
                         variant="ghost"
-                        className="w-full sm:w-auto h-14 text-lg bg-white/10 hover:bg-white/20 text-white border-2 border-white/20"
+                        className="w-full sm:w-auto h-14 text-lg bg-slate-50 hover:bg-slate-100 text-slate-600 border-2 border-slate-200 font-bold"
                         onClick={onCancel}
                     >
                         <X className="w-6 h-6 mr-2" />
@@ -94,7 +94,7 @@ export default function AccidentAlert({
                     </Button>
                     <Button
                         variant="destructive"
-                        className="w-full sm:w-auto h-14 text-lg bg-red-600 hover:bg-red-700 animate-pulse"
+                        className="w-full sm:w-auto h-14 text-lg bg-red-600 hover:bg-red-700 text-white font-black shadow-lg shadow-red-200"
                         onClick={onConfirm}
                     >
                         <Phone className="w-6 h-6 mr-2" />
