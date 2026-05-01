@@ -919,7 +919,7 @@ export default function DriverDashboard() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col overflow-y-auto" style={{ background: '#09111F', WebkitOverflowScrolling: 'touch' }}>
+    <div className="min-h-screen flex flex-col overflow-y-auto bg-white" style={{ WebkitOverflowScrolling: 'touch' }}>
 
       {/* Passenger Reached full-screen alert */}
       {showPassengerReachedAlert && (
@@ -945,7 +945,7 @@ export default function DriverDashboard() {
       )}
 
       {/* ── Header ── */}
-      <header className="sticky top-0 z-50 border-b border-slate-100/50" style={{ background: 'rgba(9,17,31,0.97)', backdropFilter: 'blur(20px)' }}>
+      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
         <div className="px-4 py-3 flex items-center justify-between">
 
           {/* Brand */}
@@ -957,12 +957,12 @@ export default function DriverDashboard() {
               </svg>
             </div>
             <div>
-              <h1 className="text-xl font-extrabold leading-none text-white" style={{ fontFamily: 'var(--font-mukta), sans-serif' }}>
+              <h1 className="text-xl font-black leading-none text-slate-900" style={{ fontFamily: 'var(--font-mukta), sans-serif' }}>
                 चालक
               </h1>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'}`} />
-                <span className="text-[10px] font-bold tracking-widest" style={{ color: isOnline ? '#6ee7b7' : '#64748b' }}>
+                <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+                <span className="text-[10px] font-black tracking-widest" style={{ color: isOnline ? '#059669' : '#64748b' }}>
                   {isOnline ? 'ONLINE' : 'OFFLINE'}
                 </span>
               </div>
@@ -974,18 +974,18 @@ export default function DriverDashboard() {
             <button
               type="button"
               onClick={() => handleLocationToggle(!locationEnabled)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all active:scale-95 ${ locationEnabled ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300' : 'bg-slate-100 border-slate-200 text-slate-300 hover:border-slate-600' }`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-black border transition-all active:scale-95 ${ locationEnabled ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-slate-100 border-slate-200 text-slate-400 hover:border-slate-400' }`}
             >
-              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${locationEnabled ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${locationEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
               {locationEnabled ? 'LIVE' : 'GO LIVE'}
             </button>
 
             <button
               type="button"
               onClick={() => setShowProfileDialog(true)}
-              className="w-10 h-10 rounded-full bg-[#0b0f1a] border border-slate-200 text-cyan-300 hover:bg-slate-100 shadow-md flex items-center justify-center transition-colors"
+              className="w-10 h-10 rounded-full bg-slate-50 border border-slate-200 text-slate-900 hover:bg-slate-100 shadow-sm flex items-center justify-center transition-colors"
             >
-              <span className="text-sm font-bold">
+              <span className="text-sm font-black">
                 {userData?.role === 'driver' ? (userData.name?.charAt(0).toUpperCase() || 'D') : 'D'}
               </span>
             </button>
@@ -997,7 +997,7 @@ export default function DriverDashboard() {
 
       {/* ── Map ── */}
       <div
-        className="relative w-full shrink-0 border-b border-slate-100/40 transition-all duration-500"
+        className="relative w-full shrink-0 border-b border-slate-200 transition-all duration-500"
         style={{ height: activeTripRequest ? '65vh' : '50vh', touchAction: 'pan-y' }}
       >
         <MapWrapper
@@ -1024,29 +1024,29 @@ export default function DriverDashboard() {
       </div>
 
       {/* ── Cockpit ── */}
-      <div className="p-4 space-y-3 pb-40" style={{ background: '#09111F' }}>
+      <div className="p-4 space-y-3 pb-40 bg-slate-50">
 
         {/* Active trip: navigation strip */}
         {activeTripRequest && (
-          <section className="rounded-2xl border border-cyan-500/15 overflow-hidden" style={{ background: 'rgba(6,182,212,0.03)' }}>
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100/50">
+          <section className="rounded-2xl border border-cyan-100 bg-white shadow-sm shadow-cyan-100/50">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <Navigation className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="text-[11px] font-bold tracking-widest text-cyan-300 uppercase">
+                <Navigation className="w-3.5 h-3.5 text-cyan-600" />
+                <span className="text-[11px] font-black tracking-widest text-cyan-700 uppercase">
                   {activeTripRequest.status === 'active' ? 'Trip in Progress' : activeTripRequest.status === 'arrived' ? 'At Pickup' : 'Navigate to Pickup'}
                 </span>
               </div>
               {driverEta !== null && (
-                <span className="text-xs font-bold text-white bg-slate-700/70 px-2.5 py-0.5 rounded-full">{driverEta} min</span>
+                <span className="text-xs font-black text-slate-900 bg-slate-100 px-2.5 py-0.5 rounded-full">{driverEta} min</span>
               )}
             </div>
             <div className="p-4 space-y-3">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-slate-700/60 border border-slate-600/40 flex items-center justify-center text-sm font-bold text-white shrink-0">
+                <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-sm font-black text-slate-900 shrink-0">
                   {activeTripRequest.passengerName?.[0]?.toUpperCase() ?? 'P'}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-white font-semibold text-sm">{activeTripRequest.passengerName}</p>
+                  <p className="text-slate-900 font-bold text-sm">{activeTripRequest.passengerName}</p>
                   <p className="text-slate-600 text-xs">
                     {activeTripRequest.status === 'requested' && 'Waiting for response'}
                     {activeTripRequest.status === 'accepted' && 'On the way'}
@@ -1060,13 +1060,13 @@ export default function DriverDashboard() {
                   const dLng = (activeTripRequest.pickupLocation.lng - userLocation.lng) * Math.PI / 180;
                   const a = Math.sin(dLat / 2) ** 2 + Math.cos(userLocation.lat * Math.PI / 180) * Math.cos(activeTripRequest.pickupLocation.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
                   const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                  return <span className="text-sm font-bold text-cyan-300 shrink-0">{dist < 1000 ? `${Math.round(dist)}m` : `${(dist / 1000).toFixed(1)}km`}</span>;
+                  return <span className="text-sm font-black text-cyan-700 shrink-0">{dist < 1000 ? `${Math.round(dist)}m` : `${(dist / 1000).toFixed(1)}km`}</span>;
                 })()}
               </div>
               {activeTripRequest.pickupLocation && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100/50">
-                  <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <p className="text-slate-300 text-xs truncate">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50 border border-slate-100">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <p className="text-slate-600 text-xs font-medium truncate">
                     {activeTripRequest.pickupLocation.address ?? `${activeTripRequest.pickupLocation.lat.toFixed(4)}, ${activeTripRequest.pickupLocation.lng.toFixed(4)}`}
                   </p>
                 </div>
@@ -1076,11 +1076,11 @@ export default function DriverDashboard() {
         )}
 
         {/* Vehicle Status */}
-        <section className="rounded-2xl border border-slate-100/70 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100/50" style={{ background: 'rgba(255,255,255,0.015)' }}>
+        <section className="rounded-2xl border border-slate-200 overflow-hidden bg-white">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-slate-50">
             <div className="flex items-center gap-2">
-              <BusIcon className="w-3.5 h-3.5 text-slate-600" />
-              <span className="text-[11px] font-bold tracking-widest text-slate-600 uppercase">Vehicle Status</span>
+              <BusIcon className="w-3.5 h-3.5 text-slate-500" />
+              <span className="text-[11px] font-black tracking-widest text-slate-500 uppercase">Vehicle Status</span>
             </div>
             {process.env.NODE_ENV === 'development' && (
               <Button variant="ghost" size="sm" className="h-5 text-[10px] text-slate-700 hover:text-red-500 px-2" onClick={triggerManualTest}>Test Crash</Button>
@@ -1097,20 +1097,20 @@ export default function DriverDashboard() {
               />
             ) : (
               <div className="py-8 text-center space-y-2">
-                <BusIcon className="w-7 h-7 text-slate-700 mx-auto" />
-                <p className="text-slate-600 text-sm">No vehicle assigned</p>
-                <p className="text-slate-700 text-xs">Complete your driver profile to link a vehicle.</p>
+                <BusIcon className="w-7 h-7 text-slate-300 mx-auto" />
+                <p className="text-slate-900 font-bold text-sm">No vehicle assigned</p>
+                <p className="text-slate-500 text-xs">Complete your driver profile to link a vehicle.</p>
               </div>
             )}
           </div>
         </section>
 
         {/* Passengers */}
-        <section className="rounded-2xl border border-slate-100/70 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100/50" style={{ background: 'rgba(255,255,255,0.015)' }}>
+        <section className="rounded-2xl border border-slate-200 overflow-hidden bg-white">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-slate-50">
             <div className="flex items-center gap-2">
-              <Users className="w-3.5 h-3.5 text-slate-600" />
-              <span className="text-[11px] font-bold tracking-widest text-slate-600 uppercase">Passengers</span>
+              <Users className="w-3.5 h-3.5 text-slate-500" />
+              <span className="text-[11px] font-black tracking-widest text-slate-500 uppercase">Passengers</span>
             </div>
             <span className="text-[11px] font-bold text-slate-600 bg-slate-100 border border-slate-200/50 rounded-full px-2.5 py-0.5">{passengers.length}</span>
           </div>
@@ -1160,15 +1160,14 @@ export default function DriverDashboard() {
       </div>
 
       {/* Fixed bottom bar: status + SOS */}
-      <div className="fixed inset-x-0 bottom-0 z-1200 border-t border-slate-100/60 backdrop-blur-md px-4 py-2.5 flex items-center justify-between" style={{ background: 'rgba(9,17,31,0.97)' }}>
+      <div className="fixed inset-x-0 bottom-0 z-1200 border-t border-slate-200 bg-white/95 backdrop-blur-xl px-4 py-2.5 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-400' : 'bg-slate-600'}`} />
-          <span className="text-[11px] font-medium text-slate-600">{isOnline ? 'Live tracking active' : 'Offline'}</span>
+          <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+          <span className="text-[11px] font-black text-slate-600 uppercase tracking-widest">{isOnline ? 'Live tracking active' : 'Offline'}</span>
         </div>
         <Dialog>
           <DialogTrigger asChild>
-            <Button variant="destructive" size="sm" className="h-8 px-4 font-bold text-xs rounded-xl"
-              style={{ background: 'rgba(239,68,68,0.15)', color: '#fca5a5', border: '1px solid rgba(239,68,68,0.3)' }}>
+            <Button variant="destructive" size="sm" className="h-8 px-4 font-black text-xs rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 shadow-sm transition-all active:scale-95">
               SOS
             </Button>
           </DialogTrigger>
@@ -1178,10 +1177,10 @@ export default function DriverDashboard() {
               <DialogDescription className="text-slate-600">This will immediately alert the admin team. Use only in emergencies.</DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-2 gap-4 py-4">
-              <Button variant="outline" className="h-24 flex flex-col gap-2 border-slate-200 hover:bg-red-950 hover:border-red-500 hover:text-red-400 rounded-xl" onClick={() => handleReportEmergency('accident')}>
+              <Button variant="outline" className="h-24 flex flex-col gap-2 border-slate-200 bg-white hover:bg-red-50 hover:border-red-300 hover:text-red-700 rounded-xl transition-all font-bold" onClick={() => handleReportEmergency('accident')}>
                 <Car className="w-8 h-8" /> Accident
               </Button>
-              <Button variant="outline" className="h-24 flex flex-col gap-2 border-slate-200 hover:bg-orange-950 hover:border-orange-500 hover:text-orange-400 rounded-xl" onClick={() => handleReportEmergency('breakdown')}>
+              <Button variant="outline" className="h-24 flex flex-col gap-2 border-slate-200 bg-white hover:bg-orange-50 hover:border-orange-300 hover:text-orange-700 rounded-xl transition-all font-bold" onClick={() => handleReportEmergency('breakdown')}>
                 <Wrench className="w-8 h-8" /> Breakdown
               </Button>
             </div>

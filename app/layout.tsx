@@ -55,7 +55,7 @@ export default function RootLayout({
   return (
     <html lang="en" data-scroll-behavior="smooth">
       <body
-        className={`${outfit.variable} ${jetbrainsMono.variable} ${mukta.variable} antialiased font-sans`}
+        className={`${outfit.variable} ${jetbrainsMono.variable} ${mukta.variable} antialiased font-sans bg-white text-slate-900`}
       >
         <AuthProvider>
           <ClientWalletProvider>

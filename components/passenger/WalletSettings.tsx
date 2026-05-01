@@ -79,11 +79,11 @@ export default function WalletSettings() {
     return (
         <div className="space-y-4 mb-6">
             {!savedWallet && !connected && (
-                <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
                     <div>
-                        <h4 className="text-sm font-bold text-yellow-500">No wallet linked</h4>
-                        <p className="text-xs text-yellow-400/80 mt-1">
+                        <h4 className="text-sm font-black text-yellow-700">No wallet linked</h4>
+                        <p className="text-xs text-yellow-600 mt-1">
                             Connect your Phantom wallet to receive Trip Ticket NFTs for completed rides.
                         </p>
                     </div>
@@ -91,20 +91,20 @@ export default function WalletSettings() {
             )}
 
             {isVerified && (
-                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
                     <div>
-                        <p className="text-xs font-bold text-emerald-400">Wallet verified</p>
-                        <p className="text-xs text-emerald-400/70 font-mono mt-0.5">
+                        <p className="text-xs font-black text-emerald-700">Wallet verified</p>
+                        <p className="text-xs text-emerald-600 font-mono mt-0.5">
                             {savedWallet?.slice(0, 6)}...{savedWallet?.slice(-4)}
                         </p>
                     </div>
                 </div>
             )}
 
-            <div className="bg-slate-50/50 border border-slate-100 p-4 rounded-xl space-y-3">
-                <p className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                    <CreditCard className="w-4 h-4 text-purple-400" />
+            <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-3">
+                <p className="text-[11px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-purple-600" />
                     Solana Wallet
                 </p>
 
@@ -114,10 +114,11 @@ export default function WalletSettings() {
                         style={{
                             width: '100%',
                             justifyContent: 'center',
-                            background: connected ? '#1e293b' : '#7c3aed',
-                            borderRadius: '0.5rem',
+                            background: connected ? '#475569' : '#6366f1',
+                            borderRadius: '0.75rem',
                             fontSize: '0.875rem',
-                            height: '2.5rem',
+                            fontWeight: '900',
+                            height: '2.75rem',
                         }}
                     />
 
@@ -127,7 +128,7 @@ export default function WalletSettings() {
                             onClick={handleVerify}
                             disabled={isVerifying}
                             size="sm"
-                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl"
                         >
                             {isVerifying
                                 ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Verifying...</>
@@ -136,7 +137,7 @@ export default function WalletSettings() {
                     )}
 
                     {connected && savedWallet && savedWallet !== connectedAddress && !justVerified && (
-                        <p className="text-xs text-amber-400 text-center">
+                        <p className="text-xs text-amber-700 font-bold text-center">
                             Connected wallet differs from saved address. Click verify to update.
                         </p>
                     )}

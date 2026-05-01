@@ -79,9 +79,9 @@ export default function TripRequestPanel({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-white font-bold text-lg">{request.passengerName}</p>
+                <p className="text-slate-900 font-bold text-lg">{request.passengerName}</p>
                 <div className="flex items-center gap-2 text-slate-600 text-sm mt-0.5">
-                  <MapPin className="w-3.5 h-3.5 text-cyan-400" />
+                  <MapPin className="w-3.5 h-3.5 text-cyan-600" />
                   <span>{distanceText} to pickup</span>
                 </div>
               </div>
@@ -92,7 +92,7 @@ export default function TripRequestPanel({
                 className="flex items-center gap-1.5 bg-amber-500/15 border border-amber-500/30 rounded-full px-3 py-1"
               >
                 <Clock className="w-3.5 h-3.5 text-amber-400" aria-hidden="true" />
-                <span className="text-amber-300 font-mono font-bold text-sm">{countdown}s</span>
+                <span className="text-amber-700 font-mono font-bold text-sm">{countdown}s</span>
               </div>
             </div>
             <div className="flex gap-3">
@@ -119,7 +119,7 @@ export default function TripRequestPanel({
           <div className="space-y-3">
             <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2">
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <p className="text-emerald-300 text-sm font-medium">
+              <p className="text-emerald-700 text-sm font-bold">
                 Trip accepted — navigate to pickup
               </p>
             </div>
@@ -136,7 +136,7 @@ export default function TripRequestPanel({
           <div className="space-y-3">
             <div className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 rounded-xl px-3 py-2">
               <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-              <p className="text-blue-300 text-sm font-medium">Trip underway</p>
+              <p className="text-blue-700 text-sm font-bold">Trip underway</p>
             </div>
             <Button
               className="w-full h-12 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30"

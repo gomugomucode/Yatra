@@ -37,7 +37,7 @@ export default function TripTicketCard({ booking }: { booking: Booking }) {
 
     return (
         <div
-            className={`relative overflow-hidden rounded-2xl border transition-all duration-300 ${hasReceipt ? 'border-purple-500/30 bg-gradient-to-br from-slate-900 via-purple-950/20 to-white shadow-lg shadow-purple-500/10' : 'border-slate-100 bg-orange-50/40' }`}
+            className={`relative overflow-hidden rounded-2xl border transition-all duration-300 ${hasReceipt ? 'border-purple-200 bg-white shadow-md' : 'border-slate-200 bg-slate-50' }`}
         >
             {/* Decorative ticket-hole strip */}
             {hasReceipt && (
@@ -50,7 +50,7 @@ export default function TripTicketCard({ booking }: { booking: Booking }) {
                     <div className="flex items-center gap-3">
                         <span className="text-3xl" role="img" aria-label="vehicle">{emoji}</span>
                         <div>
-                            <p className="font-bold text-white text-sm">{route || 'Trip'}</p>
+                            <p className="font-black text-slate-900 text-sm">{route || 'Trip'}</p>
                             <p className="text-xs text-slate-600 mt-0.5">
                                 {typeof timestamp === 'string' || timestamp instanceof Date
                                     ? new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -62,7 +62,7 @@ export default function TripTicketCard({ booking }: { booking: Booking }) {
 
                     {/* Fare */}
                     {fare > 0 && (
-                        <span className="text-sm font-bold text-emerald-400 shrink-0">रु {fare}</span>
+                        <span className="text-sm font-black text-emerald-600 shrink-0">रु {fare}</span>
                     )}
                 </div>
 
@@ -71,21 +71,21 @@ export default function TripTicketCard({ booking }: { booking: Booking }) {
                     <div className="mt-4 space-y-3">
                         {/* Verified badge */}
                         <div className="flex items-center gap-2">
-                            <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30 text-[10px] px-2 py-0.5 font-semibold uppercase tracking-widest flex items-center gap-1">
+                            <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-[10px] px-2 py-0.5 font-black uppercase tracking-widest flex items-center gap-1 shadow-sm">
                                 <CheckCircle2 className="w-3 h-3" />
                                 Verified on Solana
                             </Badge>
-                            <Badge className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 text-[10px] px-2 py-0.5 uppercase tracking-widest">
+                            <Badge className="bg-cyan-50 text-cyan-700 border-cyan-200 text-[10px] px-2 py-0.5 font-black uppercase tracking-widest shadow-sm">
                                 Soulbound NFT
                             </Badge>
                         </div>
 
                         {/* Mint address */}
-                        <div className="bg-white/50 rounded-xl p-3 border border-slate-100 font-mono text-[11px] text-slate-600 flex items-center justify-between gap-2">
+                        <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 font-mono text-[11px] text-slate-600 flex items-center justify-between gap-2">
                             <span className="truncate">
                                 {receipt.mintAddress.slice(0, 8)}...{receipt.mintAddress.slice(-8)}
                             </span>
-                            <Ticket className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                            <Ticket className="w-3.5 h-3.5 text-purple-600 shrink-0" />
                         </div>
 
                         {/* Minted at */}
@@ -98,7 +98,7 @@ export default function TripTicketCard({ booking }: { booking: Booking }) {
                         {/* Explorer button */}
                         <Button
                             onClick={handleOpenExplorer}
-                            className="w-full h-10 text-xs font-bold bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 shadow-lg shadow-purple-500/20 tracking-wide"
+                            className="w-full h-10 text-xs font-black bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 shadow-md tracking-wide text-white"
                         >
                             <ExternalLink className="w-3.5 h-3.5 mr-2" />
                             ⭐ Blockchain Receipt

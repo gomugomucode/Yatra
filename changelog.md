@@ -2,6 +2,34 @@
 
 All notable changes to the Yatra project will be documented in this file.
 
+## [1.4.0] - 2026-05-01
+### Final Daylight UI Audit & Component Refactoring
+
+#### Design System Completion
+- **Universal Daylight Compliance**: Performed a site-wide audit and refactored all remaining UI components to ensure 100% adherence to the Daylight (light-only) design system.
+- **Surface & Typography Standardization**: Replaced all residual dark-themed surfaces and low-contrast text with high-visibility tokens (`bg-white`, `bg-slate-50`, `text-slate-900`, `text-slate-600`).
+- **Contrast Optimization**: Eliminated semi-transparent backgrounds and legacy dark-mode overrides in favor of solid, high-contrast surfaces optimized for outdoor, high-glare environments.
+
+#### Component Refactoring
+- **Driver Dashboard**: Overhauled headers, status badges, and SOS buttons in `app/driver/page.tsx` for maximum visibility.
+- **Passenger Dashboard**: Refactored the hailing instruction grid, status banners, and map overlays in `app/passenger/page.tsx`.
+- **Booking & Modals**:
+    - **DetailedBookingModal.tsx**: Updated the booking flow, vehicle selection, and confirmation states with solid surfaces and high-contrast typography.
+    - **BookingPanel.tsx**: Refactored the quick-hail and manual booking panel to remove glassmorphism and improve input legibility.
+- **Alerts & Notifications**:
+    - **AccidentAlert.tsx**: Improved contrast for emergency alerts, using solid red borders and high-visibility countdown timers.
+    - **NotificationToast.tsx**: Standardized shared toast notifications with high-contrast text and icon containers.
+- **Profile & Wallet**:
+    - **YatraProfileDrawer.tsx**: Completely refactored the passenger profile drawer, including wallet balance cards and journey NFT galleries.
+    - **WalletSettings.tsx**: Updated Solana wallet connection states and verification badges for better clarity on light backgrounds.
+- **Trip Management**:
+    - **TripHistory.tsx & TripTicketCard.tsx**: Overhauled the trip history list and NFT ticket cards, replacing dark-gradient backgrounds with clean light-theme variants.
+    - **RouteInfo.tsx & SeatVisualizer.tsx**: Updated route stops and seat availability grids for improved data legibility.
+
+#### Build & Stability
+- **Turbopack Build Verification**: Successfully verified code-wide changes with `npm run build`, ensuring zero regressions in JSX structure or CSS utility compatibility.
+- **JSX Structuring**: Fixed a critical structure error in the passenger dashboard instruction grid that was causing build failures.
+
 ## [1.3.0] - 2026-05-01
 ### Modern SaaS UI Upgrade & Turbopack Stability
 

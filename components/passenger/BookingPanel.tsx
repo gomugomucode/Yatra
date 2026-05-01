@@ -125,28 +125,28 @@ export default function BookingPanel({
 	};
 
 	return (
-		<Card className="bg-slate-50/60 backdrop-blur-xl border-slate-200/50 shadow-xl overflow-hidden">
-			<CardHeader className="pb-4 bg-gradient-to-r from-slate-900/50 to-slate-800/50">
+		<Card className="bg-white border-slate-200 shadow-xl overflow-hidden">
+			<CardHeader className="pb-4 bg-slate-50 border-b border-slate-200">
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-3">
 						<div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
 							<Navigation className="w-5 h-5 text-emerald-400" />
 						</div>
 						<div>
-							<CardTitle className="text-lg font-bold text-white">Ride Request</CardTitle>
+							<CardTitle className="text-lg font-bold text-slate-900">Ride Request</CardTitle>
 							<CardDescription className="text-slate-600 mt-1 flex flex-col gap-1">
 								{selectedBus ? (
 									<>
 										<span>Bus {selectedBus.busNumber} Selected</span>
 										<div className="flex items-center gap-2 mt-1">
 											{selectedRideBus?.verificationBadge && (
-												<span className="inline-flex items-center gap-1.5 text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full text-xs font-semibold w-fit border border-emerald-500/20">
+												<span className="inline-flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full text-xs font-semibold w-fit border border-emerald-200">
 													<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /><path d="m9 12 2 2 4-4" /></svg>
 													ZK Verified
 												</span>
 											)}
 											{driverRep && (
-												<span className="inline-flex items-center gap-1.5 text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-full text-xs font-semibold w-fit border border-yellow-500/20">
+												<span className="inline-flex items-center gap-1.5 text-yellow-700 bg-yellow-50 px-2 py-0.5 rounded-full text-xs font-black w-fit border border-yellow-200">
 													⭐ Score: {driverRep.score || 0}/1000
 												</span>
 											)}
@@ -161,7 +161,7 @@ export default function BookingPanel({
 							variant="ghost"
 							size="icon"
 							onClick={onReset}
-							className="h-8 w-8 rounded-full hover:bg-slate-100 text-slate-600 hover:text-white"
+							className="h-8 w-8 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-900"
 						>
 							<X className="w-4 h-4" />
 							<span className="sr-only">Cancel Selection</span>
@@ -174,10 +174,10 @@ export default function BookingPanel({
 				{selectedBus ? (
 					<div className="space-y-4 animate-in slide-in-from-bottom-4 fade-in duration-500">
 						{/* Quick Info */}
-						<div className="flex items-center justify-between p-3 bg-slate-100/30 rounded-xl border border-slate-200/50">
+						<div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
 							<div>
 								<p className="text-xs text-slate-600 uppercase font-bold">ETA</p>
-								<p className="text-lg font-bold text-emerald-400">
+								<p className="text-lg font-bold text-emerald-600">
 									{busToPickupDistance && busToPickupDistance < 1000
 										? `${Math.round(busToPickupDistance)}m`
 										: busToPickupDistance
@@ -187,17 +187,17 @@ export default function BookingPanel({
 							</div>
 							<div className="text-right">
 								<p className="text-xs text-slate-600 uppercase font-bold">Seats</p>
-								<p className="text-lg font-bold text-white">{selectedBus.availableSeats}</p>
+								<p className="text-lg font-bold text-slate-900">{selectedBus.availableSeats}</p>
 							</div>
 						</div>
 
 						{/* Optional Details Accordion */}
 						<details className="group">
-							<summary className="flex items-center justify-center gap-2 text-xs font-medium text-slate-600 cursor-pointer hover:text-white transition-colors py-2">
+							<summary className="flex items-center justify-center gap-2 text-xs font-black text-slate-500 cursor-pointer hover:text-orange-600 transition-colors py-2 uppercase tracking-widest">
 								<span>BOOK Now</span>
 								<div className="w-4 h-4 transition-transform group-open:rotate-180">▼</div>
 							</summary>
-							<div className="pt-4 space-y-4 border-t border-slate-100 mt-2">
+							<div className="pt-4 space-y-4 border-t border-slate-200 mt-2">
 								<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 									<div className="space-y-2">
 										<Label htmlFor="name" className="text-xs font-bold text-slate-600 uppercase tracking-wider">Name</Label>
@@ -206,7 +206,7 @@ export default function BookingPanel({
 											placeholder="Your Name"
 											value={passengerName}
 											onChange={(e) => setPassengerName(e.target.value)}
-											className={`bg-slate-50/50 border-slate-100 text-white h-10 ${validationErrors.name ? 'border-red-500' : ''}`}
+											className={`bg-white border-slate-200 text-slate-900 h-10 ${validationErrors.name ? 'border-red-500' : ''}`}
 										/>
 										{validationErrors.name && <p className="text-xs text-red-500">{validationErrors.name}</p>}
 									</div>
@@ -218,7 +218,7 @@ export default function BookingPanel({
 											placeholder="Phone Number"
 											value={phoneNumber}
 											onChange={(e) => setPhoneNumber(e.target.value)}
-											className={`bg-slate-50/50 border-slate-100 text-white h-10 ${validationErrors.phone ? 'border-red-500' : ''}`}
+											className={`bg-white border-slate-200 text-slate-900 h-10 ${validationErrors.phone ? 'border-red-500' : ''}`}
 										/>
 										{validationErrors.phone && <p className="text-xs text-red-500">{validationErrors.phone}</p>}
 									</div>
@@ -232,7 +232,7 @@ export default function BookingPanel({
 												type="button"
 												size="sm"
 												variant={idx + 1 === numberOfPassengers ? 'default' : 'outline'}
-												className={`h-8 w-8 p-0 ${idx + 1 === numberOfPassengers ? 'bg-blue-600' : 'bg-slate-50 border-slate-200'}`}
+												className={`h-8 w-8 p-0 font-black ${idx + 1 === numberOfPassengers ? 'bg-blue-600' : 'bg-white border-slate-200 text-slate-600'}`}
 												onClick={() => setNumberOfPassengers(idx + 1)}
 											>
 												{idx + 1}
@@ -253,9 +253,9 @@ export default function BookingPanel({
 					</div>
 				) : (
 					/* Empty State */
-					<div className="text-center py-8 px-4 border-2 border-dashed border-slate-100 rounded-xl bg-orange-50/20">
-						<div className="w-12 h-12 rounded-full bg-slate-100/50 flex items-center justify-center mx-auto mb-3">
-							<Navigation className="w-6 h-6 text-slate-600" />
+					<div className="text-center py-8 px-4 border-2 border-dashed border-slate-200 rounded-xl bg-orange-50">
+						<div className="w-12 h-12 rounded-full bg-white border border-slate-100 flex items-center justify-center mx-auto mb-3">
+							<Navigation className="w-6 h-6 text-slate-400" />
 						</div>
 						<p className="text-slate-600 font-medium mb-2">Select a Bus</p>
 						<p className="text-xs text-slate-600 max-w-[200px] mx-auto">

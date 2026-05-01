@@ -71,9 +71,9 @@ export default function PassengerList({
 			{/* Stats row */}
 			<div className="grid grid-cols-3 gap-2">
 				{[
-					{ label: 'Waiting', count: waiting, color: '#eab308', bg: 'rgba(234,179,8,0.07)', border: 'rgba(234,179,8,0.15)' },
-					{ label: 'On Board', count: onBoard, color: '#3b82f6', bg: 'rgba(59,130,246,0.07)', border: 'rgba(59,130,246,0.15)' },
-					{ label: 'Dropped', count: dropped, color: '#10b981', bg: 'rgba(16,185,129,0.07)', border: 'rgba(16,185,129,0.15)' },
+					{ label: 'Waiting', count: waiting, color: '#b45309', bg: '#fffbeb', border: '#fef3c7' },
+					{ label: 'On Board', count: onBoard, color: '#1d4ed8', bg: '#eff6ff', border: '#dbeafe' },
+					{ label: 'Dropped', count: dropped, color: '#047857', bg: '#ecfdf5', border: '#d1fae5' },
 				].map(s => (
 					<div key={s.label} className="rounded-xl p-3 text-center border"
 						style={{ background: s.bg, borderColor: s.border }}>
@@ -90,17 +90,8 @@ export default function PassengerList({
 				{sortedPassengers.map((passenger, index) => (
 					<div
 						key={passenger.id}
-						className="rounded-2xl border p-4 transition-all duration-300"
+						className={`rounded-2xl border p-4 transition-all duration-300 shadow-sm ${passenger.status === 'waiting' ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-100'}`}
 						style={{
-							background: passenger.status === 'waiting'
-								? 'linear-gradient(135deg, rgba(30,41,59,0.8) 0%, rgba(11,14,20,0.9) 100%)'
-								: 'rgba(11,14,20,0.6)',
-							borderColor: passenger.status === 'waiting'
-								? 'rgba(234,179,8,0.2)'
-								: passenger.status === 'picked'
-									? 'rgba(59,130,246,0.15)'
-									: 'rgba(15,23,42,0.6)',
-							// Slide-in from right via animation delay per card
 							animation: `slide-in-right 0.35s ease-out ${index * 60}ms both`,
 						}}
 					>
@@ -108,14 +99,14 @@ export default function PassengerList({
 							<Avatar className="w-10 h-10 border-2 shrink-0"
 								style={{ borderColor: passenger.status === 'waiting' ? '#eab30840' : '#1e293b' }}>
 								<AvatarFallback className="text-xs font-bold"
-									style={{ background: '#0f172a', color: passenger.status === 'waiting' ? '#fbbf24' : '#94a3b8' }}>
+									style={{ background: '#f8fafc', color: passenger.status === 'waiting' ? '#b45309' : '#475569' }}>
 									{getAvatarFallback(passenger.name)}
 								</AvatarFallback>
 							</Avatar>
 
 							<div className="flex-1 min-w-0">
 								<div className="flex items-center justify-between mb-1.5">
-									<p className="font-bold text-white text-sm truncate">{passenger.name}</p>
+									<p className="font-bold text-slate-900 text-sm truncate">{passenger.name}</p>
 									{getStatusBadge(passenger.status)}
 								</div>
 
@@ -146,11 +137,7 @@ export default function PassengerList({
 							{passenger.status === 'waiting' && (
 								<button
 									onClick={() => onPassengerPickup(passenger.id)}
-									className="flex-1 flex items-center justify-center gap-2 h-14 rounded-xl font-bold text-sm text-emerald-300 border border-emerald-600/40 active:scale-95 transition-transform"
-									style={{
-										background: 'linear-gradient(180deg, rgba(16,185,129,0.15) 0%, rgba(5,150,105,0.08) 100%)',
-										boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 4px 0 rgba(0,0,0,0.35)',
-									}}
+									className="flex-1 flex items-center justify-center gap-2 h-14 rounded-xl font-black text-sm text-emerald-700 bg-emerald-100 border-2 border-emerald-200 active:scale-95 transition-transform shadow-md shadow-emerald-200/50"
 								>
 									<CheckCircle className="w-4 h-4" /> Confirm Pickup
 								</button>
@@ -158,11 +145,7 @@ export default function PassengerList({
 							{passenger.status === 'picked' && (
 								<button
 									onClick={() => onPassengerDropoff(passenger.id)}
-									className="flex-1 flex items-center justify-center gap-2 h-14 rounded-xl font-bold text-sm text-blue-300 border border-blue-600/40 active:scale-95 transition-transform"
-									style={{
-										background: 'linear-gradient(180deg, rgba(59,130,246,0.15) 0%, rgba(37,99,235,0.08) 100%)',
-										boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 4px 0 rgba(0,0,0,0.35)',
-									}}
+									className="flex-1 flex items-center justify-center gap-2 h-14 rounded-xl font-black text-sm text-blue-700 bg-blue-100 border-2 border-blue-200 active:scale-95 transition-transform shadow-md shadow-blue-200/50"
 								>
 									<XCircle className="w-4 h-4" /> Confirm Dropoff
 								</button>
@@ -173,10 +156,8 @@ export default function PassengerList({
 
 				{/* Empty state */}
 				{passengers.length === 0 && (
-					<div className="text-center py-12 px-4 rounded-2xl border-2 border-dashed border-slate-100/50"
-						style={{ background: 'rgba(11,14,20,0.5)' }}>
-						<div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 border border-slate-100"
-							style={{ background: 'rgba(15,23,42,0.8)' }}>
+					<div className="text-center py-12 px-4 rounded-2xl border-2 border-dashed border-slate-100 bg-slate-50/50">
+						<div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 border border-slate-100 bg-white">
 							<User className="w-7 h-7 text-slate-700" />
 						</div>
 						<p className="text-slate-600 font-semibold text-sm">No passengers yet</p>
@@ -187,8 +168,7 @@ export default function PassengerList({
 
 			{/* Revenue counter — glows brighter as it grows */}
 			{passengers.length > 0 && (
-				<div className="flex items-center justify-between px-4 py-3 rounded-2xl border border-slate-100/40"
-					style={{ background: 'rgba(11,14,20,0.7)' }}>
+				<div className="flex items-center justify-between px-4 py-3 rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-100">
 					<span className="text-xs text-slate-600 font-semibold uppercase tracking-widest">Est. Revenue</span>
 					<span className="font-black text-xl font-mono transition-all duration-700"
 						style={{ color: revenueColor, textShadow: revenueGlow }}>

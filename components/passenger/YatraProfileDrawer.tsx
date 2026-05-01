@@ -101,16 +101,16 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
           <Button
             variant="ghost"
             size="icon"
-            className="w-9 h-9 rounded-full bg-[#0b0f1a] border border-slate-200 text-cyan-300 hover:bg-slate-100"
+            className="w-9 h-9 rounded-full bg-white border border-slate-200 text-slate-900 hover:bg-slate-50 shadow-sm"
           >
-            <span className="text-sm font-bold">{initial}</span>
+            <span className="text-sm font-black">{initial}</span>
           </Button>
         </SheetTrigger>
       )}
       <SheetContent
         side="right"
         /* z-[10000] makes it sit on top of any Map, Zoom buttons, or popups */
-        className="w-full max-w-md border-l border-cyan-500/30 bg-[#0f172a] p-0 flex flex-col overflow-hidden z-[10000] shadow-[0_0_50px_rgba(0,0,0,1)]"
+        className="w-full max-w-md border-l border-slate-200 bg-white p-0 flex flex-col overflow-hidden z-[10000] shadow-2xl"
       >
         <SheetHeader className="sr-only">
           <SheetTitle>Yatra Profile</SheetTitle>
@@ -123,24 +123,24 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
           className="flex flex-col h-full max-h-screen overflow-y-auto custom-scrollbar"
         >
           {/* Profile Card - Using a much lighter background for contrast */}
-          <div className="p-6 bg-slate-100/40 border-b border-slate-200/50">
+          <div className="p-6 bg-slate-50 border-b border-slate-100">
             <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-2xl font-black text-white shadow-lg shadow-cyan-500/40 ring-2 ring-white/10">
+              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-2xl font-black text-white shadow-md ring-2 ring-white">
                 {initial}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-xl text-white tracking-tight">{displayName}</p>
+                <p className="font-bold text-xl text-slate-900 tracking-tight">{displayName}</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="inline-flex items-center rounded-full bg-cyan-400/10 border border-cyan-400/20 px-2.5 py-0.5 text-[10px] font-bold text-cyan-400 tracking-widest uppercase">
+                  <span className="inline-flex items-center rounded-full bg-cyan-50 border border-cyan-200 px-2.5 py-0.5 text-[10px] font-black text-cyan-700 tracking-widest uppercase">
                     PASSENGER
                   </span>
                 </div>
               </div>
             </div>            {wallet && (
-              <div className="mt-5 flex items-center gap-2 rounded-xl bg-white/40 border border-slate-100 px-4 py-3">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
+              <div className="mt-5 flex items-center gap-2 rounded-xl bg-white border border-slate-200 px-4 py-3 shadow-sm">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-sm animate-pulse" />
                 <span className="text-xs font-medium text-slate-600">Connected Wallet</span>
-                <span className="text-xs font-mono text-cyan-400 ml-auto">{truncateAddress(wallet)}</span>
+                <span className="text-xs font-mono text-cyan-600 ml-auto">{truncateAddress(wallet)}</span>
               </div>
             )}
           </div>
@@ -151,16 +151,16 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
               <Wallet className="w-3.5 h-3.5" />
               Digital Wallet
             </h3>
-            <div className="rounded-xl bg-[#161e2d] border border-slate-100 p-5 space-y-4">
+            <div className="rounded-xl bg-slate-50 border border-slate-200 p-5 space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-slate-600">Balance</span>
-                <span className="text-white font-bold text-base">0.00 SOL · 0 YTR</span>
+                <span className="text-slate-900 font-bold text-base">0.00 SOL · 0 YTR</span>
               </div>
               <div className="flex gap-3">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1 h-10 border-slate-200 bg-slate-100/50 text-slate-200 hover:bg-slate-700"
+                   className="flex-1 h-10 border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                   onClick={handleCopyAddress}
                   disabled={!wallet}
                 >
@@ -170,7 +170,7 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1 h-10 border-cyan-500/30 bg-cyan-500/5 text-cyan-400 hover:bg-cyan-500/10"
+                  className="flex-1 h-10 border-cyan-200 bg-cyan-50 text-cyan-700 hover:bg-cyan-100 font-bold"
                 >
                   <PlusCircle className="w-3.5 h-3.5 mr-2" />
                   Add Funds
@@ -187,22 +187,21 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
             </h3>
             <div className="overflow-x-auto pb-2 -mx-1 flex gap-4 snap-x snap-mandatory">
               {bookingsWithReceipts.length === 0 ? (
-                <div className="w-full py-8 text-center rounded-xl bg-slate-50/50 border border-dashed border-slate-100">
-                  <p className="text-xs text-slate-600 uppercase tracking-tighter">No tickets minted yet</p>
+                <div className="w-full py-8 text-center rounded-xl bg-slate-50 border border-dashed border-slate-200">
+                  <p className="text-xs text-slate-500 font-black uppercase tracking-widest">No tickets minted yet</p>
                 </div>
               ) : (
                 bookingsWithReceipts.map((booking) => {
                   const carbon = mockCarbonCredits(booking);
                   const longDistance = isLongDistance(booking);
                   return (
-                    <div
-                      key={booking.id}
-                      className={`flex-shrink-0 w-48 snap-center rounded-xl border p-4 bg-[#1c2537] shadow-lg ${longDistance ? 'border-amber-500/50' : 'border-cyan-500/40' }`}
+                       <div key={booking.id}
+                       className={`flex-shrink-0 w-48 snap-center rounded-xl border p-4 bg-white shadow-md ${longDistance ? 'border-amber-200' : 'border-cyan-200' }`}
                     >
                       <p className="text-[10px] text-slate-600 font-bold uppercase">MAR 06, 2026</p>
-                      <p className="text-sm font-bold text-white mt-1 truncate">Butwal ➔ KTM</p>
+                      <p className="text-sm font-bold text-slate-900 mt-1 truncate">Butwal ➔ KTM</p>
                       <div className="mt-3 flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-emerald-400">+{carbon}kg CO₂</span>
+                         <span className="text-[10px] font-bold text-emerald-600">+{carbon}kg CO₂</span>
                         <ExternalLink className="w-3 h-3 text-slate-600" />
                       </div>
                     </div>
@@ -213,7 +212,7 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
           </div>
 
           {/* Action list */}
-          <div className="p-6 flex-1 bg-[#0b0f1a]">
+          <div className="p-6 flex-1 bg-white">
             <nav className="space-y-2">
               {[
                 {
@@ -260,7 +259,7 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
                 <button
                   key={item.label}
                   onClick={item.onClick}
-                  className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-100/50 hover:text-white transition-all group"
+                   className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all group"
                 >
                   <item.icon className="w-4 h-4 text-slate-600 group-hover:text-cyan-400 transition-colors" />
                   {item.label}
@@ -271,7 +270,7 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
             <div className="mt-8 pt-6 border-t border-slate-100">
               <Button
                 variant="ghost"
-                className="w-full justify-start gap-4 px-4 h-12 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl"
+                className="w-full justify-start gap-4 px-4 h-12 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl"
                 onClick={handleLogOut}
               >
                 <LogOut className="w-4 h-4" />

@@ -486,26 +486,26 @@ export default function Home() {
           <ScrollReveal direction="right" className="flex-1">
             <motion.div
               whileHover={{ scale: 1.01, y: -5 }}
-              className="h-full p-14 rounded-[48px] bg-slate-900 flex flex-col justify-between shadow-2xl hover:shadow-slate-300 transition-all duration-500 relative overflow-hidden group"
+              className="h-full p-14 rounded-[48px] bg-white border-2 border-slate-200 flex flex-col justify-between shadow-sm hover:shadow-2xl hover:shadow-slate-100 transition-all duration-500 relative overflow-hidden group"
             >
               <div className="relative z-10">
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-8">
-                  <TrendingUp className="w-4 h-4 text-emerald-400" />
-                  <span className="text-[11px] font-black text-emerald-400 uppercase tracking-widest">Earn with Yatra</span>
+                  <TrendingUp className="w-4 h-4 text-emerald-600" />
+                  <span className="text-[11px] font-black text-emerald-600 uppercase tracking-widest">Earn with Yatra</span>
                 </div>
-                <h3 className="text-4xl font-black text-white mb-6 leading-tight">Maximize Your Earnings</h3>
-                <p className="text-xl text-slate-400 mb-10 max-w-sm font-medium leading-relaxed">
+                <h3 className="text-4xl font-black text-slate-900 mb-6 leading-tight">Maximize Your Earnings</h3>
+                <p className="text-xl text-slate-600 mb-10 max-w-sm font-medium leading-relaxed opacity-80">
                   Join our network of elite drivers. Lower commissions, flexible hours, and guaranteed passengers.
                 </p>
               </div>
               <Link href="/auth?role=driver&redirect=/driver" className="relative z-10">
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button size="lg" variant="outline" className="h-16 px-10 text-lg font-black rounded-2xl border-2 border-white/20 text-white hover:bg-white hover:text-slate-900 transition-all duration-500">
+                  <Button size="lg" variant="outline" className="h-16 px-10 text-lg font-black rounded-2xl border-2 border-slate-200 text-slate-900 hover:bg-slate-50 hover:border-slate-300 transition-all duration-500">
                     Start Driving Today
                   </Button>
                 </motion.div>
               </Link>
-              <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-white/5 rounded-full group-hover:scale-150 transition-transform duration-700" />
+              <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-slate-100 rounded-full group-hover:scale-150 transition-transform duration-700" />
             </motion.div>
           </ScrollReveal>
         </div>
@@ -546,7 +546,7 @@ export default function Home() {
               { title: 'Support', links: ['Help Center', 'Safety Center', 'Terms', 'Privacy', 'Legal'] }
             ].map((col) => (
               <div key={col.title}>
-                <h5 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.25em] mb-8">{col.title}</h5>
+                <h5 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.25em] mb-8">{col.title}</h5>
                 <ul className="space-y-5">
                   {col.links.map(item => (
                     <li key={item}>
@@ -561,12 +561,12 @@ export default function Home() {
           </div>
 
           <div className="pt-12 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-8">
-            <p className="text-sm text-slate-400 font-bold tracking-tight">
+            <p className="text-sm text-slate-500 font-bold tracking-tight">
               © {new Date().getFullYear()} Yatra Technologies. Engineered for Nepal.
             </p>
             <div className="flex gap-10">
               {['Twitter', 'Facebook', 'LinkedIn', 'Instagram'].map(social => (
-                <Link key={social} href="#" className="text-sm font-black text-slate-400 hover:text-slate-900 transition-colors tracking-widest uppercase">
+                <Link key={social} href="#" className="text-sm font-black text-slate-500 hover:text-orange-500 transition-colors tracking-widest uppercase">
                   {social}
                 </Link>
               ))}

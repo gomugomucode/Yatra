@@ -940,7 +940,7 @@ export default function PassengerDashboard() {
 
   // --- UI Render ---
   return (
-    <div className="min-h-screen bg-white/95 flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col">
       {showRideHereAlert && (
         <div className="fixed inset-0 z-1200 bg-emerald-600/95 flex flex-col items-center justify-center text-white px-6 text-center">
           <p className="text-4xl font-extrabold tracking-wide">YOUR RIDE IS HERE</p>
@@ -955,7 +955,7 @@ export default function PassengerDashboard() {
       )}
 
       {/* 1. Header (Sticky Top) */}
-      <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100/60 px-4 pt-4 pb-3">
+      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200 px-4 pt-4 pb-3">
         <div className="flex items-center justify-between gap-4">
           {/* Left: Animated Brand */}
           <div className="flex items-center gap-3">
@@ -1036,10 +1036,10 @@ export default function PassengerDashboard() {
             <DetailedBookingModal />
 
             {/* STABLE AVATAR LOGIC */}
-            <Button
-              variant="outline"
-              size="icon"
-              className="w-10 h-10 rounded-full bg-white border-2 border-orange-500/50 shadow-lg shadow-orange-100"
+              <Button
+                variant="outline"
+                size="icon"
+                className="w-10 h-10 rounded-full bg-white border-2 border-orange-500/50 shadow-sm"
               onClick={() => setIsDrawerOpen(true)}
             >
               {/* Check if userData and the initial exist.
@@ -1084,7 +1084,7 @@ export default function PassengerDashboard() {
           <Button
             size="sm"
             variant={vehicleFilter === 'all' ? 'default' : 'secondary'}
-            className={`h-7 rounded-full text-xs border ${vehicleFilter === 'all' ? 'bg-orange-500 border-orange-600 text-white' : 'bg-slate-50 text-slate-600 border-slate-100 hover:bg-slate-100'}`}
+            className={`h-7 rounded-full text-[11px] font-black uppercase tracking-wider border ${vehicleFilter === 'all' ? 'bg-orange-500 border-orange-600 text-white shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
             onClick={() => setVehicleFilter('all')}
           >
             All
@@ -1094,7 +1094,7 @@ export default function PassengerDashboard() {
               key={type.id}
               size="sm"
               variant={vehicleFilter === type.id ? 'default' : 'secondary'}
-              className={`h-7 rounded-full text-xs border flex items-center gap-1.5 ${vehicleFilter === type.id ? 'bg-orange-500 border-orange-600 text-white' : 'bg-slate-50 text-slate-600 border-slate-100 hover:bg-slate-100'}`}
+              className={`h-7 rounded-full text-[11px] font-black uppercase tracking-wider border flex items-center gap-1.5 ${vehicleFilter === type.id ? 'bg-orange-500 border-orange-600 text-white shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
               onClick={() => setVehicleFilter(type.id)}
             >
               <span>{type.icon}</span>
@@ -1118,7 +1118,7 @@ export default function PassengerDashboard() {
       </div>
 
       {/* 2. Map Section (Priority View) */}
-      <div className="relative w-full h-[65vh] shrink-0 border-b border-slate-100">
+      <div className="relative w-full h-[65vh] shrink-0 border-b border-slate-200">
         <MapWrapper
           role="passenger"
           buses={filteredBuses}
@@ -1145,11 +1145,11 @@ export default function PassengerDashboard() {
             role="status"
             aria-live="polite"
             aria-atomic="true"
-            className="absolute top-4 left-1/2 -translate-x-1/2 z-400 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg backdrop-blur-sm"
-            style={{ background: etaToDestination !== null ? '#1d4ed8cc' : '#059669cc' }}
+            className="absolute top-4 left-1/2 -translate-x-1/2 z-400 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg"
+            style={{ background: etaToDestination !== null ? '#1e40af' : '#047857' }}
           >
             <span className="text-lg" aria-hidden="true">{etaToDestination !== null ? '🏁' : '🚗'}</span>
-            <span className="text-white text-sm font-medium">
+            <span className="text-white text-sm font-bold">
               {etaToDestination !== null
                 ? `${etaToDestination} min to destination`
                 : `${etaToPickup} min to pickup`}
@@ -1159,9 +1159,9 @@ export default function PassengerDashboard() {
 
         {/* Pickup guide — shown when a driver is selected but no pickup set */}
         {selectedBus && isSelectingPickup && requestStatus === 'idle' && (
-          <div className="absolute bottom-4 left-4 right-4 z-400 bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center gap-3 text-sm shadow-lg animate-in slide-in-from-bottom-4 fade-in duration-300">
-            <MapPin className="w-5 h-5 text-emerald-500 shrink-0" />
-            <span className="text-slate-300 flex-1">Tap the map to set your pickup point, or use your current location</span>
+          <div className="absolute bottom-4 left-4 right-4 z-400 bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-3 text-sm shadow-xl animate-in slide-in-from-bottom-4 fade-in duration-300">
+            <MapPin className="w-5 h-5 text-emerald-600 shrink-0" />
+            <span className="text-slate-900 font-bold flex-1">Tap the map to set your pickup point, or use your current location</span>
             <Button size="sm" variant="outline" className="text-xs shrink-0"
               onClick={() => {
                 if (userLocation) {
@@ -1179,9 +1179,9 @@ export default function PassengerDashboard() {
 
         {selectedBus && requestStatus === 'idle' && (
           <div className="absolute bottom-4 left-4 right-4 z-[500] pointer-events-auto animate-in slide-in-from-bottom-4 fade-in duration-300">
-            <div className="relative rounded-2xl border border-slate-200/80 bg-slate-50/95 shadow-2xl p-4 flex items-center gap-4">
+            <div className="relative rounded-2xl border border-slate-200 bg-white shadow-2xl p-4 flex items-center gap-4">
               <button
-                className="absolute -top-3 left-1/2 -translate-x-1/2 w-10 h-1 bg-slate-300 rounded-full"
+                className="absolute -top-3 left-1/2 -translate-x-1/2 w-10 h-1 bg-slate-400 rounded-full"
                 onClick={() => {
                   setSelectedBus(null);
                   setIsSelectingPickup(false);
@@ -1222,9 +1222,9 @@ export default function PassengerDashboard() {
 
         {/* Waiting banner — shown while request is pending, with cancel button */}
         {requestStatus === 'requesting' && (
-          <div className="absolute bottom-4 left-4 right-4 z-400 bg-slate-50/95 border border-amber-500/30 rounded-xl px-4 py-3 flex items-center gap-3 shadow-lg animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="absolute bottom-4 left-4 right-4 z-400 bg-white border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3 shadow-xl animate-in slide-in-from-bottom-4 fade-in duration-300">
             <div className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin shrink-0" />
-            <span className="text-amber-200 text-sm font-medium flex-1">Waiting for driver to accept…</span>
+            <span className="text-amber-700 text-sm font-bold flex-1">Waiting for driver to accept…</span>
             <Button
               size="sm"
               variant="ghost"
@@ -1261,26 +1261,26 @@ export default function PassengerDashboard() {
         {requestStatus !== 'idle' ? (
           <div className="space-y-3">
             {/* Status header */}
-            <div className={`rounded-2xl border p-4 space-y-3 ${ requestStatus === 'requesting' ? 'bg-amber-500/5 border-amber-500/20' : requestStatus === 'accepted' ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-blue-500/5 border-blue-500/20' }`}>
+            <div className={`rounded-2xl border p-4 space-y-3 ${ requestStatus === 'requesting' ? 'bg-amber-50 border-amber-200 shadow-sm' : requestStatus === 'accepted' ? 'bg-emerald-50 border-emerald-200 shadow-sm' : 'bg-blue-50 border-blue-200 shadow-sm' }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className={`w-2 h-2 rounded-full animate-pulse ${ requestStatus === 'requesting' ? 'bg-amber-400' : requestStatus === 'accepted' ? 'bg-emerald-400' : 'bg-blue-400' }`} />
-                  <span className={`text-sm font-bold ${ requestStatus === 'requesting' ? 'text-amber-300' : requestStatus === 'accepted' ? 'text-emerald-300' : 'text-blue-300' }`}>
+                  <span className={`text-sm font-black ${ requestStatus === 'requesting' ? 'text-amber-700' : requestStatus === 'accepted' ? 'text-emerald-700' : 'text-blue-700' }`}>
                     {requestStatus === 'requesting' && 'Waiting for driver…'}
                     {requestStatus === 'accepted' && 'Driver on the way'}
                     {requestStatus === 'on-trip' && 'Trip in progress'}
                   </span>
                 </div>
                 {(etaToPickup !== null || etaToDestination !== null) && ['accepted', 'on-trip'].includes(requestStatus) && (
-                  <span className="text-xs font-semibold text-white bg-slate-700/60 px-2.5 py-1 rounded-full">
+                  <span className="text-xs font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
                     {etaToPickup !== null ? `${etaToPickup} min` : `${etaToDestination} min`}
                   </span>
                 )}
               </div>
 
               {selectedBus && (
-                <div className="flex items-center gap-3 pt-1 border-t border-slate-200/40">
-                  <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-base">
+                <div className="flex items-center gap-3 pt-1 border-t border-slate-100">
+                  <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-base">
                     {selectedBus.emoji}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -1360,23 +1360,23 @@ export default function PassengerDashboard() {
             {/* Instructions / Tips */}
             {!selectedBus && (
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-slate-50/50 border border-slate-100 p-3 rounded-xl flex flex-col items-center text-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
-                    <MapPin className="w-4 h-4 text-blue-400" />
+                <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl flex flex-col items-center text-center gap-2 shadow-sm">
+                  <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100">
+                    <MapPin className="w-4 h-4 text-blue-600" />
                   </div>
-                  <span className="text-xs font-medium text-slate-600">1. Tap Bus</span>
+                  <span className="text-xs font-black text-slate-600">1. Tap Bus</span>
                 </div>
-                <div className="bg-slate-50/50 border border-slate-100 p-3 rounded-xl flex flex-col items-center text-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                    <Navigation className="w-4 h-4 text-emerald-400" />
+                <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl flex flex-col items-center text-center gap-2 shadow-sm">
+                  <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100">
+                    <Navigation className="w-4 h-4 text-emerald-600" />
                   </div>
-                  <span className="text-xs font-medium text-slate-600">2. Hail</span>
+                  <span className="text-xs font-black text-slate-600">2. Hail</span>
                 </div>
-                <div className="bg-slate-50/50 border border-slate-100 p-3 rounded-xl flex flex-col items-center text-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
-                    <Clock className="w-4 h-4 text-purple-400" />
+                <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl flex flex-col items-center text-center gap-2 shadow-sm">
+                  <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center border border-purple-100">
+                    <Clock className="w-4 h-4 text-purple-600" />
                   </div>
-                  <span className="text-xs font-medium text-slate-600">3. Ride</span>
+                  <span className="text-xs font-black text-slate-600">3. Ride</span>
                 </div>
               </div>
             )}
