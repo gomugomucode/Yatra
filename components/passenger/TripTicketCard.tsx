@@ -24,7 +24,13 @@ function formatTime(isoString: string) {
     });
 }
 
-export default function TripTicketCard({ booking }: { booking: Booking }) {
+export default function TripTicketCard({ 
+    booking, 
+    onReclaim 
+}: { 
+    booking: Booking; 
+    onReclaim?: (id: string) => void;
+}) {
     const { receipt, route, fare, vehicleType, timestamp } = booking;
     const emoji = getVehicleEmoji(vehicleType);
     const hasReceipt = !!receipt;
@@ -105,9 +111,29 @@ export default function TripTicketCard({ booking }: { booking: Booking }) {
                         </Button>
                     </div>
                 ) : (
-                    <div className="mt-3 flex items-center gap-2 text-[11px] text-slate-600">
-                        <Ticket className="w-3.5 h-3.5" />
-                        <span>Receipt will appear after dropoff</span>
+                    <div className="mt-3 flex flex-col gap-3">
+                        <div className="flex items-center gap-2 text-[11px] text-slate-600">
+                            <Ticket className="w-3.5 h-3.5" />
+                            <span>
+                                {['cancelled', 'rejected', 'expired'].includes(booking.status) 
+                                    ? 'Trip failed' 
+                                    : 'Receipt will appear after dropoff'}
+                            </span>
+                        </div>
+                        
+                        {booking.paymentMethod === 'digital' && 
+                         ['cancelled', 'rejected', 'expired'].includes(booking.status) && 
+                         booking.escrowStatus === 'locked' && 
+                         onReclaim && (
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => onReclaim(booking.id)}
+                                className="w-full h-9 text-xs font-bold border-orange-200 text-orange-600 hover:bg-orange-50"
+                            >
+                                Reclaim Locked Funds (SOL)
+                            </Button>
+                        )}
                     </div>
                 )}
             </div>

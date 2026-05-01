@@ -7,7 +7,7 @@ import { Booking } from '@/lib/types';
 import TripTicketCard from './TripTicketCard';
 import { History, Ticket } from 'lucide-react';
 
-export default function TripHistory() {
+export default function TripHistory({ onReclaim }: { onReclaim?: (id: string) => void }) {
     const { currentUser } = useAuth();
     const [bookings, setBookings] = useState<Booking[]>([]);
 
@@ -44,7 +44,11 @@ export default function TripHistory() {
             {/* Ticket list */}
             <div className="space-y-3">
                 {bookings.map((booking) => (
-                    <TripTicketCard key={booking.id} booking={booking} />
+                    <TripTicketCard 
+                        key={booking.id} 
+                        booking={booking} 
+                        onReclaim={onReclaim}
+                    />
                 ))}
             </div>
         </div>

@@ -26,9 +26,11 @@ import {
   registerPushToken,
   createAlert,
   updateTripStatus,
+  autoCompleteTripByGPS,
   subscribeTripLocation,
   submitTripRating,
 } from '@/lib/firebaseDb';
+import { haversineDistance } from '@/lib/utils/geofencing';
 import TripRatingModal from '@/components/shared/TripRatingModal';
 import TripRequestPanel from '@/components/driver/TripRequestPanel';
 import { TripStatus } from '@/lib/types';
@@ -466,16 +468,70 @@ export default function DriverDashboard() {
   };
 
   const handleCompleteTrip = async () => {
-    if (!activeTripRequest) return;
+    if (!activeTripRequest || !userLocation) return;
+    
+    // Use lastKnownLocationRef for higher precision/stability if available
+    const driverPos = lastKnownLocationRef.current || userLocation;
+
+    // Enforce README GPS Constraint (200m)
+    const distance = haversineDistance(
+      driverPos.lat, driverPos.lng,
+      activeTripRequest.lat, activeTripRequest.lng
+    );
+
+    if (distance > 200) {
+      toast({
+        title: 'Drop-off too far',
+        description: `You must be within 200m of the destination to complete the trip. (Current distance: ${Math.round(distance)}m)`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
-      await updateTripStatus(activeTripRequest.id, 'completed');
+      // 1. Use the new autoCompleteTripByGPS utility for status transition and cleanup
+      await autoCompleteTripByGPS(activeTripRequest.id);
       
       const tripRecordId = activeTripRequest.bookingId ?? activeTripRequest.passengerId;
       if (tripRecordId) {
         await handlePassengerDropoff(tripRecordId);
       }
 
-      // Update TRRL Reputation
+      // 2. Escrow Release (if digital)
+      if (activeTripRequest.bookingId) {
+        // Fetch trip data to check payment method & escrow status
+        const { getDatabase, ref, get } = await import('firebase/database');
+        const { getFirebaseApp } = await import('@/lib/firebase');
+        const db = getDatabase(getFirebaseApp());
+        const tripSnap = await get(ref(db, `trips/${activeTripRequest.id}`));
+        const tripData = tripSnap.val();
+
+        if (tripData?.escrowStatus === 'locked') {
+          toast({ title: 'Releasing funds...', description: 'Verifying completion on-chain.' });
+          try {
+            const res = await fetch('/api/solana/escrow/release', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tripId: activeTripRequest.id })
+            });
+            const data = await res.json();
+            if (data.success) {
+              toast({ title: 'Payment Released', description: 'Funds transferred to your wallet.' });
+            } else {
+              throw new Error(data.error || 'Fund release failed');
+            }
+          } catch (err: any) {
+            console.error('[Escrow] Release call failed:', err);
+            toast({ 
+              title: 'Escrow Release Error', 
+              description: 'Funds are locked. Please contact support if not received.', 
+              variant: 'destructive' 
+            });
+          }
+        }
+      }
+
+      // 3. Update TRRL Reputation (only after successful completion)
       if (currentUser && driverWalletAddress) {
         const currentRep = await getDriverReputation(currentUser.uid);
         await updateDriverReputation(currentUser.uid, driverWalletAddress, {
@@ -490,8 +546,9 @@ export default function DriverDashboard() {
       setActiveTripRequest(null);
       setShowRatingModal(true);
       toast({ title: 'Trip completed' });
-    } catch {
-      toast({ title: 'Failed to complete trip', description: 'Check your connection and try again.', variant: 'destructive' });
+    } catch (error: any) {
+      console.error('[Driver] Complete trip failed:', error);
+      toast({ title: 'Failed to complete trip', description: error?.message || 'Check your connection and try again.', variant: 'destructive' });
     }
   };
 

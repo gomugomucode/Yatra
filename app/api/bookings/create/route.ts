@@ -185,6 +185,39 @@ export async function POST(request: Request) {
 
     await newBookingRef.set(bookingWithId);
 
+    // 5. Solana Escrow (for Digital Payments)
+    if (paymentMethod === 'digital') {
+      try {
+        console.log(`[Escrow] Initializing escrow for booking: ${bookingWithId.id}`);
+        
+        // Fetch driver wallet from the bus data (which we have from Step 1)
+        const driverWallet = initialBusData.driverWalletAddress;
+        
+        if (!driverWallet) {
+          console.warn(`[Escrow] Driver ${busId} has no linked Solana wallet. Escrow skipped.`);
+        } else {
+          // Internal call to escrow API or direct lib call
+          // Since we are in an API route, we'll use a direct fetch to the local escrow create endpoint
+          // to keep the logic isolated.
+          const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
+          const host = request.headers.get('host');
+          
+          fetch(`${protocol}://${host}/api/solana/escrow/create`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tripId: bookingWithId.id,
+              passengerWallet: decoded.solanaWallet || 'PASSENGER_WALLET_PLACEHOLDER', // Fallback if not in token
+              driverWallet: driverWallet,
+              amountNPR: fare
+            })
+          }).catch(err => console.error('[Escrow] API Call Failed:', err));
+        }
+      } catch (escrowErr) {
+        console.error('[Escrow] Integration failed:', escrowErr);
+      }
+    }
+
     // Send SMS Notification (Fire and forget)
     import('@/lib/utils/sms').then(({ sendSMS }) => {
       sendSMS(

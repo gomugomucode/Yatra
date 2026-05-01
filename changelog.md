@@ -2,6 +2,41 @@
 
 All notable changes to the Yatra project will be documented in this file.
 
+## [1.7.1] - 2026-05-01
+### Infrastructure Finalization & Escrow Hardening
+
+#### Trip Lifecycle & GPS Verification
+- **Refined GPS Completion**: Stabilized the 200m proximity check in the driver dashboard using a persistent location reference to prevent jitter-induced completion failures.
+- **Two-Phase ETA**: Implemented a dynamic ETA system on the passenger side that automatically switches between "Time to Pickup" and "Time to Destination" based on the current trip phase.
+- **Atomic State Transitions**: Hardened the `autoCompleteTripByGPS` flow to ensure synchronized cleanup of real-time location and trip state in Firebase.
+
+#### Solana Escrow & Digital Payments
+- **Escrow Reclaim (Refund) System**: Implemented a secure reclaim system for digital payments. Passengers can now refund funds from the Solana PDA if a trip is cancelled, rejected, or expires after a 2-hour safety timeout.
+- **NPR-to-SOL Conversion Fix**: Updated the conversion factor in `lib/solana/escrow.ts` to provide more realistic transaction amounts for Devnet testing (1 NPR ≈ 0.0001 SOL).
+- **Reclaim UI Integration**: Added a "Reclaim Funds" action to the `TripTicketCard` for failed digital bookings, ensuring passengers can easily recover locked funds.
+
+#### Reputation & Anchoring (TRRL)
+- **Finalized Reputation Anchoring**: Completed the integration of on-chain reputation synchronization. Driver scores are now anchored via the Solana Memo program upon trip completion.
+- **Robust API Handling**: Added detailed error handling and fallbacks to the `/api/solana/update-reputation` endpoint to prevent blockchain latency from blocking the UI flow.
+
+## [1.7.0] - 2026-05-01
+### GPS-Verified Trips & Solana Escrow System
+
+#### Trip Lifecycle & GPS Enforcement
+- **GPS-Verified Completion**: Implemented a strict 200m proximity check in the driver dashboard. Drivers can no longer mark a trip as "Completed" unless their live GPS coordinates are within 200m of the destination pin, preventing "force-completion" fraud.
+- **Atomic Cleanup**: Added `autoCompleteTripByGPS` utility in `lib/firebaseDb.ts` to coordinate status transitions and real-time location data cleanup upon trip finalization.
+
+#### Solana Escrow Protocol
+- **PDA-Based Escrow**: Implemented a Program Derived Address (PDA) escrow pattern in `lib/solana/escrow.ts`. Digital payments are now securely locked in a trip-specific escrow account on Solana Devnet.
+- **On-Chain Release**: funds are only released to the driver's wallet via the `/api/solana/escrow/release` endpoint after the backend verifies the GPS-enforced trip completion.
+- **Booking Integration**: Wired the escrow initialization into the booking creation API (`app/api/bookings/create/route.ts`). If `paymentMethod === 'digital'`, funds are automatically locked before the trip starts.
+
+#### Protocol Layer & Reputation
+- **On-Chain Reputation Anchoring**: Upgraded the Tokenized Reputation Layer (TRRL) to anchor scores on-chain via a dedicated API (`app/api/solana/update-reputation`). 
+- **Reputation PDA**: Introduced simulated PDA derivation for reputation tracking, preparing the system for a full Anchor program deployment.
+- **Enhanced TRRL Logic**: Refactored `lib/solana/trrl.ts` to support atomic updates of driver scores with verifiable Solana transaction signatures.
+
+
 ## [1.6.0] - 2026-05-01
 ### Stability & Console Cleanup
 

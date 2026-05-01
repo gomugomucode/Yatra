@@ -800,7 +800,14 @@ export default function PassengerDashboard() {
       setSelectedBus(null);
       setPickupLocation(null);
       setDropoffLocation(null);
-      setRequestStatus('on-trip');
+      
+      // If digital payment, notify about escrow
+      if (bookingData?.paymentMethod === 'digital') {
+        toast({
+          title: 'Escrow Locked',
+          description: 'Funds are secured on Solana. Reclaimable if driver fails to complete trip.',
+        });
+      }
 
       toast({
         title: 'Booking confirmed',
@@ -815,9 +822,33 @@ export default function PassengerDashboard() {
         description: message,
         variant: 'destructive',
       });
-      setRequestStatus('idle');
     } finally {
       setBookingLoading(false);
+    }
+  };
+
+  const handleReclaimEscrow = async (bookingId: string) => {
+    try {
+      toast({ title: 'Reclaiming funds...', description: 'Verifying timeout on-chain.' });
+      const res = await fetch('/api/solana/escrow/reclaim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tripId: bookingId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: 'Refund Successful', description: 'Funds returned to your wallet.' });
+        // Refresh bookings local state if needed
+      } else {
+        throw new Error(data.error || 'Reclaim failed');
+      }
+    } catch (err: any) {
+      console.error('[Escrow] Reclaim failed:', err);
+      toast({ 
+        title: 'Reclaim Error', 
+        description: err.message || 'Could not reclaim funds yet.', 
+        variant: 'destructive' 
+      });
     }
   };
 
@@ -1311,7 +1342,7 @@ export default function PassengerDashboard() {
 
             {/* Trip history still accessible during trip */}
             <div id="trip-history">
-              <TripHistory />
+              <TripHistory onReclaim={handleReclaimEscrow} />
             </div>
           </div>
         ) : (
@@ -1349,7 +1380,7 @@ export default function PassengerDashboard() {
 
             {/* Trip History & NFT Receipts */}
             <div id="trip-history">
-              <TripHistory />
+              <TripHistory onReclaim={handleReclaimEscrow} />
             </div>
 
             {/* Instructions / Tips */}

@@ -149,6 +149,7 @@ export interface Booking {
     status: 'minted';
     mintedAt: string;
   };
+  escrowStatus?: 'locked' | 'released' | 'reclaimed';
   // Booking timeout fields
   reservationExpiresAt?: Date;     // 10-minute timeout
   isExpired: boolean;
