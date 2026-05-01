@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import {
   Bus,
   Users,
@@ -29,6 +29,9 @@ export default function Home() {
   const [isClient, setIsClient] = useState(false);
   const [onlineBuses, setOnlineBuses] = useState<number | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { scrollYProgress } = useScroll();
+  const heroScale = useTransform(scrollYProgress, [0, 0.25], [1, 0.965]);
+  const heroY = useTransform(scrollYProgress, [0, 0.25], [0, -24]);
 
   useEffect(() => {
     setIsClient(true);
@@ -83,18 +86,24 @@ export default function Home() {
 
             {/* Center: Desktop Nav */}
             <div className="hidden md:flex items-center gap-8">
-              {['Home', 'Ride', 'Driver', 'Pricing', 'Support'].map((item, i) => (
+              {[
+                { label: 'Home', href: '/' },
+                { label: 'Features', href: '/#features' },
+                { label: 'Ride', href: '/#ride' },
+                { label: 'Passenger', href: '/auth?role=passenger&redirect=/passenger' },
+                { label: 'Driver', href: '/auth?role=driver&redirect=/driver' },
+              ].map((item, i) => (
                 <motion.div
-                  key={item}
+                  key={item.label}
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
                 >
                   <Link
-                    href={item === 'Home' ? '/' : `/#${item.toLowerCase()}`}
+                    href={item.href}
                     className="text-sm font-semibold text-slate-600 hover:text-orange-500 transition-colors relative group"
                   >
-                    {item}
+                    {item.label}
                     <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-orange-500 transition-all group-hover:w-full" />
                   </Link>
                 </motion.div>
@@ -129,10 +138,17 @@ export default function Home() {
                     <motion.div
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
+                      className="relative"
                     >
                       <Button className="bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-full px-8 shadow-lg shadow-orange-200 transition-all">
                         Sign Up
                       </Button>
+                      <motion.div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 rounded-full border border-orange-300/50"
+                        animate={{ scale: [1, 1.08, 1], opacity: [0.3, 0.06, 0.3] }}
+                        transition={{ duration: 2.6, repeat: Infinity }}
+                      />
                     </motion.div>
                   </Link>
                 </>
@@ -161,14 +177,20 @@ export default function Home() {
               className="md:hidden bg-white border-b border-slate-100 overflow-hidden"
             >
               <div className="py-6 px-4 space-y-4">
-                {['Home', 'Ride', 'Driver', 'Pricing', 'Support'].map((item) => (
+                {[
+                  { label: 'Home', href: '/' },
+                  { label: 'Features', href: '/#features' },
+                  { label: 'Ride', href: '/#ride' },
+                  { label: 'Passenger', href: '/auth?role=passenger&redirect=/passenger' },
+                  { label: 'Driver', href: '/auth?role=driver&redirect=/driver' },
+                ].map((item) => (
                   <Link
-                    key={item}
-                    href={item === 'Home' ? '/' : `/#${item.toLowerCase()}`}
+                    key={item.label}
+                    href={item.href}
                     className="block text-lg font-bold text-slate-900 hover:text-orange-500 transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    {item}
+                    {item.label}
                   </Link>
                 ))}
                 <div className="pt-4 border-t border-slate-100 flex flex-col gap-4">
@@ -220,6 +242,7 @@ export default function Home() {
             variants={containerVariants}
             initial="hidden"
             animate="visible"
+            style={{ scale: heroScale, y: heroY }}
             className="text-center max-w-4xl mx-auto"
           >
             <motion.div variants={itemVariants}>
@@ -265,8 +288,9 @@ export default function Home() {
                       <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </span>
                     <motion.div
-                      className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                      initial={false}
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                      animate={{ x: ['-120%', '120%'] }}
+                      transition={{ duration: 2.4, repeat: Infinity, ease: 'linear' }}
                     />
                   </Button>
                 </motion.div>
@@ -349,6 +373,7 @@ export default function Home() {
               <ScrollReveal key={i} delay={i * 0.1}>
                 <motion.div
                   whileHover={{ y: -8, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
+                  whileTap={{ scale: 0.995 }}
                   className="group p-10 rounded-[32px] bg-white border border-slate-100 shadow-sm transition-all duration-500 relative overflow-hidden"
                 >
                   <div className="w-16 h-16 rounded-2xl bg-orange-50 flex items-center justify-center mb-8 group-hover:bg-orange-500 transition-colors duration-500">
@@ -541,17 +566,29 @@ export default function Home() {
             </div>
 
             {[
-              { title: 'Product', links: ['Ride', 'Drive', 'Track', 'Pricing', 'Safety'] },
-              { title: 'Company', links: ['About Us', 'Careers', 'Press', 'Blog', 'Contact'] },
-              { title: 'Support', links: ['Help Center', 'Safety Center', 'Terms', 'Privacy', 'Legal'] }
+              {
+                title: 'Product',
+                links: [
+                  { label: 'Ride', href: '/auth?role=passenger&redirect=/passenger' },
+                  { label: 'Drive', href: '/auth?role=driver&redirect=/driver' },
+                  { label: 'Track', href: '/#ride' },
+                ],
+              },
+              {
+                title: 'Support',
+                links: [
+                  { label: 'Help Center', href: '/auth' },
+                  { label: 'Safety Center', href: '/admin' },
+                ],
+              }
             ].map((col) => (
               <div key={col.title}>
                 <h5 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.25em] mb-8">{col.title}</h5>
                 <ul className="space-y-5">
                   {col.links.map(item => (
-                    <li key={item}>
-                      <Link href="#" className="text-base text-slate-600 hover:text-orange-500 transition-colors font-bold opacity-80 hover:opacity-100">
-                        {item}
+                    <li key={item.label}>
+                      <Link href={item.href} className="text-base text-slate-600 hover:text-orange-500 transition-colors font-bold opacity-80 hover:opacity-100">
+                        {item.label}
                       </Link>
                     </li>
                   ))}
@@ -565,11 +602,8 @@ export default function Home() {
               © {new Date().getFullYear()} Yatra Technologies. Engineered for Nepal.
             </p>
             <div className="flex gap-10">
-              {['Twitter', 'Facebook', 'LinkedIn', 'Instagram'].map(social => (
-                <Link key={social} href="#" className="text-sm font-black text-slate-500 hover:text-orange-500 transition-colors tracking-widest uppercase">
-                  {social}
-                </Link>
-              ))}
+              <Link href="https://x.com" className="text-sm font-black text-slate-500 hover:text-orange-500 transition-colors tracking-widest uppercase">Twitter</Link>
+              <Link href="https://facebook.com" className="text-sm font-black text-slate-500 hover:text-orange-500 transition-colors tracking-widest uppercase">Facebook</Link>
             </div>
           </div>
         </div>

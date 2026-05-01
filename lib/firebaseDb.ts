@@ -1,6 +1,7 @@
 import { getDatabase, ref, set, update, remove, onValue, push, get, onDisconnect, query, orderByChild, equalTo } from 'firebase/database';
 import { getFirebaseApp } from './firebase';
 import { Bus, Booking, Location, LiveUser, TripStatus } from './types';
+import { isValidTripTransition } from '@/lib/tripStateMachine';
 
 export const getDb = () => getDatabase(getFirebaseApp());
 const getActiveDriverRef = (driverId: string) => ref(getDb(), `drivers/active/${driverId}`);
@@ -195,6 +196,20 @@ export interface TripRequest {
     dropoffLocation?: { lat: number; lng: number; address?: string };
 }
 
+function mapTripStatusToBookingStatus(status: TripStatus): Booking['status'] {
+    switch (status) {
+        case 'completed':
+            return 'completed';
+        case 'cancelled':
+        case 'rejected':
+            return 'cancelled';
+        case 'expired':
+            return 'expired';
+        default:
+            return 'confirmed';
+    }
+}
+
 export const subscribeToTripRequests = (
     busId: string,
     callback: (requests: TripRequest[]) => void
@@ -346,22 +361,14 @@ export const subscribeToBookings = (
 ) => {
     const db = getDb();
     const bookingsRef = ref(db, 'bookings');
+    const targetRef = role === 'admin'
+        ? bookingsRef
+        : query(bookingsRef, orderByChild(role === 'passenger' ? 'passengerId' : 'busId'), equalTo(id));
 
-    const unsubscribe = onValue(bookingsRef, (snapshot) => {
+    const unsubscribe = onValue(targetRef, (snapshot) => {
         const data = snapshot.val();
         if (data) {
-            const allBookings = Object.values(data) as Booking[];
-            // Filter based on role
-            const filtered = allBookings.filter((b) => {
-                if (role === 'admin') return true;
-                if (role === 'passenger') {
-                    // id = passengerId
-                    return b.passengerId === id;
-                }
-                // role === 'driver' -> id = busId
-                return b.busId === id;
-            });
-            callback(filtered);
+            callback(Object.values(data) as Booking[]);
         } else {
             callback([]);
         }
@@ -497,7 +504,6 @@ export const seedInitialData = async (buses: Bus[]) => {
             updates[bus.id] = bus;
         });
         await update(busesRef, updates);
-        console.log('Seeded initial bus data');
     }
 };
 
@@ -622,7 +628,6 @@ export const updateLiveUserStatus = async (user: LiveUser) => {
         ...locationPayload,
         status: user.isOnline ? 'online' : 'offline',
     });
-    console.log('📡 LOCATION WRITTEN:', locationPayload);
 
     // If this is a driver, also keep `buses/{id}/currentLocation` up to date
     // so the bus list / existing bus-tracking components stay in sync.
@@ -651,11 +656,38 @@ export async function updateTripStatus(
     extraFields?: Record<string, unknown>
 ): Promise<void> {
     const db = getDb();
+    const tripRef = ref(db, `trips/${tripId}`);
+    const tripSnap = await get(tripRef);
+    if (!tripSnap.exists()) {
+        throw new Error(`Trip not found: ${tripId}`);
+    }
+
+    const currentStatus = tripSnap.exists() ? (tripSnap.val()?.status as TripStatus | undefined) : undefined;
+    const tripData = tripSnap.val() as { bookingId?: string };
+
+    if (currentStatus && currentStatus !== status) {
+        if (!isValidTripTransition(currentStatus, status)) {
+            throw new Error(`Invalid trip transition: ${currentStatus} -> ${status}`);
+        }
+    }
+
+    const now = new Date().toISOString();
     await update(ref(db, `trips/${tripId}`), {
         status,
-        updatedAt: new Date().toISOString(),
+        updatedAt: now,
         ...extraFields,
     });
+
+    // Keep booking lifecycle in sync with trip lifecycle when linked.
+    const linkedBookingId = tripData.bookingId || tripId;
+    const bookingRef = ref(db, `bookings/${linkedBookingId}`);
+    const bookingSnap = await get(bookingRef);
+    if (bookingSnap.exists()) {
+        await update(bookingRef, {
+            status: mapTripStatusToBookingStatus(status),
+            updatedAt: now,
+        });
+    }
 }
 
 /**
@@ -668,14 +700,36 @@ export async function autoCompleteTripByGPS(
 ): Promise<void> {
     const db = getDb();
     const now = new Date().toISOString();
+    const tripRef = ref(db, `trips/${tripId}`);
+    const tripSnap = await get(tripRef);
+    if (!tripSnap.exists()) {
+        throw new Error(`Trip not found: ${tripId}`);
+    }
+
+    const tripData = tripSnap.val() as { bookingId?: string };
     
     // 1. Update main trip record
-    await update(ref(db, `trips/${tripId}`), {
+    await update(tripRef, {
         status: 'completed',
         completedAt: now,
+        completionMethod: 'gps',
+        gpsVerifiedAt: now,
         updatedAt: now,
         ...extraFields,
     });
+
+    const linkedBookingId = tripData.bookingId || tripId;
+    const bookingRef = ref(db, `bookings/${linkedBookingId}`);
+    const bookingSnap = await get(bookingRef);
+    if (bookingSnap.exists()) {
+        await update(bookingRef, {
+            status: 'completed',
+            completedAt: now,
+            completionMethod: 'gps',
+            gpsVerifiedAt: now,
+            updatedAt: now,
+        });
+    }
 
     // 2. Cleanup trip-specific location data
     await cleanupTripLocation(tripId);
@@ -692,8 +746,7 @@ export async function publishTripLocation(
         lat < -90 || lat > 90 ||
         lng < -180 || lng > 180
     ) {
-        console.warn('[publishTripLocation] Invalid coordinates', { lat, lng });
-        return;
+        throw new Error('Invalid coordinates for trip location update');
     }
     const db = getDb();
     await set(ref(db, `tripLocations/${tripId}/${role}`), {

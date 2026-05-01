@@ -22,10 +22,7 @@ export default function AdminDashboard() {
     useEffect(() => {
         if (!authLoading) {
             if (!currentUser || role !== 'admin') {
-                // For hackathon demo ease, we might want to allow easy access or redirect
-                // But let's stick to the plan: redirect if not admin
-                // router.replace('/auth');
-                // Actually, let's just show a warning for now or allow it if I manually set role
+                router.replace('/auth?redirect=/admin');
             }
         }
     }, [authLoading, currentUser, role, router]);
@@ -64,7 +61,7 @@ export default function AdminDashboard() {
         <AdminLayout>
             <div className="space-y-8">
                 <div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Dashboard Overview</h1>
+                    <h1 className="text-3xl font-bold text-slate-900 mb-2">Dashboard Overview</h1>
                     <p className="text-slate-600">Welcome back, Admin. Here's what's happening today.</p>
                 </div>
 
@@ -78,7 +75,7 @@ export default function AdminDashboard() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Live Map - Takes up 2 columns */}
                     <div className="lg:col-span-2 bg-slate-50 border border-slate-100 rounded-xl p-4 h-125 flex flex-col">
-                        <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                        <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                             Live Fleet Map
                         </h2>
@@ -90,12 +87,12 @@ export default function AdminDashboard() {
                     {/* Recent Activity / Quick Actions - Takes up 1 column */}
                     <div className="space-y-8">
                         <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
-                            <h2 className="text-lg font-bold text-white mb-4">Recent Bookings</h2>
+                            <h2 className="text-lg font-bold text-slate-900 mb-4">Recent Bookings</h2>
                             <div className="space-y-4">
                                 {bookings.slice(-5).reverse().map((booking) => (
                                     <div key={booking.id} className="flex items-center justify-between p-3 bg-white/50 rounded-lg border border-slate-100/50">
                                         <div>
-                                            <p className="font-medium text-slate-200">{booking.passengerName}</p>
+                                            <p className="font-medium text-slate-900">{booking.passengerName}</p>
                                             <p className="text-xs text-slate-600">
                                                 {new Date(booking.timestamp).toLocaleTimeString()} • {booking.paymentMethod || 'Cash'}
                                             </p>

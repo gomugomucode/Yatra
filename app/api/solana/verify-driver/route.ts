@@ -37,9 +37,6 @@ const MEMO_PROGRAM_ID = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfc
  *   licenseNumber       — Optional; stored as "ZK_PRIVATE" if not provided
  */
 export async function POST(request: Request) {
-    console.log("------------------------------------------");
-    console.log("🚀 [API] MINT REQUEST RECEIVED");
-
     try {
         const body = await request.json();
         const {
@@ -52,30 +49,38 @@ export async function POST(request: Request) {
             licenseNumber,
         } = body;
 
+        if (!driverId || !driverName || !vehicleType || !driverWalletAddress || !zkProof || !zkPublicSignals) {
+            return NextResponse.json({ error: 'Missing required verification fields' }, { status: 400 });
+        }
+        if (!Array.isArray(zkPublicSignals) || zkPublicSignals.length < 2) {
+            return NextResponse.json({ error: 'Invalid zk public signals payload' }, { status: 400 });
+        }
+        try {
+            new PublicKey(driverWalletAddress);
+        } catch {
+            return NextResponse.json({ error: 'Invalid driver wallet address' }, { status: 400 });
+        }
+
         // ── Rate Limiting (5 attempts per driver per hour) ────────────────
         if (driverId && !checkRateLimit(`verify-driver:${driverId}`, 5, 3_600_000)) {
             return NextResponse.json({ error: 'Rate limit exceeded. Try again in 1 hour.' }, { status: 429 });
         }
 
         // ── Step 1: ZK Verification ───────────────────────────────────────
-        console.log("🔍 [ZK] Verifying Proof...");
         const zkResult = await verifyDriverProof(zkProof, zkPublicSignals);
 
         if (!zkResult.isValid) {
-            console.error("❌ [ZK] Proof rejected:", zkResult.error);
             return NextResponse.json(
                 { error: zkResult.error ?? 'ZK proof verification failed' },
                 { status: 400 }
             );
         }
-        console.log("✅ [ZK] Proof verified");
 
         // ── Step 2: Connection & Balance Check ────────────────────────────
         const connection = getConnection();
         const serverKeypair = getServerKeypair();
 
-        const balance = await connection.getBalance(serverKeypair.publicKey);
-        console.log(`💰 [Wallet] Balance: ${balance / 1e9} SOL`);
+        await connection.getBalance(serverKeypair.publicKey);
 
         const metadata: BadgeMetadata = {
             driverName,
@@ -83,18 +88,15 @@ export async function POST(request: Request) {
             licenseNumber: licenseNumber || 'ZK_PRIVATE',
         };
 
-        // ── Step 3: Minting the Badge (THE STUCK POINT) ────────────────────
-        console.log("🔨 [Solana] Creating Badge... (Wait 10-20s)");
+        // ── Step 3: Minting the Badge ───────────────────────────────────────
         const mintResult = await createDriverVerificationBadge(
             connection,
             serverKeypair,
             driverWalletAddress,
             metadata
         );
-        console.log(`✅ [Solana] Badge Minted: ${mintResult.mintAddress}`);
 
         // ── Step 4: Memo & Anchor ─────────────────────────────────────────
-        console.log("📝 [Solana] Anchoring Memo...");
         let memoSignature: string | undefined;
         try {
             const memoContent = JSON.stringify({
@@ -117,13 +119,11 @@ export async function POST(request: Request) {
             memoSignature = await sendAndConfirmTransaction(
                 connection, memoTx, [serverKeypair], { commitment: 'confirmed' }
             );
-            console.log(`✅ [Solana] Memo Sig: ${memoSignature}`);
         } catch (memoErr: any) {
-            console.warn('⚠️ [Solana] Memo failed, continuing anyway:', memoErr.message);
+            memoSignature = undefined;
         }
 
         // ── Step 5: Firebase ─────────────────────────────────────────────
-        console.log("🔥 [Firebase] Updating Driver Record...");
         const adminDb = getAdminDb();
         const badgeData = {
             mintAddress: mintResult.mintAddress,
@@ -147,9 +147,6 @@ export async function POST(request: Request) {
             updatedAt: new Date().toISOString(),
         });
 
-        console.log("🏁 [API] ALL STEPS COMPLETE");
-        console.log("------------------------------------------");
-
         return NextResponse.json({
             success: true,
             mintAddress: mintResult.mintAddress,
@@ -157,7 +154,7 @@ export async function POST(request: Request) {
         });
 
     } catch (error: any) {
-        console.error('❌ [API ERROR]:', error.message);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error('[verify-driver] API error:', error);
+        return NextResponse.json({ error: 'Driver verification failed' }, { status: 500 });
     }
 }

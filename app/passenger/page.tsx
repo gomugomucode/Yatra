@@ -367,13 +367,17 @@ export default function PassengerDashboard() {
   useEffect(() => {
     if (requestStatus === 'requesting' && activeTripId) {
       requestTimeoutRef.current = setTimeout(async () => {
-        await updateTripStatus(activeTripId, 'expired');
-        cleanupTripLocation(activeTripId).catch(console.warn);
-        setRequestStatus('idle');
-        setSelectedBus(null);
-        setHailedDriverId(null);
-        setActiveTripId(null);
-        toast({ variant: 'destructive', title: 'Request timed out', description: 'No driver responded.' });
+        try {
+          await updateTripStatus(activeTripId, 'expired');
+          cleanupTripLocation(activeTripId).catch(console.warn);
+          setRequestStatus('idle');
+          setSelectedBus(null);
+          setHailedDriverId(null);
+          setActiveTripId(null);
+          toast({ variant: 'destructive', title: 'Request timed out', description: 'No driver responded.' });
+        } catch {
+          // If status already changed elsewhere, let real-time subscription drive UI.
+        }
       }, 5 * 60 * 1000);
     } else {
       if (requestTimeoutRef.current) {
@@ -890,15 +894,23 @@ export default function PassengerDashboard() {
 
   const handleCancelRequest = async () => {
     if (!activeTripId) return;
-    await updateTripStatus(activeTripId, 'cancelled');
-    cleanupTripLocation(activeTripId).catch(console.warn);
-    setRequestStatus('idle');
-    setSelectedBus(null);
-    setIsSelectingPickup(false);
-    setHailedDriverId(null);
-    setActiveTripId(null);
-    setActiveTripPickup(null);
-    toast({ title: 'Request cancelled' });
+    try {
+      await updateTripStatus(activeTripId, 'cancelled');
+      cleanupTripLocation(activeTripId).catch(console.warn);
+      setRequestStatus('idle');
+      setSelectedBus(null);
+      setIsSelectingPickup(false);
+      setHailedDriverId(null);
+      setActiveTripId(null);
+      setActiveTripPickup(null);
+      toast({ title: 'Request cancelled' });
+    } catch (error) {
+      toast({
+        title: 'Unable to cancel',
+        description: error instanceof Error ? error.message : 'Trip is already progressing.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const locationPending = !userLocation;

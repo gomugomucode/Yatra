@@ -4,6 +4,7 @@ import bs58 from 'bs58';
 import { mintTripTicketNFT, TripTicketMetadata } from '@/lib/solana/tripTicket';
 import { getAdminDb } from '@/lib/firebaseAdmin';
 import { checkRateLimit } from '@/lib/utils/rateLimit';
+import { getBookingReceiptPath, isValidMintTicketInput } from '@/app/api/solana/mint-ticket/utils';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -13,8 +14,11 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { bookingId, passengerId, fare, route, driverName } = body;
 
-        if (!bookingId || !passengerId || !fare || !route || !driverName) {
+        if (!isValidMintTicketInput({ bookingId, passengerId, fare, route, driverName })) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        }
+        if (typeof fare !== 'number' || !Number.isFinite(fare) || fare < 0) {
+            return NextResponse.json({ error: 'Invalid fare amount' }, { status: 400 });
         }
 
         // Rate limit: 10 mints per passenger per hour
@@ -28,8 +32,16 @@ export async function POST(request: Request) {
         const existingSnap = await adminDb.ref(`receipts/${bookingId}`).get();
         if (existingSnap.exists()) {
             const existing = existingSnap.val();
-            console.log(`[MINT] Already minted for ${bookingId}: ${existing.mintAddress}`);
             return NextResponse.json({ success: true, receipt: existing, alreadyMinted: true });
+        }
+
+        const bookingSnap = await adminDb.ref(getBookingReceiptPath(bookingId)).get();
+        if (!bookingSnap.exists()) {
+            return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
+        }
+        const bookingData = bookingSnap.val();
+        if (bookingData.passengerId !== passengerId) {
+            return NextResponse.json({ error: 'Passenger mismatch for booking' }, { status: 403 });
         }
 
         // ── Read verified wallet from Firebase (server-side, trusted) ───────
@@ -63,7 +75,6 @@ export async function POST(request: Request) {
             tripDate: new Date().toISOString(),
         };
 
-        console.log(`[MINT] Minting NFT for ${passengerId} → ${passengerWallet}`);
         const receipt = await mintTripTicketNFT(connection, serverKeypair, passengerWallet, metadataDetails);
 
         const receiptData = {
@@ -79,7 +90,7 @@ export async function POST(request: Request) {
         // ── Write idempotency record + booking receipt in parallel ───────────
         await Promise.all([
             adminDb.ref(`receipts/${bookingId}`).set(receiptData),
-            adminDb.ref(`bookings/${passengerId}/${bookingId}`).update({
+            adminDb.ref(getBookingReceiptPath(bookingId)).update({
                 receipt: {
                     status: 'minted',
                     txSignature: receipt.signature,
@@ -90,11 +101,10 @@ export async function POST(request: Request) {
             }),
         ]);
 
-        console.log(`[MINT] Success — mint: ${receipt.mintAddress}`);
         return NextResponse.json({ success: true, receipt: receiptData });
 
     } catch (error: any) {
-        console.error('[MINT] Error:', error.message);
-        return NextResponse.json({ error: error.message || 'Unknown error' }, { status: 500 });
+        console.error('[MINT] Error:', error);
+        return NextResponse.json({ error: 'Ticket minting failed' }, { status: 500 });
     }
 }

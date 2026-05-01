@@ -29,13 +29,17 @@ export async function POST(request: Request) {
 
         // Update Firebase with Escrow info
         const adminDb = getAdminDb();
-        await adminDb.ref(`trips/${tripId}`).update({
+        const escrowUpdate = {
             escrowStatus: 'locked',
             escrowAddress: result.escrowAddress,
             escrowSignature: result.signature,
             amountLamports: result.amountLamports,
             updatedAt: new Date().toISOString()
-        });
+        };
+        await Promise.all([
+            adminDb.ref(`trips/${tripId}`).update(escrowUpdate),
+            adminDb.ref(`bookings/${tripId}`).update(escrowUpdate),
+        ]);
 
         return NextResponse.json({
             success: true,

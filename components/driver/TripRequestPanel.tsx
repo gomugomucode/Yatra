@@ -20,6 +20,7 @@ interface TripRequestPanelProps {
   tripStatus: TripStatus;
   onAccept: () => void;
   onReject: () => void;
+  onExpire: () => void;
   onPassengerBoarded: () => void;
   onCompleteTrip: () => void;
 }
@@ -32,12 +33,13 @@ export default function TripRequestPanel({
   tripStatus,
   onAccept,
   onReject,
+  onExpire,
   onPassengerBoarded,
   onCompleteTrip,
 }: TripRequestPanelProps) {
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
-  const onRejectRef = useRef(onReject);
-  onRejectRef.current = onReject;
+  const onExpireRef = useRef(onExpire);
+  onExpireRef.current = onExpire;
 
   const pickupLat = request.pickupLocation?.lat ?? request.lat;
   const pickupLng = request.pickupLocation?.lng ?? request.lng;
@@ -56,7 +58,7 @@ export default function TripRequestPanel({
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-          onRejectRef.current();
+          onExpireRef.current();
           return 0;
         }
         return prev - 1;

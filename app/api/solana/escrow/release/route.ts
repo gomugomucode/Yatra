@@ -7,22 +7,52 @@ export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
     try {
-        const { tripId } = await request.json();
+        const body = await request.json().catch(() => null);
+        const tripId = body?.tripId;
 
-        if (!tripId) {
+        if (typeof tripId !== 'string' || !tripId.trim()) {
             return NextResponse.json({ error: 'Missing tripId' }, { status: 400 });
         }
 
         const adminDb = getAdminDb();
-        const tripSnap = await adminDb.ref(`trips/${tripId}`).once('value');
+        const [tripSnap, bookingSnap] = await Promise.all([
+            adminDb.ref(`trips/${tripId}`).once('value'),
+            adminDb.ref(`bookings/${tripId}`).once('value'),
+        ]);
         const tripData = tripSnap.val();
+        const bookingData = bookingSnap.val();
 
-        if (!tripData) {
-            return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
+        if (!tripData || !bookingData) {
+            return NextResponse.json({ error: 'Trip and booking must both exist before release' }, { status: 409 });
         }
 
-        if (tripData.escrowStatus !== 'locked') {
+        if (tripData.status !== 'completed' || bookingData.status !== 'completed') {
+            return NextResponse.json({ error: 'Trip completion is required before escrow release' }, { status: 403 });
+        }
+
+        if (!(tripData.gpsVerifiedAt || tripData.completionMethod === 'gps')) {
+            return NextResponse.json({ error: 'GPS verification is required for escrow release' }, { status: 403 });
+        }
+
+        if (tripData.escrowStatus !== 'locked' || bookingData.escrowStatus !== 'locked') {
             return NextResponse.json({ error: 'Escrow is not in locked state' }, { status: 400 });
+        }
+
+        if (
+            tripData.passengerId !== bookingData.passengerId ||
+            tripData.driverId !== bookingData.busId ||
+            tripData.amountLamports !== bookingData.amountLamports
+        ) {
+            return NextResponse.json({ error: 'Trip and booking state mismatch' }, { status: 409 });
+        }
+
+        if (typeof tripData.amountLamports !== 'number' || tripData.amountLamports <= 0) {
+            return NextResponse.json({ error: 'Invalid escrow amount' }, { status: 400 });
+        }
+
+        const driverWalletAddress = bookingData.driverWalletAddress || tripData.driverWalletAddress || tripData.driverId;
+        if (typeof driverWalletAddress !== 'string' || !driverWalletAddress) {
+            return NextResponse.json({ error: 'Missing driver wallet address' }, { status: 400 });
         }
 
         const connection = getConnection();
@@ -32,16 +62,21 @@ export async function POST(request: Request) {
             connection,
             serverKeypair,
             tripId,
-            tripData.driverWalletAddress || tripData.driverId, // Fallback to driverId if wallet not found
+            driverWalletAddress,
             tripData.amountLamports
         );
 
-        // Update Firebase
-        await adminDb.ref(`trips/${tripId}`).update({
+        const now = new Date().toISOString();
+        const releaseUpdate = {
             escrowStatus: 'released',
             releaseSignature: releaseSig,
-            updatedAt: new Date().toISOString()
-        });
+            escrowReleasedAt: now,
+            updatedAt: now
+        };
+        await Promise.all([
+            adminDb.ref(`trips/${tripId}`).update(releaseUpdate),
+            adminDb.ref(`bookings/${tripId}`).update(releaseUpdate),
+        ]);
 
         return NextResponse.json({
             success: true,
@@ -49,7 +84,7 @@ export async function POST(request: Request) {
         });
 
     } catch (error: any) {
-        console.error('[API Escrow] Release error:', error.message);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error('[API Escrow] Release error:', error);
+        return NextResponse.json({ error: 'Escrow release failed' }, { status: 500 });
     }
 }
