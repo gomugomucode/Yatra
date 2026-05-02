@@ -1011,33 +1011,33 @@ export default function DriverDashboard() {
 
   if (loading || !currentUser || (role && role !== 'driver')) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-white via-slate-50 to-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-background via-section/40 to-background flex items-center justify-center">
         <div className="text-center">
           <div className="relative w-20 h-20 mx-auto mb-6">
-            <div className="absolute inset-0 bg-orange-500/20 rounded-full animate-ping"></div>
-            <div className="relative bg-linear-to-br from-orange-500 to-sky-500 rounded-2xl w-full h-full flex items-center justify-center shadow-2xl shadow-orange-500/30">
+            <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping"></div>
+            <div className="relative bg-gradient-to-br from-primary to-secondary rounded-2xl w-full h-full flex items-center justify-center shadow-2xl shadow-primary/25">
               <BusIcon className="w-10 h-10 text-white animate-pulse" />
             </div>
           </div>
-          <p className="text-slate-600 text-lg font-medium">Initializing Command Center...</p>
+          <p className="text-muted-foreground text-lg font-medium">Initializing Command Center...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col overflow-y-auto bg-white" style={{ WebkitOverflowScrolling: 'touch' }}>
+    <div className="min-h-screen flex flex-col overflow-y-auto bg-background" style={{ WebkitOverflowScrolling: 'touch' }}>
 
       {/* Passenger Reached full-screen alert */}
       {showPassengerReachedAlert && (
         <div className="fixed inset-0 z-1400 flex flex-col items-center justify-center text-white px-6 text-center" style={{ background: 'rgba(6,182,212,0.97)' }}>
-          <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-6">
+          <div className="w-16 h-16 rounded-full bg-card/25 flex items-center justify-center mb-6">
             <MapPin className="w-8 h-8 text-white" />
           </div>
           <p className="text-3xl font-black tracking-tight">Passenger Nearby</p>
           <p className="mt-2 text-sm opacity-80">You are within 10 metres of the pickup point.</p>
           <Button
-            className="mt-8 bg-white text-cyan-700 hover:bg-white/90 font-bold px-8 h-12 rounded-2xl"
+            className="mt-8 bg-card text-primary hover:bg-card/90 font-bold px-8 h-12 min-h-12 rounded-2xl"
             onClick={async () => {
               setShowPassengerReachedAlert(false);
               if (activeTripRequest?.id) {
@@ -1052,24 +1052,24 @@ export default function DriverDashboard() {
       )}
 
       {/* ── Header ── */}
-      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-xl">
         <div className="px-4 py-3 flex items-center justify-between">
 
           {/* Brand */}
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200/60 flex items-center justify-center shrink-0">
-              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="#22d3ee" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div className="w-8 h-8 rounded-xl bg-slate-100 border border-border/60 flex items-center justify-center shrink-0">
+              <svg viewBox="0 0 24 24" className="w-4 h-4 text-primary" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2L20 6V12C20 17 16.5 21 12 22C7.5 21 4 17 4 12V6L12 2Z" />
                 <path d="M9 12L11 14L15 10" />
               </svg>
             </div>
             <div>
-              <h1 className="text-xl font-black leading-none text-slate-900" style={{ fontFamily: 'var(--font-mukta), sans-serif' }}>
+              <h1 className="text-xl font-black leading-none text-foreground" style={{ fontFamily: 'var(--font-mukta), sans-serif' }}>
                 चालक
               </h1>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
-                <span className="text-[10px] font-black tracking-widest" style={{ color: isOnline ? '#059669' : '#64748b' }}>
+                <span className={`text-[10px] font-black tracking-widest ${isOnline ? 'text-emerald-700' : 'text-muted-foreground'}`}>
                   {isOnline ? 'ONLINE' : 'OFFLINE'}
                 </span>
               </div>
@@ -1081,7 +1081,7 @@ export default function DriverDashboard() {
             <button
               type="button"
               onClick={() => handleLocationToggle(!locationEnabled)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-black border transition-all active:scale-95 ${ locationEnabled ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-slate-100 border-slate-200 text-slate-400 hover:border-slate-400' }`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-black border transition-all active:scale-95 ${ locationEnabled ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-slate-100 border-border text-slate-400 hover:border-slate-400' }`}
             >
               <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${locationEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
               {locationEnabled ? 'LIVE' : 'GO LIVE'}
@@ -1090,7 +1090,7 @@ export default function DriverDashboard() {
             <button
               type="button"
               onClick={() => setShowProfileDialog(true)}
-              className="w-10 h-10 rounded-full bg-slate-50 border border-slate-200 text-slate-900 hover:bg-slate-100 shadow-sm flex items-center justify-center transition-colors"
+              className="w-10 h-10 rounded-full bg-surface-soft border border-border text-foreground hover:bg-slate-100 shadow-sm flex items-center justify-center transition-colors"
             >
               <span className="text-sm font-black">
                 {userData?.role === 'driver' ? (userData.name?.charAt(0).toUpperCase() || 'D') : 'D'}
@@ -1104,7 +1104,7 @@ export default function DriverDashboard() {
 
       {/* ── Map ── */}
       <div
-        className="relative w-full shrink-0 border-b border-slate-200 transition-all duration-500"
+        className="relative w-full shrink-0 border-b border-border transition-all duration-500"
         style={{ height: activeTripRequest ? '65vh' : '50vh', touchAction: 'pan-y' }}
       >
         <MapWrapper
@@ -1131,12 +1131,12 @@ export default function DriverDashboard() {
       </div>
 
       {/* ── Cockpit ── */}
-      <div className="p-4 space-y-3 pb-40 bg-slate-50">
+      <div className="p-4 space-y-3 pb-40 bg-surface-soft">
 
         {/* Active trip: navigation strip */}
         {activeTripRequest && (
-          <section className="rounded-2xl border border-cyan-100 bg-white shadow-sm shadow-cyan-100/50">
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
+          <section className="rounded-2xl border border-primary/20 bg-card shadow-md shadow-primary/10">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
               <div className="flex items-center gap-2">
                 <Navigation className="w-3.5 h-3.5 text-cyan-600" />
                 <span className="text-[11px] font-black tracking-widest text-cyan-700 uppercase">
@@ -1144,17 +1144,17 @@ export default function DriverDashboard() {
                 </span>
               </div>
               {driverEta !== null && (
-                <span className="text-xs font-black text-slate-900 bg-slate-100 px-2.5 py-0.5 rounded-full">{driverEta} min</span>
+                <span className="text-xs font-black text-foreground bg-slate-100 px-2.5 py-0.5 rounded-full">{driverEta} min</span>
               )}
             </div>
             <div className="p-4 space-y-3">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-sm font-black text-slate-900 shrink-0">
+                <div className="w-9 h-9 rounded-full bg-slate-100 border border-border flex items-center justify-center text-sm font-black text-foreground shrink-0">
                   {activeTripRequest.passengerName?.[0]?.toUpperCase() ?? 'P'}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-slate-900 font-bold text-sm">{activeTripRequest.passengerName}</p>
-                  <p className="text-slate-600 text-xs">
+                  <p className="text-foreground font-bold text-sm">{activeTripRequest.passengerName}</p>
+                  <p className="text-muted-foreground text-xs">
                     {activeTripRequest.status === 'requested' && 'Waiting for response'}
                     {activeTripRequest.status === 'accepted' && 'On the way'}
                     {activeTripRequest.status === 'arrived' && 'At pickup point'}
@@ -1171,9 +1171,9 @@ export default function DriverDashboard() {
                 })()}
               </div>
               {activeTripRequest.pickupLocation && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50 border border-slate-100">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-soft border border-border">
                   <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <p className="text-slate-600 text-xs font-medium truncate">
+                  <p className="text-muted-foreground text-xs font-medium truncate">
                     {activeTripRequest.pickupLocation.address ?? `${activeTripRequest.pickupLocation.lat.toFixed(4)}, ${activeTripRequest.pickupLocation.lng.toFixed(4)}`}
                   </p>
                 </div>
@@ -1183,14 +1183,14 @@ export default function DriverDashboard() {
         )}
 
         {/* Vehicle Status */}
-        <section className="rounded-2xl border border-slate-200 overflow-hidden bg-white">
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-slate-50">
+        <section className="rounded-2xl border border-border overflow-hidden bg-card shadow-sm">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-surface-soft">
             <div className="flex items-center gap-2">
-              <BusIcon className="w-3.5 h-3.5 text-slate-500" />
-              <span className="text-[11px] font-black tracking-widest text-slate-500 uppercase">Vehicle Status</span>
+              <BusIcon className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-[11px] font-black tracking-widest text-muted-foreground uppercase">Vehicle Status</span>
             </div>
             {process.env.NODE_ENV === 'development' && (
-              <Button variant="ghost" size="sm" className="h-5 text-[10px] text-slate-700 hover:text-red-500 px-2" onClick={triggerManualTest}>Test Crash</Button>
+              <Button variant="ghost" size="sm" className="h-5 text-[10px] text-foreground/90 hover:text-red-500 px-2" onClick={triggerManualTest}>Test Crash</Button>
             )}
           </div>
           <div className="p-4">
@@ -1205,21 +1205,21 @@ export default function DriverDashboard() {
             ) : (
               <div className="py-8 text-center space-y-2">
                 <BusIcon className="w-7 h-7 text-slate-300 mx-auto" />
-                <p className="text-slate-900 font-bold text-sm">No vehicle assigned</p>
-                <p className="text-slate-500 text-xs">Complete your driver profile to link a vehicle.</p>
+                <p className="text-foreground font-bold text-sm">No vehicle assigned</p>
+                <p className="text-muted-foreground text-xs">Complete your driver profile to link a vehicle.</p>
               </div>
             )}
           </div>
         </section>
 
         {/* Passengers */}
-        <section className="rounded-2xl border border-slate-200 overflow-hidden bg-white">
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-slate-50">
+        <section className="rounded-2xl border border-border overflow-hidden bg-card shadow-sm">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-surface-soft">
             <div className="flex items-center gap-2">
-              <Users className="w-3.5 h-3.5 text-slate-500" />
-              <span className="text-[11px] font-black tracking-widest text-slate-500 uppercase">Passengers</span>
+              <Users className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-[11px] font-black tracking-widest text-muted-foreground uppercase">Passengers</span>
             </div>
-            <span className="text-[11px] font-bold text-slate-600 bg-slate-100 border border-slate-200/50 rounded-full px-2.5 py-0.5">{passengers.length}</span>
+            <span className="text-[11px] font-bold text-muted-foreground bg-slate-100 border border-border/50 rounded-full px-2.5 py-0.5">{passengers.length}</span>
           </div>
           <div className="p-4">
             <PassengerList
@@ -1268,32 +1268,32 @@ export default function DriverDashboard() {
       </div>
 
       {/* Fixed bottom bar: status + SOS */}
-      <div className="fixed inset-x-0 bottom-0 z-1200 border-t border-slate-200 bg-white/95 backdrop-blur-xl px-4 py-2.5 flex items-center justify-between">
+      <div className="fixed inset-x-0 bottom-0 z-1200 border-t border-border bg-background/95 backdrop-blur-xl px-4 py-2.5 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
-          <span className="text-[11px] font-black text-slate-600 uppercase tracking-widest">{isOnline ? 'Live tracking active' : 'Offline'}</span>
+          <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">{isOnline ? 'Live tracking active' : 'Offline'}</span>
         </div>
         <Dialog>
           <DialogTrigger asChild>
-            <Button variant="destructive" size="sm" className="h-8 px-4 font-black text-xs rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 shadow-sm transition-all active:scale-95">
+            <Button variant="destructive" size="sm" className="h-11 min-h-11 px-4 font-black text-xs rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 shadow-sm transition-all active:scale-95">
               SOS
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-slate-50 border-slate-100 text-white sm:max-w-md rounded-2xl">
+          <DialogContent className="bg-surface-soft border-border text-white sm:max-w-md rounded-2xl">
             <DialogHeader>
               <DialogTitle className="text-red-400 flex items-center gap-2"><AlertTriangle className="w-5 h-5" /> Emergency Report</DialogTitle>
-              <DialogDescription className="text-slate-600">This will immediately alert the admin team. Use only in emergencies.</DialogDescription>
+              <DialogDescription className="text-muted-foreground">This will immediately alert the admin team. Use only in emergencies.</DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-2 gap-4 py-4">
-              <Button variant="outline" className="h-24 flex flex-col gap-2 border-slate-200 bg-white hover:bg-red-50 hover:border-red-300 hover:text-red-700 rounded-xl transition-all font-bold" onClick={() => handleReportEmergency('accident')}>
+              <Button variant="outline" className="h-24 min-h-[5.5rem] flex flex-col gap-2 border-border bg-card hover:bg-red-50 hover:border-red-300 hover:text-red-700 rounded-xl transition-all font-bold" onClick={() => handleReportEmergency('accident')}>
                 <Car className="w-8 h-8" /> Accident
               </Button>
-              <Button variant="outline" className="h-24 flex flex-col gap-2 border-slate-200 bg-white hover:bg-orange-50 hover:border-orange-300 hover:text-orange-700 rounded-xl transition-all font-bold" onClick={() => handleReportEmergency('breakdown')}>
+              <Button variant="outline" className="h-24 min-h-[5.5rem] flex flex-col gap-2 border-border bg-card hover:bg-primary-soft hover:border-primary/40 hover:text-primary-hover rounded-xl transition-all font-bold" onClick={() => handleReportEmergency('breakdown')}>
                 <Wrench className="w-8 h-8" /> Breakdown
               </Button>
             </div>
             <DialogFooter>
-              <DialogClose asChild><Button variant="ghost" className="text-slate-600">Cancel</Button></DialogClose>
+              <DialogClose asChild><Button variant="ghost" className="text-muted-foreground">Cancel</Button></DialogClose>
             </DialogFooter>
           </DialogContent>
         </Dialog>

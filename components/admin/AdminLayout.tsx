@@ -35,12 +35,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     };
 
     return (
-        <div className="min-h-screen bg-white text-slate-900 flex">
+        <div className="min-h-screen bg-background text-foreground flex">
             {/* Alert Banner */}
             {activeAlert && (
                 <div className="fixed top-0 left-0 right-0 z-[100] bg-red-600 text-white px-4 py-3 shadow-lg animate-pulse flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-white/20 rounded-full">
+                        <div className="p-2 bg-card/20 rounded-full">
                             <span className="text-xl">🚨</span>
                         </div>
                         <div>
@@ -53,14 +53,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <div className="flex items-center gap-3">
                         <Button
                             variant="secondary"
-                            className="bg-white text-red-600 hover:bg-white/90 font-bold"
+                            className="bg-card text-red-600 hover:bg-card/90 font-bold"
                             onClick={() => window.open(`https://www.google.com/maps?q=${activeAlert.location.lat},${activeAlert.location.lng}`, '_blank')}
                         >
                             View Location
                         </Button>
                         <Button
                             variant="outline"
-                            className="border-white text-white hover:bg-white/20"
+                            className="border-white/70 text-white hover:bg-white/15"
                             onClick={handleResolveAlert}
                         >
                             Resolve
@@ -72,14 +72,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Mobile Sidebar Overlay */}
             {sidebarOpen && (
                 <div
-                    className="fixed inset-0 bg-white/50 z-40 lg:hidden"
+                    className="fixed inset-0 bg-background/70 backdrop-blur-sm z-40 lg:hidden"
                     onClick={() => setSidebarOpen(false)}
                 />
             )}
 
             {/* Sidebar */}
-            <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-50/90 backdrop-blur-md border-r border-slate-100 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:shrink-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${activeAlert ? 'mt-16' : ''}`}>
-                <div className="h-16 flex items-center justify-between px-6 border-b border-slate-100">
+            <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-surface-soft/90 backdrop-blur-md border-r border-border transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:shrink-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${activeAlert ? 'mt-16' : ''}`}>
+                <div className="h-16 flex items-center justify-between px-6 border-b border-border">
                     <span className="text-xl font-black bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">
                         Yatra Admin
                     </span>
@@ -95,7 +95,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <Link
                                 key={item.href}
                                 href={item.href}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${isActive ? 'bg-cyan-500/10 text-cyan-700 font-bold' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }`}
+                                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${isActive ? 'bg-cyan-500/10 text-cyan-700 font-bold' : 'text-muted-foreground hover:bg-slate-100 hover:text-foreground' }`}
                                 onClick={() => setSidebarOpen(false)}
                             >
                                 <item.icon className="w-5 h-5" />
@@ -105,7 +105,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     })}
                 </nav>
 
-                <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-100">
+                <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
                     <Button
                         variant="ghost"
                         className="w-full justify-start gap-3 text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -120,7 +120,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Main Content */}
             <main className={`flex-1 flex flex-col min-w-0 overflow-hidden ${activeAlert ? 'mt-16' : ''}`}>
                 {/* Header */}
-                <header className="h-16 border-b border-slate-100 bg-white/80 backdrop-blur-md flex items-center justify-between px-4 lg:px-8 sticky top-0 z-30">
+                <header className="h-16 border-b border-border bg-background/90 backdrop-blur-md flex items-center justify-between px-4 lg:px-8 sticky top-0 z-30">
                     <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
                         <Menu className="w-5 h-5" />
                     </Button>
@@ -129,7 +129,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <div className="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400 font-bold">
                                 A
                             </div>
-                            <span className="text-sm font-medium hidden sm:block text-slate-700">Admin User</span>
+                            <span className="text-sm font-medium hidden sm:block text-foreground/90">Admin User</span>
                         </div>
                     </div>
                 </header>

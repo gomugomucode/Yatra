@@ -55,16 +55,16 @@ export default function RouteInfo({ route, onRouteChange }: RouteInfoProps) {
 					<div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
 						<div className="flex items-center gap-2">
 							<Clock className="w-4 h-4 text-blue-600" />
-							<span className="text-sm text-slate-600">Duration</span>
+							<span className="text-sm text-muted-foreground">Duration</span>
 						</div>
-						<p className="font-bold text-lg mt-1 text-slate-900">{estimatedDuration}</p>
+						<p className="font-bold text-lg mt-1 text-foreground">{estimatedDuration}</p>
 					</div>
 					<div className="bg-emerald-50 p-3 rounded-lg border border-emerald-100">
 						<div className="flex items-center gap-2">
 							<Users className="w-4 h-4 text-emerald-600" />
-							<span className="text-sm text-slate-600">Active Buses</span>
+							<span className="text-sm text-muted-foreground">Active Buses</span>
 						</div>
-						<p className="font-bold text-lg mt-1 text-slate-900">{activeBuses}</p>
+						<p className="font-bold text-lg mt-1 text-foreground">{activeBuses}</p>
 					</div>
 				</div>
 
@@ -75,19 +75,19 @@ export default function RouteInfo({ route, onRouteChange }: RouteInfoProps) {
 						{route.stops.map((stop, index) => (
 							<div
 								key={index}
-								className="flex items-center gap-3 p-2 bg-slate-50 border border-slate-100 rounded-lg"
+								className="flex items-center gap-3 p-2 bg-surface-soft border border-border rounded-lg"
 							>
-								<Badge variant="outline" className="shrink-0 font-bold bg-white">
+								<Badge variant="outline" className="shrink-0 font-bold bg-card">
 									{index + 1}
 								</Badge>
 								<div className="flex-1">
-									<p className="text-sm font-bold text-slate-900">{stop.name}</p>
-									<p className="text-xs text-slate-500">
+									<p className="text-sm font-bold text-foreground">{stop.name}</p>
+									<p className="text-xs text-muted-foreground">
 										{index === 0 ? 'Starting point' : 'Stop'}
 									</p>
 								</div>
 								{index < route.stops.length - 1 && (
-									<ChevronRight className="w-4 h-4 text-slate-400" />
+									<ChevronRight className="w-4 h-4 text-muted-foreground" />
 								)}
 							</div>
 						))}
@@ -95,14 +95,14 @@ export default function RouteInfo({ route, onRouteChange }: RouteInfoProps) {
 				</div>
 
 				{/* Additional Info */}
-				<div className="pt-3 border-t border-slate-100">
+				<div className="pt-3 border-t border-border">
 					<div className="flex items-center justify-between text-sm">
-						<span className="text-slate-600">Fare Range:</span>
-						<span className="font-bold text-slate-900">रु 50 - रु 150</span>
+						<span className="text-muted-foreground">Fare Range:</span>
+						<span className="font-bold text-foreground">रु 50 - रु 150</span>
 					</div>
 					<div className="flex items-center justify-between text-sm mt-2">
-						<span className="text-slate-600">Frequency:</span>
-						<span className="font-bold text-slate-900">Every 15-20 mins</span>
+						<span className="text-muted-foreground">Frequency:</span>
+						<span className="font-bold text-foreground">Every 15-20 mins</span>
 					</div>
 				</div>
 			</CardContent>

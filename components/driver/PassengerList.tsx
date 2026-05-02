@@ -90,7 +90,7 @@ export default function PassengerList({
 				{sortedPassengers.map((passenger, index) => (
 					<div
 						key={passenger.id}
-						className={`rounded-2xl border p-4 transition-all duration-300 shadow-sm ${passenger.status === 'waiting' ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-100'}`}
+						className={`rounded-2xl border p-4 transition-all duration-300 shadow-sm ${passenger.status === 'waiting' ? 'bg-amber-50 border-amber-200' : 'bg-card border-border'}`}
 						style={{
 							animation: `slide-in-right 0.35s ease-out ${index * 60}ms both`,
 						}}
@@ -106,11 +106,11 @@ export default function PassengerList({
 
 							<div className="flex-1 min-w-0">
 								<div className="flex items-center justify-between mb-1.5">
-									<p className="font-bold text-slate-900 text-sm truncate">{passenger.name}</p>
+									<p className="font-bold text-foreground text-sm truncate">{passenger.name}</p>
 									{getStatusBadge(passenger.status)}
 								</div>
 
-								<div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
+								<div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
 									{/* Distance */}
 									{passenger.distanceToPickup != null && (
 										<span className="flex items-center gap-1" style={{
@@ -124,7 +124,7 @@ export default function PassengerList({
 										</span>
 									)}
 									{/* Time */}
-									<span className="flex items-center gap-1 text-slate-600">
+									<span className="flex items-center gap-1 text-muted-foreground">
 										<Clock className="w-3 h-3" />
 										{new Date(passenger.bookingTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
 									</span>
@@ -156,20 +156,20 @@ export default function PassengerList({
 
 				{/* Empty state */}
 				{passengers.length === 0 && (
-					<div className="text-center py-12 px-4 rounded-2xl border-2 border-dashed border-slate-100 bg-slate-50/50">
-						<div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 border border-slate-100 bg-white">
-							<User className="w-7 h-7 text-slate-700" />
+					<div className="text-center py-12 px-4 rounded-2xl border-2 border-dashed border-border bg-section/40">
+						<div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 border border-border bg-card">
+							<User className="w-7 h-7 text-foreground/90" />
 						</div>
-						<p className="text-slate-600 font-semibold text-sm">No passengers yet</p>
-						<p className="text-xs text-slate-700 mt-1">Bookings will appear here in real-time</p>
+						<p className="text-muted-foreground font-semibold text-sm">No passengers yet</p>
+						<p className="text-xs text-foreground/90 mt-1">Bookings will appear here in real-time</p>
 					</div>
 				)}
 			</div>
 
 			{/* Revenue counter — glows brighter as it grows */}
 			{passengers.length > 0 && (
-				<div className="flex items-center justify-between px-4 py-3 rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-100">
-					<span className="text-xs text-slate-600 font-semibold uppercase tracking-widest">Est. Revenue</span>
+				<div className="flex items-center justify-between px-4 py-3 rounded-2xl border border-border bg-card shadow-lg shadow-slate-100">
+					<span className="text-xs text-muted-foreground font-semibold uppercase tracking-widest">Est. Revenue</span>
 					<span className="font-black text-xl font-mono transition-all duration-700"
 						style={{ color: revenueColor, textShadow: revenueGlow }}>
 						रु {revenue}

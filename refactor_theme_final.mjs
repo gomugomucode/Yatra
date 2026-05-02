@@ -1,128 +1,118 @@
-import fs from 'fs/promises';
+import fs from 'fs';
 import path from 'path';
 
-const projectRoot = 'c:\\Users\\Anupam Baral\\Desktop\\Yatra';
+// Define directories to scan
+const dirsToScan = ['app', 'components'];
 
-async function walkDir(dir) {
-    let results = [];
-    const list = await fs.readdir(dir);
-    for (const file of list) {
-        const fullPath = path.join(dir, file);
-        const stat = await fs.stat(fullPath);
-        if (stat && stat.isDirectory()) {
-            results = results.concat(await walkDir(fullPath));
-        } else {
-            if (fullPath.endsWith('.tsx') || fullPath.endsWith('.ts') || fullPath.endsWith('.css')) {
-                results.push(fullPath);
-            }
-        }
+function getAllFiles(dirPath, arrayOfFiles) {
+  const files = fs.readdirSync(dirPath);
+
+  arrayOfFiles = arrayOfFiles || [];
+
+  files.forEach(function(file) {
+    if (fs.statSync(dirPath + "/" + file).isDirectory()) {
+      arrayOfFiles = getAllFiles(dirPath + "/" + file, arrayOfFiles);
+    } else {
+      if (file.endsWith('.tsx') || file.endsWith('.ts')) {
+        arrayOfFiles.push(path.join(dirPath, "/", file));
+      }
     }
-    return results;
+  });
+
+  return arrayOfFiles;
 }
 
-async function updateFiles() {
-    const appFiles = await walkDir(path.join(projectRoot, 'app'));
-    const compFiles = await walkDir(path.join(projectRoot, 'components'));
-    const allFiles = [...appFiles, ...compFiles];
+let allFiles = [];
+dirsToScan.forEach(dir => {
+  allFiles = getAllFiles(path.join(process.cwd(), dir), allFiles);
+});
 
-    for (const file of allFiles) {
-        let content = await fs.readFile(file, 'utf8');
-        let originalContent = content;
+const palette = {
+  base: 'var(--background)',        // #F5F7FA
+  section: 'var(--section)',        // #EEF4FA
+  surface: 'var(--surface)',        // #FFFFFF
+  surfaceSoft: 'var(--surface-soft)',// #F8FAFC
+  border: 'var(--border)',          // #D7DFE8
+  text: 'var(--foreground)',        // #1E293B
+  textMuted: 'var(--muted-foreground)',// #64748B
+  primary: 'var(--primary)',        // #0F766E
+  primaryHover: 'var(--primary-hover)',// #115E59
+  primarySoft: 'var(--primary-soft)',// #CCFBF1
+  secondary: 'var(--secondary)',    // #4F46E5
+  secondarySoft: 'var(--secondary-soft)',// #E0E7FF
+  accent: 'var(--accent)',          // #F59E0B
+  accentSoft: 'var(--accent-soft)',  // #FEF3C7
+};
 
-        if (file.endsWith('.tsx') || file.endsWith('.ts')) {
-            // 1. Remove `dark:` prefixes but keep the class name safely without breaking lines.
-            // This regex matches `dark:` followed by any valid tailwind class characters.
-            content = content.replace(/\bdark:([a-zA-Z0-9\-\_\[\]\#\/\:]+)/g, '');
-            
-            // Clean up double spaces that might have been left behind inside classNames.
-            content = content.replace(/className="([^"]+)"/g, (match, p1) => {
-                return `className="${p1.replace(/\s+/g, ' ').trim()}"`;
-            });
-            content = content.replace(/className=\{`([^`]+)`\}/g, (match, p1) => {
-                return `className={\`${p1.replace(/\s+/g, ' ').trim()}\`}`;
-            });
+// Replacements tailored for semantic Tailwind mapping
+const replacements = [
+  // Text colors
+  [/text-slate-900/g, 'text-foreground'],
+  [/text-slate-800/g, 'text-foreground'],
+  [/text-slate-700/g, 'text-foreground/90'],
+  [/text-slate-600/g, 'text-muted-foreground'],
+  [/text-slate-500/g, 'text-muted-foreground'],
+  
+  // Primary (Orange -> Teal)
+  [/bg-orange-500/g, 'bg-primary'],
+  [/hover:bg-orange-600/g, 'hover:bg-primary-hover'],
+  [/text-orange-500/g, 'text-primary'],
+  [/text-orange-600/g, 'text-primary-hover'],
+  [/text-orange-700/g, 'text-primary-hover'],
+  [/hover:text-orange-500/g, 'hover:text-primary'],
+  [/border-orange-500/g, 'border-primary'],
+  [/border-orange-300\/50/g, 'border-primary/50'],
+  [/shadow-orange-200/g, 'shadow-primary/20'],
+  [/shadow-orange-100\/50/g, 'shadow-primary/10'],
+  
+  // Primary Soft
+  [/bg-orange-50\/50/g, 'bg-primary-soft/50'],
+  [/bg-orange-50/g, 'bg-primary-soft'],
+  [/bg-orange-100\/10/g, 'bg-primary-soft/10'],
+  [/text-orange-100/g, 'text-primary-soft'],
+  [/text-orange-200/g, 'text-primary-soft/80'],
+  
+  // Accent
+  [/bg-orange-100/g, 'bg-accent-soft'],
+  
+  // Background layers
+  [/bg-slate-50\/50/g, 'bg-section/40'],
+  [/bg-slate-50/g, 'bg-surface-soft'],
+  
+  // Borders
+  [/border-slate-100/g, 'border-border'],
+  [/border-slate-200/g, 'border-border'],
+  
+  // Gradients (Hero)
+  [/from-orange-500 via-orange-400 to-orange-600/g, 'from-primary via-sky-500 to-secondary'],
+  
+  // Selection
+  [/selection:bg-orange-100/g, 'selection:bg-primary-soft'],
+  [/selection:text-orange-900/g, 'selection:text-primary'],
+];
 
-            // 2. Replace hardcoded dark colors
-            content = content.replace(/bg-slate-900/g, 'bg-slate-50');
-            content = content.replace(/text-slate-400/g, 'text-slate-500');
-        }
+let changedFilesCount = 0;
 
-        if (file.endsWith('globals.css')) {
-            // Replace root variables
-            content = content.replace(/--background: #09111f;/g, '--background: #FFFFFF;');
-            content = content.replace(/--foreground: #fff8f1;/g, '--foreground: #111827;');
-            
-            content = content.replace(/--card: #101a2d;/g, '--card: #F9FAFB;');
-            content = content.replace(/--card-foreground: #fff8f1;/g, '--card-foreground: #111827;');
-            
-            content = content.replace(/--popover: #101a2d;/g, '--popover: #F9FAFB;');
-            content = content.replace(/--popover-foreground: #fff8f1;/g, '--popover-foreground: #111827;');
-            
-            content = content.replace(/--primary-foreground: #fff8f1;/g, '--primary-foreground: #FFFFFF;');
-            
-            content = content.replace(/--secondary: #0ea5e9;/g, '--secondary: #F3F4F6;');
-            content = content.replace(/--secondary-foreground: #09111f;/g, '--secondary-foreground: #1F2937;');
-            
-            content = content.replace(/--muted: #162235;/g, '--muted: #F3F4F6;');
-            content = content.replace(/--muted-foreground: #c3cfdf;/g, '--muted-foreground: #6B7280;');
-            
-            content = content.replace(/--accent: #fb923c;/g, '--accent: #FFF7ED;');
-            content = content.replace(/--accent-foreground: #09111f;/g, '--accent-foreground: #C2410C;');
-            
-            content = content.replace(/--destructive: #f97373;/g, '--destructive: #EF4444;');
-            
-            content = content.replace(/--border: #24344d;/g, '--border: #E5E7EB;');
-            content = content.replace(/--input: #24344d;/g, '--input: #E5E7EB;');
-            
-            content = content.replace(/--sidebar: #09111f;/g, '--sidebar: #FFFFFF;');
-            content = content.replace(/--sidebar-foreground: #eef4ff;/g, '--sidebar-foreground: #111827;');
-            content = content.replace(/--sidebar-accent: #162235;/g, '--sidebar-accent: #F3F4F6;');
-            content = content.replace(/--sidebar-accent-foreground: #eef4ff;/g, '--sidebar-accent-foreground: #1F2937;');
-            content = content.replace(/--sidebar-border: #24344d;/g, '--sidebar-border: #E5E7EB;');
+allFiles.forEach(file => {
+  let content = fs.readFileSync(file, 'utf8');
+  let originalContent = content;
 
-            // Base styles
-            content = content.replace(/background-color: #09111f;/g, 'background-color: #FFFFFF;');
-            content = content.replace(/background:\s*radial-gradient\([^;]+;/g, 'background: #FFFFFF;');
+  // General Replacements
+  for (const [regex, replacement] of replacements) {
+    content = content.replace(regex, replacement);
+  }
 
-            // Scrollbar
-            content = content.replace(/background-color: #09111f;[\s\n]*\}/g, 'background-color: #F3F4F6;\n}');
-            content = content.replace(/background-color: #31425d;/g, 'background-color: #D1D5DB;');
-            content = content.replace(/background-color: #4d6489;/g, 'background-color: #9CA3AF;');
+  // Refine specific white backgrounds
+  if (file.includes('page.tsx') || file.includes('layout.tsx')) {
+      content = content.replace(/min-h-screen bg-white/g, 'min-h-screen bg-background');
+      content = content.replace(/bg-white\/80/g, 'bg-background/80');
+  }
 
-            // Web3
-            content = content.replace(/background: #09111f;/g, 'background: #FFFFFF;');
+  if (content !== originalContent) {
+    fs.writeFileSync(file, content, 'utf8');
+    changedFilesCount++;
+    console.log(`Updated: ${file.replace(process.cwd(), '')}`);
+  }
+});
 
-            // Hero
-            content = content.replace(/background: #030b1a;/g, 'background: #FFFFFF;');
-            content = content.replace(/linear-gradient\(170deg, #030b1a 0%, #060d1f 40%, #050c1b 100%\)/g, 'linear-gradient(170deg, #FFFFFF 0%, #F9FAFB 40%, #F3F4F6 100%)');
-            
-            // Cockpit
-            content = content.replace(/background: linear-gradient\(135deg,[\s\n]*rgba\(0, 20, 50, 0\.7\) 0%,[\s\n]*rgba\(5, 15, 35, 0\.8\) 100%\);/g, 'background: #FFFFFF;');
-            content = content.replace(/border: 1px solid rgba\(0, 245, 255, 0\.15\);/g, 'border: 1px solid #E5E7EB;');
-
-            // Subtitles
-            content = content.replace(/background: linear-gradient\(90deg, #e2e8f0, #94a3b8\);/g, 'background: linear-gradient(90deg, #4B5563, #6B7280);');
-            content = content.replace(/color: rgba\(148, 163, 184, 0\.9\);/g, 'color: #4B5563;');
-
-            // Primary Button
-            content = content.replace(/background: linear-gradient\(135deg, rgba\(0, 180, 255, 0\.2\), rgba\(0, 100, 200, 0\.3\)\);/g, 'background: var(--primary);');
-            content = content.replace(/border: 1px solid rgba\(0, 245, 255, 0\.45\);/g, 'border: 1px solid var(--primary);');
-            
-            // Driver Button
-            content = content.replace(/background: linear-gradient\(135deg, rgba\(15, 20, 30, 0\.8\), rgba\(10, 15, 25, 0\.9\)\);/g, 'background: #FFFFFF;');
-            content = content.replace(/color: #94a3b8;/g, 'color: var(--primary);');
-            content = content.replace(/border: 1px solid rgba\(100, 116, 139, 0\.4\);/g, 'border: 2px solid var(--primary);');
-            
-            // Bento cards
-            content = content.replace(/background: linear-gradient\(135deg, rgba\(5, 15, 35, 0\.9\) 0%, rgba\(10, 20, 50, 0\.8\) 100%\);/g, 'background: #FFFFFF;');
-            content = content.replace(/border: 1px solid rgba\(0, 245, 255, 0\.12\);/g, 'border: 1px solid #E5E7EB;');
-        }
-
-        if (content !== originalContent) {
-            await fs.writeFile(file, content, 'utf8');
-            console.log(`Updated ${file}`);
-        }
-    }
-}
-
-updateFiles().catch(console.error);
+console.log(`\nSuccessfully applied semantic premium theme to ${changedFilesCount} files.`);

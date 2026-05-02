@@ -95,7 +95,7 @@ export default function BusManagement() {
 
     if (authLoading || loading) {
         return (
-            <div className="min-h-screen bg-white flex items-center justify-center">
+            <div className="min-h-screen bg-background flex items-center justify-center">
                 <Loader2 className="w-8 h-8 text-cyan-500 animate-spin" />
             </div>
         );
@@ -103,8 +103,8 @@ export default function BusManagement() {
 
     if (!currentUser || role !== 'admin') {
         return (
-            <div className="min-h-screen bg-white flex items-center justify-center">
-                <p className="text-slate-600">Admin access required.</p>
+            <div className="min-h-screen bg-background flex items-center justify-center">
+                <p className="text-muted-foreground">Admin access required.</p>
             </div>
         );
     }
@@ -114,18 +114,18 @@ export default function BusManagement() {
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold text-slate-900 mb-2">Transport Office Dashboard</h1>
-                        <p className="text-slate-600">Search by plate number or driver ID to inspect compliance and live status.</p>
+                        <h1 className="text-3xl font-bold text-foreground mb-2">Transport Office Dashboard</h1>
+                        <p className="text-muted-foreground">Search by plate number or driver ID to inspect compliance and live status.</p>
                     </div>
                 </div>
 
                 {/* Filters */}
-                <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <div className="flex items-center gap-4 bg-surface-soft p-4 rounded-xl border border-border">
                     <div className="relative flex-1 max-w-sm">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input
                             placeholder="Search by plate, route, driver name, or driver ID..."
-                            className="pl-9 bg-white border-slate-100 text-slate-900"
+                            className="pl-9 bg-card border-border text-foreground"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -133,46 +133,46 @@ export default function BusManagement() {
                 </div>
 
                 {/* Table */}
-                <div className="bg-slate-50 border border-slate-100 rounded-xl overflow-hidden">
+                <div className="bg-surface-soft border border-border rounded-xl overflow-hidden">
                     <Table>
-                        <TableHeader className="bg-white">
-                            <TableRow className="border-slate-100 hover:bg-white">
-                                <TableHead className="text-slate-600">Bus Number</TableHead>
-                                <TableHead className="text-slate-600">Driver</TableHead>
-                                <TableHead className="text-slate-600">Route</TableHead>
-                                <TableHead className="text-slate-600">Driver ID</TableHead>
-                                <TableHead className="text-slate-600">Live Location</TableHead>
-                                <TableHead className="text-slate-600">Reputation</TableHead>
-                                <TableHead className="text-slate-600">ZK Verified</TableHead>
-                                <TableHead className="text-slate-600">Trip History</TableHead>
-                                <TableHead className="text-slate-600">Compliance</TableHead>
-                                <TableHead className="text-slate-600">Status</TableHead>
-                                <TableHead className="text-slate-600">Seats</TableHead>
+                        <TableHeader className="bg-card">
+                            <TableRow className="border-border hover:bg-muted/50">
+                                <TableHead className="text-muted-foreground">Bus Number</TableHead>
+                                <TableHead className="text-muted-foreground">Driver</TableHead>
+                                <TableHead className="text-muted-foreground">Route</TableHead>
+                                <TableHead className="text-muted-foreground">Driver ID</TableHead>
+                                <TableHead className="text-muted-foreground">Live Location</TableHead>
+                                <TableHead className="text-muted-foreground">Reputation</TableHead>
+                                <TableHead className="text-muted-foreground">ZK Verified</TableHead>
+                                <TableHead className="text-muted-foreground">Trip History</TableHead>
+                                <TableHead className="text-muted-foreground">Compliance</TableHead>
+                                <TableHead className="text-muted-foreground">Status</TableHead>
+                                <TableHead className="text-muted-foreground">Seats</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {filteredBuses.map((bus) => (
-                                <TableRow key={bus.id} className="border-slate-100 hover:bg-slate-100/50">
-                                    <TableCell className="font-medium text-slate-900">
+                                <TableRow key={bus.id} className="border-border hover:bg-slate-100/50">
+                                    <TableCell className="font-medium text-foreground">
                                         <div className="flex items-center gap-2">
                                             <span className="text-xl">{bus.emoji}</span>
                                             {bus.busNumber}
                                         </div>
                                     </TableCell>
-                                    <TableCell className="text-slate-700">{bus.driverName}</TableCell>
-                                    <TableCell className="text-slate-700">
+                                    <TableCell className="text-foreground/90">{bus.driverName}</TableCell>
+                                    <TableCell className="text-foreground/90">
                                         <div className="flex items-center gap-1">
-                                            <MapPin className="w-3 h-3 text-slate-600" />
+                                            <MapPin className="w-3 h-3 text-muted-foreground" />
                                             {bus.route}
                                         </div>
                                     </TableCell>
-                                    <TableCell className="text-xs font-mono text-slate-700">{bus.id}</TableCell>
-                                    <TableCell className="text-xs text-slate-700">
+                                    <TableCell className="text-xs font-mono text-foreground/90">{bus.id}</TableCell>
+                                    <TableCell className="text-xs text-foreground/90">
                                         {bus.currentLocation
                                             ? `${bus.currentLocation.lat.toFixed(4)}, ${bus.currentLocation.lng.toFixed(4)}`
                                             : '—'}
                                     </TableCell>
-                                    <TableCell className="text-slate-700">
+                                    <TableCell className="text-foreground/90">
                                         {driverReputation[bus.id]?.score != null ? driverReputation[bus.id].score : '—'}
                                     </TableCell>
                                     <TableCell>
@@ -180,13 +180,13 @@ export default function BusManagement() {
                                             variant={driverProfiles[bus.id]?.verificationBadge?.mintAddress ? 'default' : 'secondary'}
                                             className={driverProfiles[bus.id]?.verificationBadge?.mintAddress
                                                 ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                                                : 'bg-slate-100 text-slate-600 border-slate-200'}
+                                                : 'bg-slate-100 text-muted-foreground border-border'}
                                         >
                                             {driverProfiles[bus.id]?.verificationBadge?.mintAddress ? 'Verified' : 'Pending'}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell className="text-slate-700">{tripCountByDriver[bus.id] || 0}</TableCell>
-                                    <TableCell className="text-xs text-slate-700">
+                                    <TableCell className="text-foreground/90">{tripCountByDriver[bus.id] || 0}</TableCell>
+                                    <TableCell className="text-xs text-foreground/90">
                                         {(driverProfiles[bus.id]?.isApproved ? 'Approved' : 'Review') +
                                             ` · SOS ${driverReputation[bus.id]?.sosTriggered || 0}`}
                                     </TableCell>
@@ -194,19 +194,19 @@ export default function BusManagement() {
                                         <Badge variant={bus.isActive ? 'default' : 'secondary'} className={
                                             bus.isActive
                                                 ? 'bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 border-emerald-500/20'
-                                                : 'bg-slate-100 text-slate-600 hover:bg-slate-100 border-slate-200'
+                                                : 'bg-slate-100 text-muted-foreground hover:bg-slate-100 border-border'
                                         }>
                                             {bus.isActive ? 'Active' : 'Offline'}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell className="text-slate-700">
+                                    <TableCell className="text-foreground/90">
                                         {bus.availableSeats} / {bus.capacity}
                                     </TableCell>
                                 </TableRow>
                             ))}
                             {filteredBuses.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={11} className="text-center py-8 text-slate-600">
+                                    <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                                         No matching buses found.
                                     </TableCell>
                                 </TableRow>

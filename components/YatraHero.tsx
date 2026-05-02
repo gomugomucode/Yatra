@@ -15,10 +15,10 @@ const NEPAL_PATH = `M 60,140 L 80,130 L 110,125 L 140,120 L 160,115 L 190,110
 
 // Transit route paths across Nepal
 const ROUTES = [
-  { id: 'r1', d: 'M 80,138 Q 200,125 350,110 Q 450,98 555,90', color: '#fb923c', delay: 0 },
-  { id: 'r2', d: 'M 100,142 Q 220,132 360,118 Q 460,108 545,100', color: '#f97316', delay: 0.6 },
-  { id: 'r3', d: 'M 120,145 Q 250,135 380,125 Q 470,115 540,108', color: '#38bdf8', delay: 1.2 },
-  { id: 'r4', d: 'M 150,148 Q 280,140 400,132 Q 500,124 555,118', color: '#0ea5e9', delay: 1.8 },
+  { id: 'r1', d: 'M 80,138 Q 200,125 350,110 Q 450,98 555,90', color: '#0F766E', delay: 0 },
+  { id: 'r2', d: 'M 100,142 Q 220,132 360,118 Q 460,108 545,100', color: '#14b8a6', delay: 0.6 },
+  { id: 'r3', d: 'M 120,145 Q 250,135 380,125 Q 470,115 540,108', color: '#4F46E5', delay: 1.2 },
+  { id: 'r4', d: 'M 150,148 Q 280,140 400,132 Q 500,124 555,118', color: '#6366f1', delay: 1.8 },
 ];
 
 // City dots on the Nepal map
@@ -104,7 +104,7 @@ export default function YatraHero({
         {/* Live Badge */}
         <div className={`yatra-badge transition-all duration-700 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
           <span className="yatra-live-dot" />
-          <span className="text-xs font-bold tracking-[0.2em] text-orange-200 uppercase">Now Live in Butwal</span>
+          <span className="text-xs font-bold tracking-[0.2em] text-primary-soft/80 uppercase">Now Live in Butwal</span>
           <span className="yatra-badge-chip">BETA</span>
         </div>
 
@@ -123,7 +123,7 @@ export default function YatraHero({
           <p className="yatra-subtitle">Nepal&apos;s Transit, Tokenized.</p>
           <p className="yatra-body mt-3">
             Real-time tracking meets Solana-powered security.
-            <span className="text-orange-300">Experience the movement.</span>
+            <span className="text-accent"> Experience the movement.</span>
           </p>
         </div>
 
@@ -361,7 +361,7 @@ export default function YatraHero({
       </div>
 
       {/* Bottom fade into next section */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent pointer-events-none" />
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent pointer-events-none" />
     </section>
   );
 }

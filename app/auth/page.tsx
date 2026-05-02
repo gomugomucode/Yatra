@@ -182,37 +182,37 @@ function AuthContent() {
   const isBusy = loading !== 'idle';
 
   return (
-    <div className="min-h-screen bg-white flex flex-col md:flex-row">
+    <div className="min-h-screen bg-background flex flex-col md:flex-row">
       
       {/* Left side: Visuals (Desktop only) */}
-      <div className="hidden md:flex md:w-1/2 bg-slate-50 items-center justify-center p-12 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500/5 rounded-full blur-[80px]" />
+      <div className="hidden md:flex md:w-1/2 bg-surface-soft items-center justify-center p-12 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[80px]" />
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/5 rounded-full blur-[100px]" />
         
         <div className="relative z-10 max-w-lg">
           <Link href="/" className="inline-flex items-center gap-2 mb-12">
             <Image src="/yatra-logo.png" alt="Yatra" width={44} height={44} className="rounded-xl" priority />
-            <span className="text-2xl font-black tracking-tight text-slate-900">Yatra</span>
+            <span className="text-2xl font-black tracking-tight text-foreground">Yatra</span>
           </Link>
           
-          <h2 className="text-5xl font-black text-slate-900 leading-tight mb-6">
+          <h2 className="text-5xl font-black text-foreground leading-tight mb-6">
             The future of <br />
-            <span className="text-orange-500">Nepal's transit.</span>
+            <span className="text-primary">Nepal's transit.</span>
           </h2>
-          <p className="text-xl text-slate-600 font-medium leading-relaxed mb-12">
+          <p className="text-xl text-muted-foreground font-medium leading-relaxed mb-12">
             Join thousands of passengers and drivers moving smarter every day. 
             Real-time tracking, secure payments, and verified identity.
           </p>
           
           <div className="space-y-6">
             {[
-              { icon: <ShieldCheck className="w-6 h-6 text-orange-500" />, text: "ZK-Verified Secure Identity" },
-              { icon: <Bus className="w-6 h-6 text-orange-500" />, text: "Real-time Live GPS Tracking" },
-              { icon: <Loader2 className="w-6 h-6 text-orange-500" />, text: "Instant Paperless Booking" }
+              { icon: <ShieldCheck className="w-6 h-6 text-primary" />, text: "ZK-Verified Secure Identity" },
+              { icon: <Bus className="w-6 h-6 text-primary" />, text: "Real-time Live GPS Tracking" },
+              { icon: <Loader2 className="w-6 h-6 text-primary" />, text: "Instant Paperless Booking" }
             ].map((item, i) => (
-              <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-white border border-slate-100 shadow-sm">
+              <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-card border border-border shadow-md">
                 {item.icon}
-                <span className="font-bold text-slate-700">{item.text}</span>
+                <span className="font-bold text-foreground/90">{item.text}</span>
               </div>
             ))}
           </div>
@@ -220,25 +220,25 @@ function AuthContent() {
       </div>
 
       {/* Right side: Auth Form */}
-      <div className="w-full md:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-white">
+      <div className="w-full md:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-card">
         <div className="w-full max-w-md">
           <div className="md:hidden mb-12 flex justify-between items-center">
             <Link href="/" className="inline-flex items-center gap-2">
               <Image src="/yatra-logo.png" alt="Yatra" width={36} height={36} className="rounded-lg" />
-              <span className="text-xl font-black tracking-tight text-slate-900">Yatra</span>
+              <span className="text-xl font-black tracking-tight text-foreground">Yatra</span>
             </Link>
             <Link href="/">
-              <Button variant="ghost" size="sm" className="font-bold text-slate-600">
+              <Button variant="ghost" size="sm" className="font-bold text-muted-foreground">
                 <ChevronLeft className="w-4 h-4 mr-1" /> Back
               </Button>
             </Link>
           </div>
 
           <div className="mb-10">
-            <h1 className="text-3xl font-black text-slate-900 mb-2">
+            <h1 className="text-3xl font-black text-foreground mb-2">
               {isSignUp ? 'Create an account' : 'Welcome back'}
             </h1>
-            <p className="text-slate-600 font-medium">
+            <p className="text-muted-foreground font-medium">
               {isSignUp 
                 ? 'Join Yatra and start your journey today.' 
                 : 'Enter your credentials to access your portal.'}
@@ -246,16 +246,18 @@ function AuthContent() {
           </div>
 
           {/* Role Selector */}
-          <div className="flex p-1 rounded-2xl bg-slate-100 mb-8">
+          <div className="flex p-1 rounded-2xl bg-muted/60 mb-8">
             <button
+              type="button"
               onClick={() => setSelectedRole('passenger')}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${selectedRole === 'passenger' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-700'}`}
+              className={`flex-1 flex items-center justify-center gap-2 min-h-11 py-3 rounded-xl text-sm font-bold transition-all ${selectedRole === 'passenger' ? 'bg-card text-foreground shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground/90'}`}
             >
               <User2 className="w-4 h-4" /> Passenger
             </button>
             <button
+              type="button"
               onClick={() => setSelectedRole('driver')}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${selectedRole === 'driver' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-700'}`}
+              className={`flex-1 flex items-center justify-center gap-2 min-h-11 py-3 rounded-xl text-sm font-bold transition-all ${selectedRole === 'driver' ? 'bg-card text-foreground shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground/90'}`}
             >
               <Bus className="w-4 h-4" /> Driver
             </button>
@@ -265,7 +267,7 @@ function AuthContent() {
             <Button
               onClick={handleGoogleSignIn}
               disabled={isBusy}
-              className="w-full h-14 rounded-2xl bg-white hover:bg-slate-50 text-slate-900 font-bold border-2 border-slate-100 shadow-sm flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
+              className="w-full h-14 min-h-12 rounded-2xl bg-card hover:bg-surface-soft text-foreground font-bold border-2 border-border shadow-md flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
             >
               {loading === 'google' ? <Loader2 className="w-5 h-5 animate-spin" /> : (
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -279,35 +281,37 @@ function AuthContent() {
             </Button>
 
             <div className="relative">
-              <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-100" /></div>
-              <div className="relative flex justify-center text-[10px] uppercase tracking-[0.2em] font-black text-slate-600">
-                <span className="bg-white px-4">OR USE EMAIL</span>
+              <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
+              <div className="relative flex justify-center text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground">
+                <span className="bg-card px-4">OR USE EMAIL</span>
               </div>
             </div>
 
             <div className="space-y-4">
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   type="email"
                   placeholder="Email Address"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="h-14 pl-12 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-orange-500/50 focus:ring-orange-500/10 transition-all font-medium"
+                  className="h-14 pl-12 rounded-2xl bg-surface-soft border-transparent focus:bg-card focus:border-primary/50 focus:ring-primary/15 transition-all font-medium"
                 />
               </div>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-14 pl-12 pr-12 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-orange-500/50 focus:ring-orange-500/10 transition-all font-medium"
+                  className="h-14 pl-12 pr-12 rounded-2xl bg-surface-soft border-transparent focus:bg-card focus:border-primary/50 focus:ring-primary/15 transition-all font-medium"
                 />
                 <button 
+                  type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-600 hover:text-orange-500 transition-colors"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 touch-target text-muted-foreground hover:text-primary transition-colors"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -317,7 +321,7 @@ function AuthContent() {
             <Button
               onClick={handleEmailAuth}
               disabled={isBusy || !email || !password}
-              className="w-full h-14 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-black text-lg shadow-xl shadow-orange-200 transition-all active:scale-[0.98]"
+              className="w-full h-14 rounded-2xl bg-primary hover:bg-primary-hover text-white font-black text-lg shadow-xl shadow-primary/20 transition-all active:scale-[0.98]"
             >
               {loading === 'email' ? <Loader2 className="w-6 h-6 animate-spin" /> : (isSignUp ? 'Create Account' : 'Sign In')}
             </Button>
@@ -325,7 +329,7 @@ function AuthContent() {
             <div className="text-center pt-4">
               <button
                 onClick={() => setIsSignUp(!isSignUp)}
-                className="text-sm font-bold text-slate-600 hover:text-orange-500 transition-colors"
+                className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors"
               >
                 {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
               </button>
@@ -345,7 +349,7 @@ function AuthContent() {
 
 export default function AuthPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-orange-500" /></div>}>
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>}>
       <AuthContent />
     </Suspense>
   );

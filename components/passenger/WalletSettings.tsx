@@ -102,8 +102,8 @@ export default function WalletSettings() {
                 </div>
             )}
 
-            <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-3">
-                <p className="text-[11px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+            <div className="bg-surface-soft border border-border p-4 rounded-xl space-y-3">
+                <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                     <CreditCard className="w-4 h-4 text-purple-600" />
                     Solana Wallet
                 </p>

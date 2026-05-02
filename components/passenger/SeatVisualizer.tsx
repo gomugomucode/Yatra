@@ -49,7 +49,7 @@ export default function SeatVisualizer({ bus, compact = false }: SeatVisualizerP
                         </span>
                     ))}
                 </div>
-                <span className="text-xs text-slate-600 font-medium">
+                <span className="text-xs text-muted-foreground font-medium">
                     {bus.availableSeats}/{bus.capacity}
                 </span>
             </div>
@@ -59,12 +59,12 @@ export default function SeatVisualizer({ bus, compact = false }: SeatVisualizerP
     return (
         <div className="space-y-4">
             {/* Seat Grid */}
-            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-inner">
+            <div className="bg-surface-soft rounded-xl p-4 border border-border shadow-inner">
                 <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2 justify-center">
                     {seats.map((seat, idx) => (
                         <div
                             key={idx}
-                            className={`h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-lg text-lg transition-transform hover:scale-110 cursor-default ${seat.type === 'available' ? 'bg-white border border-slate-200 hover:bg-slate-100' : seat.type === 'online' ? 'bg-blue-50 border border-blue-200' : 'bg-yellow-50 border border-yellow-200' }`}
+                            className={`h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-lg text-lg transition-transform hover:scale-110 cursor-default ${seat.type === 'available' ? 'bg-card border border-border hover:bg-muted/50' : seat.type === 'online' ? 'bg-secondary-soft/50 border border-secondary/30' : 'bg-accent-soft/40 border border-accent/30' }`}
                             title={
                                 seat.type === 'online'
                                     ? 'Online Booked'
@@ -102,23 +102,23 @@ export default function SeatVisualizer({ bus, compact = false }: SeatVisualizerP
             </div>
 
             {/* Last Update */}
-            <div className="flex items-center justify-between text-xs text-slate-600 px-1">
+            <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
                 <p>Updated {lastUpdate}</p>
             </div>
 
             {/* Legend */}
-            <div className="border-t border-slate-100 pt-3 flex items-center justify-center gap-6">
+            <div className="border-t border-border pt-3 flex items-center justify-center gap-6">
                 <div className="flex items-center gap-2 text-sm">
                     <span className="text-lg">🟦</span>
-                    <span className="text-slate-600 text-xs font-medium uppercase tracking-wide">Online</span>
+                    <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Online</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                     <span className="text-lg">🟨</span>
-                    <span className="text-slate-600 text-xs font-medium uppercase tracking-wide">Offline</span>
+                    <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Offline</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                     <span className="text-lg">⚪</span>
-                    <span className="text-slate-600 text-xs font-medium uppercase tracking-wide">Empty</span>
+                    <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Empty</span>
                 </div>
             </div>
         </div>
