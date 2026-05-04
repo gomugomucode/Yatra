@@ -14,6 +14,10 @@ import {
   Ticket,
   Navigation,
   Clock,
+  Map,
+  History,
+  UserRound,
+  BookOpen,
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -42,6 +46,8 @@ interface PassengerBookingData {
   paymentMethod?: 'cash' | 'digital';
   status?: string;
 }
+
+type PassengerTab = 'map' | 'book' | 'history' | 'profile';
 
 export default function PassengerDashboard() {
   const router = useRouter();
@@ -88,6 +94,7 @@ export default function PassengerDashboard() {
   const [activeTripPickup, setActiveTripPickup] = useState<{ lat: number; lng: number; status: string } | null>(null);
   const [showRideHereAlert, setShowRideHereAlert] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<PassengerTab>('book');
   const [ratingTripId, setRatingTripId] = useState<string | null>(null);
   const [ratingDriverName, setRatingDriverName] = useState<string>('');
   const hasLocationErrorRef = useRef(false);
@@ -1359,71 +1366,139 @@ export default function PassengerDashboard() {
           </div>
         ) : (
           <>
-            {/* Location / nearby driver status */}
-            {locationPending ? (
-              <div className="flex flex-col items-center justify-center h-16 gap-2 text-muted-foreground">
-                <MapPin className="w-5 h-5 animate-pulse text-muted-foreground" />
-                <p className="text-xs text-center text-muted-foreground">Grant location permission to see nearby drivers</p>
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                {filteredBuses.length} driver{filteredBuses.length !== 1 ? 's' : ''} within {NEARBY_DRIVER_RADIUS_KM}km
-              </p>
+            {(activeTab === 'map' || activeTab === 'book') && (
+              <>
+                {/* Location / nearby driver status */}
+                {locationPending ? (
+                  <div className="flex flex-col items-center justify-center h-16 gap-2 text-muted-foreground">
+                    <MapPin className="w-5 h-5 animate-pulse text-muted-foreground" />
+                    <p className="text-xs text-center text-muted-foreground">Grant location permission to see nearby drivers</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    {filteredBuses.length} driver{filteredBuses.length !== 1 ? 's' : ''} within {NEARBY_DRIVER_RADIUS_KM}km
+                  </p>
+                )}
+
+                {/* Wallet Settings */}
+                <WalletSettings />
+              </>
             )}
 
-            {/* Wallet Settings */}
-            <WalletSettings />
-
-            {/* Booking Panel */}
-            <div className="space-y-2">
-              <h2 className="text-lg font-black text-foreground flex items-center gap-2">
-                <Ticket className="w-5 h-5 text-blue-400" />
-                Ride Details
-              </h2>
-              <BookingPanel
-                pickupLocation={pickupLocation}
-                dropoffLocation={dropoffLocation}
-                selectedBus={selectedBus}
-                onBook={handleBookBus}
-                onReset={handleResetLocations}
-                loading={bookingLoading}
-              />
-            </div>
-
-            {/* Trip History & NFT Receipts */}
-            <div id="trip-history">
-              <TripHistory onReclaim={handleReclaimEscrow} />
-            </div>
-
-            {/* Instructions / Tips */}
-            {!selectedBus && (
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-surface-soft border border-border p-3 rounded-xl flex flex-col items-center text-center gap-2 shadow-sm">
-                  <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100">
-                    <MapPin className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <span className="text-xs font-black text-muted-foreground">1. Tap Bus</span>
+            {activeTab === 'book' && (
+              <>
+                <div className="space-y-2">
+                  <h2 className="text-lg font-black text-foreground flex items-center gap-2">
+                    <Ticket className="w-5 h-5 text-secondary" />
+                    Ride Details
+                  </h2>
+                  <BookingPanel
+                    pickupLocation={pickupLocation}
+                    dropoffLocation={dropoffLocation}
+                    selectedBus={selectedBus}
+                    onBook={handleBookBus}
+                    onReset={handleResetLocations}
+                    loading={bookingLoading}
+                  />
                 </div>
-                <div className="bg-surface-soft border border-border p-3 rounded-xl flex flex-col items-center text-center gap-2 shadow-sm">
-                  <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100">
-                    <Navigation className="w-4 h-4 text-emerald-600" />
+
+                {!selectedBus && (
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-surface-soft border border-border p-3 rounded-xl flex flex-col items-center text-center gap-2 shadow-sm">
+                      <div className="w-8 h-8 rounded-full bg-primary-soft flex items-center justify-center border border-primary/20">
+                        <MapPin className="w-4 h-4 text-primary" />
+                      </div>
+                      <span className="text-xs font-black text-muted-foreground">1. Tap Bus</span>
+                    </div>
+                    <div className="bg-surface-soft border border-border p-3 rounded-xl flex flex-col items-center text-center gap-2 shadow-sm">
+                      <div className="w-8 h-8 rounded-full bg-primary-soft flex items-center justify-center border border-primary/20">
+                        <Navigation className="w-4 h-4 text-primary" />
+                      </div>
+                      <span className="text-xs font-black text-muted-foreground">2. Hail</span>
+                    </div>
+                    <div className="bg-surface-soft border border-border p-3 rounded-xl flex flex-col items-center text-center gap-2 shadow-sm">
+                      <div className="w-8 h-8 rounded-full bg-secondary-soft/60 flex items-center justify-center border border-secondary/20">
+                        <Clock className="w-4 h-4 text-secondary" />
+                      </div>
+                      <span className="text-xs font-black text-muted-foreground">3. Ride</span>
+                    </div>
                   </div>
-                  <span className="text-xs font-black text-muted-foreground">2. Hail</span>
-                </div>
-                <div className="bg-surface-soft border border-border p-3 rounded-xl flex flex-col items-center text-center gap-2 shadow-sm">
-                  <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center border border-purple-100">
-                    <Clock className="w-4 h-4 text-purple-600" />
-                  </div>
-                  <span className="text-xs font-black text-muted-foreground">3. Ride</span>
-                </div>
+                )}
+              </>
+            )}
+
+            {activeTab === 'history' && (
+              <div id="trip-history">
+                <TripHistory onReclaim={handleReclaimEscrow} />
               </div>
             )}
 
-            {/* Bottom Padding for scrolling */}
-            <div className="h-8" />
+            {activeTab === 'profile' && (
+              <div className="space-y-4">
+                <div className="card-elevated p-5">
+                  <p className="text-xs uppercase tracking-widest text-muted-foreground font-black">Passenger Profile</p>
+                  <p className="mt-2 text-lg font-black text-foreground">{userData?.name || 'Yatra User'}</p>
+                  <p className="text-sm text-muted-foreground">{userData?.email || currentUser?.email || 'No email on file'}</p>
+                  <Button
+                    className="mt-4 h-11 min-h-11 bg-accent hover:bg-amber-600 text-white font-bold"
+                    onClick={() => setIsDrawerOpen(true)}
+                  >
+                    <UserRound className="w-4 h-4 mr-2" />
+                    Open Profile & Settings
+                  </Button>
+                </div>
+                <WalletSettings />
+              </div>
+            )}
+
+            {/* Bottom Padding for tab bar */}
+            <div className="h-24" />
           </>
         )}
       </div>
+
+      <nav
+        aria-label="Passenger tabs"
+        className="fixed inset-x-0 bottom-0 z-[1300] border-t border-border bg-background/95 backdrop-blur-xl px-3 py-2"
+      >
+        <div className="mx-auto grid max-w-md grid-cols-4 gap-2">
+          <Button
+            variant="ghost"
+            className={`min-h-11 flex-col gap-1 rounded-xl ${activeTab === 'map' ? 'bg-primary-soft text-primary' : 'text-muted-foreground'}`}
+            onClick={() => setActiveTab('map')}
+          >
+            <Map className="h-4 w-4" />
+            <span className="text-[10px] font-black tracking-wide">Map</span>
+          </Button>
+          <Button
+            variant="ghost"
+            className={`min-h-11 flex-col gap-1 rounded-xl ${activeTab === 'book' ? 'bg-primary-soft text-primary' : 'text-muted-foreground'}`}
+            onClick={() => setActiveTab('book')}
+          >
+            <BookOpen className="h-4 w-4" />
+            <span className="text-[10px] font-black tracking-wide">Book Ride</span>
+          </Button>
+          <Button
+            variant="ghost"
+            className={`min-h-11 flex-col gap-1 rounded-xl ${activeTab === 'history' ? 'bg-primary-soft text-primary' : 'text-muted-foreground'}`}
+            onClick={() => setActiveTab('history')}
+          >
+            <History className="h-4 w-4" />
+            <span className="text-[10px] font-black tracking-wide">History</span>
+          </Button>
+          <Button
+            variant="ghost"
+            className={`min-h-11 flex-col gap-1 rounded-xl ${activeTab === 'profile' ? 'bg-primary-soft text-primary' : 'text-muted-foreground'}`}
+            onClick={() => {
+              setActiveTab('profile');
+              setIsDrawerOpen(true);
+            }}
+          >
+            <UserRound className="h-4 w-4" />
+            <span className="text-[10px] font-black tracking-wide">Profile</span>
+          </Button>
+        </div>
+      </nav>
     </div>
   );
 }

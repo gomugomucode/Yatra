@@ -206,32 +206,20 @@ export default function Home() {
       </nav>
 
       {/* ═══ HERO SECTION ═══ */}
-      <section className="relative pt-24 pb-32 overflow-hidden bg-gradient-to-br from-primary via-teal-600 to-secondary text-white">
-        {/* Pulsing background glow */}
+      <section className="relative pt-24 pb-32 overflow-hidden bg-background text-foreground">
+        {/* Subtle warm depth, no neon glows */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[700px] pointer-events-none">
           <motion.div
             animate={{
-              scale: [1, 1.1, 1],
-              opacity: [0.25, 0.45, 0.25]
+              scale: [1, 1.05, 1],
+              opacity: [0.1, 0.2, 0.1]
             }}
             transition={{
               duration: 8,
               repeat: Infinity,
               ease: "easeInOut"
             }}
-            className="absolute top-0 right-0 w-[600px] h-[600px] bg-white/20 rounded-full blur-[120px]"
-          />
-          <motion.div
-            animate={{
-              scale: [1.1, 1, 1.1],
-              opacity: [0.15, 0.35, 0.15]
-            }}
-            transition={{
-              duration: 10,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-            className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-secondary-soft/40 rounded-full blur-[100px]"
+            className="absolute top-0 right-0 w-[600px] h-[600px] bg-secondary rounded-full blur-[120px]"
           />
         </div>
 
@@ -244,30 +232,23 @@ export default function Home() {
             className="text-center max-w-4xl mx-auto"
           >
             <motion.div variants={itemVariants}>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 border border-white/25 backdrop-blur-sm mb-8 shadow-md">
-                <span className="w-2 h-2 rounded-full bg-primary-soft animate-pulse shadow-[0_0_12px_rgba(204,251,241,0.9)]" />
-                <span className="text-sm font-bold text-white tracking-tight">Now Live in Butwal, Nepal</span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20 mb-8">
+                <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                <span className="text-sm font-bold text-accent tracking-tight">Now Live in Butwal, Nepal</span>
               </div>
             </motion.div>
 
             <motion.h1
               variants={itemVariants}
-              className="text-5xl sm:text-6xl md:text-8xl font-black text-white tracking-tight mb-8 leading-[0.95]"
+              className="text-5xl sm:text-6xl md:text-8xl font-black text-foreground tracking-tight mb-8 leading-[0.95]"
             >
               Move Smarter. <br />
-              <motion.span
-                initial={{ backgroundPosition: '0% 50%' }}
-                animate={{ backgroundPosition: '100% 50%' }}
-                transition={{ duration: 5, repeat: Infinity, repeatType: "reverse" }}
-                className="text-transparent bg-clip-text bg-gradient-to-r from-primary-soft via-white to-secondary-soft"
-              >
-                Connect Better.
-              </motion.span>
+              <span className="text-primary">Connect Better.</span>
             </motion.h1>
 
             <motion.p
               variants={itemVariants}
-              className="text-lg sm:text-xl md:text-2xl text-white/85 mb-12 max-w-2xl mx-auto font-medium leading-relaxed"
+              className="text-lg sm:text-xl md:text-2xl text-muted-foreground mb-12 max-w-2xl mx-auto font-medium leading-relaxed"
             >
               Real-time transit tracking and seamless booking for Nepal.
               Experience safe, fast, and transparent travel at your fingertips.
@@ -280,22 +261,17 @@ export default function Home() {
             >
               <Link href="/auth?role=passenger&redirect=/passenger" className="w-full sm:w-auto">
                 <motion.div whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}>
-                  <Button className="w-full sm:w-auto h-16 min-h-14 px-10 text-lg font-black rounded-2xl bg-white text-primary hover:bg-primary-soft hover:text-primary-hover shadow-lg shadow-black/15 transition-all group overflow-hidden relative border-0">
+                  <Button className="w-full sm:w-auto h-16 min-h-14 px-10 text-lg font-black rounded-2xl shadow-sm border-0">
                     <span className="relative z-10 flex items-center">
                       Ride as Passenger
                       <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </span>
-                    <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
-                      animate={{ x: ['-120%', '120%'] }}
-                      transition={{ duration: 2.4, repeat: Infinity, ease: 'linear' }}
-                    />
                   </Button>
                 </motion.div>
               </Link>
               <Link href="/auth?role=driver&redirect=/driver" className="w-full sm:w-auto">
                 <motion.div whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}>
-                  <Button variant="outline" className="w-full sm:w-auto h-16 min-h-14 px-10 text-lg font-black rounded-2xl border-2 border-white/50 bg-white/10 text-white backdrop-blur-sm hover:bg-white/20 hover:border-white hover:text-white transition-all">
+                  <Button variant="secondary" className="w-full sm:w-auto h-16 min-h-14 px-10 text-lg font-black rounded-2xl">
                     Drive with Yatra
                   </Button>
                 </motion.div>
@@ -304,7 +280,7 @@ export default function Home() {
 
             <motion.div
               variants={itemVariants}
-              className="mt-20 flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-white/80 sm:opacity-90 sm:grayscale sm:hover:grayscale-0 transition-all duration-700"
+              className="mt-20 flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-muted-foreground transition-all duration-700"
             >
               {[
                 { icon: ShieldCheck, text: "Verified Drivers" },
@@ -312,8 +288,8 @@ export default function Home() {
                 { icon: Smartphone, text: "Paperless Tickets" }
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-2.5">
-                  <item.icon className="w-5 h-5 text-white" />
-                  <span className="text-sm font-bold text-white tracking-tight">{item.text}</span>
+                  <item.icon className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-sm font-bold text-muted-foreground tracking-tight">{item.text}</span>
                 </div>
               ))}
             </motion.div>

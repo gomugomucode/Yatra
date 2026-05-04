@@ -4,179 +4,169 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+@theme {
   --font-sans: var(--font-outfit);
   --font-mono: var(--font-jetbrains-mono);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
+
+  --radius: 0.625rem;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --color-section: var(--section);
-  --color-surface: var(--surface);
-  --color-surface-soft: var(--surface-soft);
-  --color-primary-hover: var(--primary-hover);
-  --color-primary-soft: var(--primary-soft);
-  --color-secondary-soft: var(--secondary-soft);
-  --color-accent-soft: var(--accent-soft);
-}
 
-:root {
-  --radius: 0.625rem;
+  --color-background: #FDFAF7;
+  --color-foreground: #1A1208;
 
-  --background: #F5F7FA;
-  --section: #EEF4FA;
-  --surface: #FFFFFF;
-  --surface-soft: #F8FAFC;
-  --foreground: #1E293B;
+  --color-card: #F5EFE8;
+  --color-card-foreground: #1A1208;
 
-  --card: #FFFFFF;
-  --card-foreground: #1E293B;
+  --color-popover: #F5EFE8;
+  --color-popover-foreground: #1A1208;
 
-  --popover: #FFFFFF;
-  --popover-foreground: #1E293B;
+  --color-border: #D4C4B0;
+  --color-input: #F5EFE8;
+  --color-ring: #C4501A;
 
-  --primary: #0F766E;
-  --primary-hover: #115E59;
-  --primary-soft: #CCFBF1;
-  --primary-foreground: #FFFFFF;
+  --color-primary: #C4501A;
+  --color-primary-foreground: #FFFFFF;
 
-  --secondary: #4F46E5;
-  --secondary-soft: #E0E7FF;
-  --secondary-foreground: #FFFFFF;
+  --color-secondary: #2D6A9F;
+  --color-secondary-foreground: #FFFFFF;
 
-  --muted: #F1F5F9;
-  --muted-foreground: #64748B;
+  --color-accent: #8B5E3C;
+  --color-accent-foreground: #FFFFFF;
 
-  --accent: #F59E0B;
-  --accent-soft: #FEF3C7;
-  --accent-foreground: #FFFFFF;
+  --color-muted: #F5EFE8;
+  --color-muted-foreground: #6B5B4E;
 
-  --destructive: #EF4444;
-  --destructive-foreground: #FFFFFF;
+  --color-destructive: #B44A4A;
+  --color-success: #55785A;
+  --color-warning: #C78D4A;
+  --color-info: #4A7B9B;
 
-  --border: #D7DFE8;
-  --input: #D7DFE8;
-  --ring: #0F766E;
+  --color-seat-available: #6E8C73;
+  --color-seat-selected: #C4501A;
+  --color-seat-booked: #B8B0A8;
+  --color-seat-expiring: #C78D4A;
 
-  --chart-1: #0F766E;
-  --chart-2: #0ea5e9;
-  --chart-3: #fbbf24;
-  --chart-4: #38bdf8;
-  --chart-5: #fb7185;
+  --color-driver-online: #55785A;
+  --color-driver-offline: #B8B0A8;
+  --color-driver-busy: #C78D4A;
 
-  --sidebar: #F8F9FA;
-  --sidebar-foreground: #1e293b;
-  --sidebar-primary: #0F766E;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F1F5F9;
-  --sidebar-accent-foreground: #334155;
-  --sidebar-border: #E2E8F0;
-  --sidebar-ring: #0F766E;
+  --color-trip-idle: #B8B0A8;
+  --color-trip-active: #55785A;
+  --color-trip-completed: #2D6A9F;
+  --color-trip-cancelled: #B44A4A;
+
+  --color-route-primary: #C4501A;
+  --color-route-alternate: #8A7B6D;
+  --color-route-inactive: #D0C6B8;
+
+  --color-map-pin: #C4501A;
+  --color-map-cluster: #8A7B6D;
+
+  --color-signal-live: #55785A;
+  --color-signal-delayed: #C78D4A;
+  --color-signal-error: #B44A4A;
 }
 
 .dark {
-  --background: #0f172a;
-  --section: #1e293b;
-  --surface: #1e293b;
-  --surface-soft: #334155;
-  --foreground: #f8fafc;
+  @theme {
+    --color-background: #211915;
+    --color-foreground: #F5EFE8;
 
-  --card: #1e293b;
-  --card-foreground: #f8fafc;
+    --color-primary: #B64D1D;
+    --color-primary-foreground: #FDFAF7;
 
-  --popover: #1e293b;
-  --popover-foreground: #f8fafc;
+    --color-secondary: #352A24;
+    --color-secondary-foreground: #F5EFE8;
 
-  --primary: #2dd4bf;
-  --primary-hover: #14b8a6;
-  --primary-soft: #134e4a;
-  --primary-foreground: #042f2e;
+    --color-accent: #437CAE;
+    --color-accent-foreground: #FDFAF7;
 
-  --secondary: #818cf8;
-  --secondary-soft: #312e81;
-  --secondary-foreground: #f8fafc;
+    --color-card: #2A201B;
+    --color-card-foreground: #F5EFE8;
 
-  --muted: #334155;
-  --muted-foreground: #94a3b8;
+    --color-popover: #2A201B;
+    --color-popover-foreground: #F5EFE8;
 
-  --accent: #fbbf24;
-  --accent-soft: #422006;
-  --accent-foreground: #422006;
+    --color-muted: #352A24;
+    --color-muted-foreground: #A59A8E;
 
-  --destructive: #f87171;
-  --destructive-foreground: #450a0a;
+    --color-border: #453930;
+    --color-input: #2A201B;
+    --color-ring: #B64D1D;
 
-  --border: #334155;
-  --input: #475569;
-  --ring: #2dd4bf;
+    --color-destructive: #D35C5C;
+    --color-success: #6F9474;
+    --color-warning: #DE9F56;
+    --color-info: #5F95B5;
 
-  --sidebar: #1e293b;
-  --sidebar-foreground: #f8fafc;
-  --sidebar-primary: #2dd4bf;
-  --sidebar-primary-foreground: #042f2e;
-  --sidebar-accent: #334155;
-  --sidebar-accent-foreground: #e2e8f0;
-  --sidebar-border: #334155;
-  --sidebar-ring: #2dd4bf;
+    --color-seat-available: #6F9474;
+    --color-seat-selected: #B64D1D;
+    --color-seat-booked: #594D44;
+    --color-seat-expiring: #DE9F56;
+
+    --color-driver-online: #6F9474;
+    --color-driver-offline: #594D44;
+    --color-driver-busy: #DE9F56;
+
+    --color-trip-idle: #594D44;
+    --color-trip-active: #6F9474;
+    --color-trip-completed: #437CAE;
+    --color-trip-cancelled: #D35C5C;
+
+    --color-route-primary: #437CAE;
+    --color-route-alternate: #6C5E54;
+    --color-route-inactive: #453930;
+
+    --color-map-pin: #B64D1D;
+    --color-map-cluster: #437CAE;
+
+    --color-signal-live: #6F9474;
+    --color-signal-delayed: #DE9F56;
+    --color-signal-error: #D35C5C;
+  }
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
 
-  html {
-    @apply scroll-smooth;
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-border, currentColor);
   }
 
   body {
-    @apply text-foreground bg-background antialiased selection:bg-primary-soft selection:text-primary;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji");
   }
-}
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
+  ::selection {
+    background-color: var(--color-accent);
+    color: var(--color-accent-foreground);
+  }
 
-::-webkit-scrollbar-track {
-  @apply bg-muted/50;
-}
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
 
-::-webkit-scrollbar-thumb {
-  @apply bg-border rounded-full hover:bg-muted-foreground/30 transition-colors;
+  ::-webkit-scrollbar-track {
+    background-color: var(--color-muted);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--color-border);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-primary);
+  }
 }
 
 /* Utility classes for the new SaaS UI */

@@ -11,7 +11,11 @@ import {
   Navigation,
   Users,
   MapPin,
-  Bus as BusIcon
+  Bus as BusIcon,
+  LayoutDashboard,
+  Route,
+  CircleDollarSign,
+  UserRound,
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -87,6 +91,7 @@ export default function DriverDashboard() {
   const [driverEta, setDriverEta] = useState<number | null>(null);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'trips' | 'earnings' | 'profile'>('dashboard');
   const [ratingTripId, setRatingTripId] = useState<string | null>(null);
   const [ratingPassengerName, setRatingPassengerName] = useState<string>('');
   const driverProfile = userData && userData.role === 'driver' ? userData as Driver : null;
@@ -1025,6 +1030,13 @@ export default function DriverDashboard() {
     );
   }
 
+  const completedTrips = passengers.filter((p: any) => p?.status === 'dropped').length;
+  const activeTripsCount = passengers.filter((p: any) => p?.status === 'waiting' || p?.status === 'onBoard').length;
+  const estimatedEarnings = passengers.reduce((sum: number, p: any) => {
+    const fare = typeof p?.fare === 'number' ? p.fare : 0;
+    return sum + fare;
+  }, 0);
+
   return (
     <div className="min-h-screen flex flex-col overflow-y-auto bg-background" style={{ WebkitOverflowScrolling: 'touch' }}>
 
@@ -1182,56 +1194,117 @@ export default function DriverDashboard() {
           </section>
         )}
 
-        {/* Vehicle Status */}
-        <section className="rounded-2xl border border-border overflow-hidden bg-card shadow-sm">
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-surface-soft">
-            <div className="flex items-center gap-2">
-              <BusIcon className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-[11px] font-black tracking-widest text-muted-foreground uppercase">Vehicle Status</span>
-            </div>
-            {process.env.NODE_ENV === 'development' && (
-              <Button variant="ghost" size="sm" className="h-5 text-[10px] text-foreground/90 hover:text-red-500 px-2" onClick={triggerManualTest}>Test Crash</Button>
-            )}
-          </div>
-          <div className="p-4">
-            {selectedBus ? (
-              <DriverPanel
-                bus={selectedBus}
-                onLocationToggle={handleLocationToggle}
-                locationEnabled={locationEnabled}
-                onAddOfflinePassenger={handleAddOfflinePassenger}
-                onRemoveOfflinePassenger={handleRemoveOfflinePassenger}
-              />
-            ) : (
-              <div className="py-8 text-center space-y-2">
-                <BusIcon className="w-7 h-7 text-slate-300 mx-auto" />
-                <p className="text-foreground font-bold text-sm">No vehicle assigned</p>
-                <p className="text-muted-foreground text-xs">Complete your driver profile to link a vehicle.</p>
+        {activeTab === 'dashboard' && (
+          <>
+            {/* Vehicle Status */}
+            <section className="rounded-2xl border border-border overflow-hidden bg-card shadow-sm">
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-surface-soft">
+                <div className="flex items-center gap-2">
+                  <BusIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-[11px] font-black tracking-widest text-muted-foreground uppercase">Vehicle Status</span>
+                </div>
+                {process.env.NODE_ENV === 'development' && (
+                  <Button variant="ghost" size="sm" className="h-5 text-[10px] text-foreground/90 hover:text-red-500 px-2" onClick={triggerManualTest}>Test Crash</Button>
+                )}
               </div>
-            )}
-          </div>
-        </section>
+              <div className="p-4">
+                {selectedBus ? (
+                  <DriverPanel
+                    bus={selectedBus}
+                    onLocationToggle={handleLocationToggle}
+                    locationEnabled={locationEnabled}
+                    onAddOfflinePassenger={handleAddOfflinePassenger}
+                    onRemoveOfflinePassenger={handleRemoveOfflinePassenger}
+                  />
+                ) : (
+                  <div className="py-8 text-center space-y-2">
+                    <BusIcon className="w-7 h-7 text-slate-300 mx-auto" />
+                    <p className="text-foreground font-bold text-sm">No vehicle assigned</p>
+                    <p className="text-muted-foreground text-xs">Complete your driver profile to link a vehicle.</p>
+                  </div>
+                )}
+              </div>
+            </section>
 
-        {/* Passengers */}
-        <section className="rounded-2xl border border-border overflow-hidden bg-card shadow-sm">
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-surface-soft">
-            <div className="flex items-center gap-2">
-              <Users className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-[11px] font-black tracking-widest text-muted-foreground uppercase">Passengers</span>
+            {/* Passengers */}
+            <section className="rounded-2xl border border-border overflow-hidden bg-card shadow-sm">
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-surface-soft">
+                <div className="flex items-center gap-2">
+                  <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-[11px] font-black tracking-widest text-muted-foreground uppercase">Passengers</span>
+                </div>
+                <span className="text-[11px] font-bold text-muted-foreground bg-slate-100 border border-border/50 rounded-full px-2.5 py-0.5">{passengers.length}</span>
+              </div>
+              <div className="p-4">
+                <PassengerList
+                  passengers={passengers}
+                  selectedBus={selectedBus}
+                  onPassengerPickup={handlePassengerPickup}
+                  onPassengerDropoff={handlePassengerDropoff}
+                />
+              </div>
+            </section>
+          </>
+        )}
+
+        {activeTab === 'trips' && (
+          <section className="rounded-2xl border border-border bg-card shadow-sm p-4 space-y-3">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground font-black">Trip Overview</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-primary/20 bg-primary-soft/50 p-3">
+                <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wide">Active</p>
+                <p className="text-2xl font-black text-primary">{activeTripsCount}</p>
+              </div>
+              <div className="rounded-xl border border-secondary/20 bg-secondary-soft/40 p-3">
+                <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wide">Completed</p>
+                <p className="text-2xl font-black text-secondary">{completedTrips}</p>
+              </div>
             </div>
-            <span className="text-[11px] font-bold text-muted-foreground bg-slate-100 border border-border/50 rounded-full px-2.5 py-0.5">{passengers.length}</span>
-          </div>
-          <div className="p-4">
             <PassengerList
               passengers={passengers}
               selectedBus={selectedBus}
               onPassengerPickup={handlePassengerPickup}
               onPassengerDropoff={handlePassengerDropoff}
             />
-          </div>
-        </section>
+          </section>
+        )}
 
-        <div className="h-2" />
+        {activeTab === 'earnings' && (
+          <section className="rounded-2xl border border-border bg-card shadow-sm p-4 space-y-3">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground font-black">Earnings</p>
+            <div className="rounded-2xl border border-accent/30 bg-accent-soft/40 p-4">
+              <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-bold">Estimated Today</p>
+              <p className="mt-1 text-3xl font-black text-accent">NPR {estimatedEarnings.toLocaleString()}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-border bg-surface-soft p-3">
+                <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wide">Trips</p>
+                <p className="text-xl font-black text-foreground">{completedTrips}</p>
+              </div>
+              <div className="rounded-xl border border-border bg-surface-soft p-3">
+                <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wide">Passengers</p>
+                <p className="text-xl font-black text-foreground">{passengers.length}</p>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'profile' && (
+          <section className="rounded-2xl border border-border bg-card shadow-sm p-4 space-y-3">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground font-black">Driver Profile</p>
+            <p className="text-lg font-black text-foreground">{userData?.name || 'Driver'}</p>
+            <p className="text-sm text-muted-foreground">{userData?.email || currentUser?.email || 'No email on file'}</p>
+            <Button
+              className="h-11 min-h-11 bg-accent hover:bg-amber-600 text-white font-bold"
+              onClick={() => setShowProfileDialog(true)}
+            >
+              <UserRound className="w-4 h-4 mr-2" />
+              Open Driver Profile
+            </Button>
+          </section>
+        )}
+
+        <div className="h-24" />
       </div>
 
       {/* Trip Request Panel (fixed bottom sheet) */}
@@ -1267,8 +1340,8 @@ export default function DriverDashboard() {
         </div>
       </div>
 
-      {/* Fixed bottom bar: status + SOS */}
-      <div className="fixed inset-x-0 bottom-0 z-1200 border-t border-border bg-background/95 backdrop-blur-xl px-4 py-2.5 flex items-center justify-between">
+      {/* Floating status + SOS */}
+      <div className="fixed inset-x-3 bottom-16 z-1200 border border-border rounded-2xl bg-background/95 backdrop-blur-xl px-4 py-2.5 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
           <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">{isOnline ? 'Live tracking active' : 'Offline'}</span>
@@ -1298,6 +1371,49 @@ export default function DriverDashboard() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <nav
+        aria-label="Driver tabs"
+        className="fixed inset-x-0 bottom-0 z-[1300] border-t border-border bg-background/95 backdrop-blur-xl px-3 py-2"
+      >
+        <div className="mx-auto grid max-w-md grid-cols-4 gap-2">
+          <Button
+            variant="ghost"
+            className={`min-h-11 flex-col gap-1 rounded-xl ${activeTab === 'dashboard' ? 'bg-primary-soft text-primary' : 'text-muted-foreground'}`}
+            onClick={() => setActiveTab('dashboard')}
+          >
+            <LayoutDashboard className="h-4 w-4" />
+            <span className="text-[10px] font-black tracking-wide">Dashboard</span>
+          </Button>
+          <Button
+            variant="ghost"
+            className={`min-h-11 flex-col gap-1 rounded-xl ${activeTab === 'trips' ? 'bg-primary-soft text-primary' : 'text-muted-foreground'}`}
+            onClick={() => setActiveTab('trips')}
+          >
+            <Route className="h-4 w-4" />
+            <span className="text-[10px] font-black tracking-wide">Trips</span>
+          </Button>
+          <Button
+            variant="ghost"
+            className={`min-h-11 flex-col gap-1 rounded-xl ${activeTab === 'earnings' ? 'bg-primary-soft text-primary' : 'text-muted-foreground'}`}
+            onClick={() => setActiveTab('earnings')}
+          >
+            <CircleDollarSign className="h-4 w-4" />
+            <span className="text-[10px] font-black tracking-wide">Earnings</span>
+          </Button>
+          <Button
+            variant="ghost"
+            className={`min-h-11 flex-col gap-1 rounded-xl ${activeTab === 'profile' ? 'bg-primary-soft text-primary' : 'text-muted-foreground'}`}
+            onClick={() => {
+              setActiveTab('profile');
+              setShowProfileDialog(true);
+            }}
+          >
+            <UserRound className="h-4 w-4" />
+            <span className="text-[10px] font-black tracking-wide">Profile</span>
+          </Button>
+        </div>
+      </nav>
     </div>
   );
 }
