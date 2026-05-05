@@ -234,7 +234,7 @@ export default function Home() {
             <motion.div variants={itemVariants}>
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20 mb-8">
                 <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                <span className="text-sm font-bold text-accent tracking-tight">Now Live in Butwal, Nepal</span>
+                <span className="text-sm font-bold text-accent-foreground tracking-tight">Now Live in Butwal, Nepal</span>
               </div>
             </motion.div>
 

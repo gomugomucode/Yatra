@@ -123,7 +123,7 @@ export default function YatraHero({
           <p className="yatra-subtitle">Nepal&apos;s Transit, Tokenized.</p>
           <p className="yatra-body mt-3">
             Real-time tracking meets Solana-powered security.
-            <span className="text-accent"> Experience the movement.</span>
+            <span className="text-accent-foreground"> Experience the movement.</span>
           </p>
         </div>
 

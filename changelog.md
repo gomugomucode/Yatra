@@ -2,6 +2,16 @@
 
 All notable changes to the Yatra project will be documented in this file.
 
+## [1.8.1] - 2026-05-05
+### CSS Stability & Visual Polish
+
+#### CSS Parsing & Theme Stability
+- **Global Imports**: Fixed a Turbopack build error by moving the Google Fonts `@import url()` to the absolute top of `globals.css`, ahead of all Tailwind injections. This ensures strict CSS parsing compliance.
+
+#### Accessibility & Visibility
+- **Contrast & Visibility Fixes**: Identified a widespread issue where the semantic `text-accent` token (which maps to a light background color in the Pashmina Rust theme) was rendering text invisible on light backgrounds. Replaced all instances of `text-accent` with the correct `text-accent-foreground` token across `button.tsx`, `page.tsx`, `driver/page.tsx`, `YatraHero.tsx`, and `YatraOnboardingWizard.tsx`.
+- **Button Definition**: Added `border border-accent/20` to the `secondary` button variant in `components/ui/button.tsx` to ensure its bounds are clearly visible, preventing the button from visually merging into the light page background.
+
 ## [1.8.0] - 2026-05-05
 ### Pashmina Rust Theme Redesign & ReactBits Integration
 

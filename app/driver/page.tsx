@@ -1274,7 +1274,7 @@ export default function DriverDashboard() {
             <p className="text-xs uppercase tracking-widest text-muted-foreground font-black">Earnings</p>
             <div className="rounded-2xl border border-accent/30 bg-accent-soft/40 p-4">
               <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-bold">Estimated Today</p>
-              <p className="mt-1 text-3xl font-black text-accent">NPR {estimatedEarnings.toLocaleString()}</p>
+              <p className="mt-1 text-3xl font-black text-accent-foreground">NPR {estimatedEarnings.toLocaleString()}</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl border border-border bg-surface-soft p-3">

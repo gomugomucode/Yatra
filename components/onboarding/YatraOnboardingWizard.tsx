@@ -402,7 +402,7 @@ export function YatraOnboardingWizard({ initialRole, onComplete }: YatraOnboardi
                             className={`peer h-12 rounded-xl border bg-section/40 px-11 text-sm text-white outline-none transition-all focus:ring-2 ${errors.birthYear ? 'border-red-500/50 focus:ring-red-500/20' : 'border-border focus:border-amber-500/60 focus:ring-amber-500/20'}`}
                           />
                           <Calendar className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-400" />
-                          <label className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 rounded-full bg-card px-2 text-[10px] text-muted-foreground transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-focus:-top-2 peer-focus:text-[10px] peer-focus:text-accent">
+                          <label className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 rounded-full bg-card px-2 text-[10px] text-muted-foreground transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-focus:-top-2 peer-focus:text-[10px] peer-focus:text-accent-foreground">
                             Birth Year
                           </label>
                         </div>
