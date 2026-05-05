@@ -101,7 +101,7 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
           <Button
             variant="ghost"
             size="icon"
-            className="w-9 h-9 rounded-full bg-white border border-slate-200 text-slate-900 hover:bg-slate-50 shadow-sm"
+            className="w-11 h-11 min-w-11 min-h-11 rounded-full bg-card border border-border text-foreground hover:bg-surface-soft shadow-md"
           >
             <span className="text-sm font-black">{initial}</span>
           </Button>
@@ -110,7 +110,7 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
       <SheetContent
         side="right"
         /* z-[10000] makes it sit on top of any Map, Zoom buttons, or popups */
-        className="w-full max-w-md border-l border-slate-200 bg-white p-0 flex flex-col overflow-hidden z-[10000] shadow-2xl"
+        className="w-full max-w-md border-l border-border bg-card p-0 flex flex-col overflow-hidden z-[10000] shadow-2xl"
       >
         <SheetHeader className="sr-only">
           <SheetTitle>Yatra Profile</SheetTitle>
@@ -123,13 +123,13 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
           className="flex flex-col h-full max-h-screen overflow-y-auto custom-scrollbar"
         >
           {/* Profile Card - Using a much lighter background for contrast */}
-          <div className="p-6 bg-slate-50 border-b border-slate-100">
+          <div className="p-6 bg-surface-soft border-b border-border">
             <div className="flex items-center gap-4">
               <div className="h-16 w-16 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-2xl font-black text-white shadow-md ring-2 ring-white">
                 {initial}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-xl text-slate-900 tracking-tight">{displayName}</p>
+                <p className="font-bold text-xl text-foreground tracking-tight">{displayName}</p>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="inline-flex items-center rounded-full bg-cyan-50 border border-cyan-200 px-2.5 py-0.5 text-[10px] font-black text-cyan-700 tracking-widest uppercase">
                     PASSENGER
@@ -137,30 +137,30 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
                 </div>
               </div>
             </div>            {wallet && (
-              <div className="mt-5 flex items-center gap-2 rounded-xl bg-white border border-slate-200 px-4 py-3 shadow-sm">
+              <div className="mt-5 flex items-center gap-2 rounded-xl bg-card border border-border px-4 py-3 shadow-md">
                 <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-sm animate-pulse" />
-                <span className="text-xs font-medium text-slate-600">Connected Wallet</span>
+                <span className="text-xs font-medium text-muted-foreground">Connected Wallet</span>
                 <span className="text-xs font-mono text-cyan-600 ml-auto">{truncateAddress(wallet)}</span>
               </div>
             )}
           </div>
 
           {/* Digital wallet */}
-          <div className="p-6 border-b border-slate-100">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-600 mb-4 flex items-center gap-2">
+          <div className="p-6 border-b border-border">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
               <Wallet className="w-3.5 h-3.5" />
               Digital Wallet
             </h3>
-            <div className="rounded-xl bg-slate-50 border border-slate-200 p-5 space-y-4">
+            <div className="rounded-xl bg-surface-soft border border-border p-5 space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-600">Balance</span>
-                <span className="text-slate-900 font-bold text-base">0.00 SOL · 0 YTR</span>
+                <span className="text-sm text-muted-foreground">Balance</span>
+                <span className="text-foreground font-bold text-base">0.00 SOL · 0 YTR</span>
               </div>
               <div className="flex gap-3">
                 <Button
                   variant="outline"
                   size="sm"
-                   className="flex-1 h-10 border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                   className="flex-1 h-11 min-h-11 border-border bg-card text-muted-foreground hover:bg-surface-soft"
                   onClick={handleCopyAddress}
                   disabled={!wallet}
                 >
@@ -180,15 +180,15 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
           </div>
 
           {/* Recent Journey NFTs - With Solid Card background */}
-          <div className="p-6 border-b border-slate-100">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-600 mb-4 flex items-center gap-2">
+          <div className="p-6 border-b border-border">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
               <Ticket className="w-3.5 h-3.5" />
               Recent Journey NFTs
             </h3>
             <div className="overflow-x-auto pb-2 -mx-1 flex gap-4 snap-x snap-mandatory">
               {bookingsWithReceipts.length === 0 ? (
-                <div className="w-full py-8 text-center rounded-xl bg-slate-50 border border-dashed border-slate-200">
-                  <p className="text-xs text-slate-500 font-black uppercase tracking-widest">No tickets minted yet</p>
+                <div className="w-full py-8 text-center rounded-xl bg-surface-soft border border-dashed border-border">
+                  <p className="text-xs text-muted-foreground font-black uppercase tracking-widest">No tickets minted yet</p>
                 </div>
               ) : (
                 bookingsWithReceipts.map((booking) => {
@@ -196,13 +196,13 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
                   const longDistance = isLongDistance(booking);
                   return (
                        <div key={booking.id}
-                       className={`flex-shrink-0 w-48 snap-center rounded-xl border p-4 bg-white shadow-md ${longDistance ? 'border-amber-200' : 'border-cyan-200' }`}
+                       className={`flex-shrink-0 w-48 snap-center rounded-xl border p-4 bg-card shadow-md ${longDistance ? 'border-accent/35' : 'border-primary/25' }`}
                     >
-                      <p className="text-[10px] text-slate-600 font-bold uppercase">MAR 06, 2026</p>
-                      <p className="text-sm font-bold text-slate-900 mt-1 truncate">Butwal ➔ KTM</p>
+                      <p className="text-[10px] text-muted-foreground font-bold uppercase">MAR 06, 2026</p>
+                      <p className="text-sm font-bold text-foreground mt-1 truncate">Butwal ➔ KTM</p>
                       <div className="mt-3 flex items-center justify-between">
                          <span className="text-[10px] font-bold text-emerald-600">+{carbon}kg CO₂</span>
-                        <ExternalLink className="w-3 h-3 text-slate-600" />
+                        <ExternalLink className="w-3 h-3 text-muted-foreground" />
                       </div>
                     </div>
                   );
@@ -212,7 +212,7 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
           </div>
 
           {/* Action list */}
-          <div className="p-6 flex-1 bg-white">
+          <div className="p-6 flex-1 bg-background">
             <nav className="space-y-2">
               {[
                 {
@@ -259,15 +259,15 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
                 <button
                   key={item.label}
                   onClick={item.onClick}
-                   className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all group"
+                   className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-bold text-muted-foreground hover:bg-surface-soft hover:text-foreground transition-all group"
                 >
-                  <item.icon className="w-4 h-4 text-slate-600 group-hover:text-cyan-400 transition-colors" />
+                  <item.icon className="w-4 h-4 text-muted-foreground group-hover:text-cyan-400 transition-colors" />
                   {item.label}
                 </button>
               ))}
             </nav>
 
-            <div className="mt-8 pt-6 border-t border-slate-100">
+            <div className="mt-8 pt-6 border-t border-border">
               <Button
                 variant="ghost"
                 className="w-full justify-start gap-4 px-4 h-12 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl"

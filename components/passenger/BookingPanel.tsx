@@ -125,16 +125,16 @@ export default function BookingPanel({
 	};
 
 	return (
-		<Card className="bg-white border-slate-200 shadow-xl overflow-hidden">
-			<CardHeader className="pb-4 bg-slate-50 border-b border-slate-200">
+		<Card className="bg-card border-border shadow-xl overflow-hidden">
+			<CardHeader className="pb-4 bg-surface-soft border-b border-border">
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-3">
 						<div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
 							<Navigation className="w-5 h-5 text-emerald-400" />
 						</div>
 						<div>
-							<CardTitle className="text-lg font-bold text-slate-900">Ride Request</CardTitle>
-							<CardDescription className="text-slate-600 mt-1 flex flex-col gap-1">
+							<CardTitle className="text-lg font-bold text-foreground">Ride Request</CardTitle>
+							<CardDescription className="text-muted-foreground mt-1 flex flex-col gap-1">
 								{selectedBus ? (
 									<>
 										<span>Bus {selectedBus.busNumber} Selected</span>
@@ -161,7 +161,7 @@ export default function BookingPanel({
 							variant="ghost"
 							size="icon"
 							onClick={onReset}
-							className="h-8 w-8 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-900"
+							className="h-8 w-8 rounded-full hover:bg-slate-100 text-muted-foreground hover:text-foreground"
 						>
 							<X className="w-4 h-4" />
 							<span className="sr-only">Cancel Selection</span>
@@ -174,9 +174,9 @@ export default function BookingPanel({
 				{selectedBus ? (
 					<div className="space-y-4 animate-in slide-in-from-bottom-4 fade-in duration-500">
 						{/* Quick Info */}
-						<div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+						<div className="flex items-center justify-between p-3 bg-surface-soft rounded-xl border border-border">
 							<div>
-								<p className="text-xs text-slate-600 uppercase font-bold">ETA</p>
+								<p className="text-xs text-muted-foreground uppercase font-bold">ETA</p>
 								<p className="text-lg font-bold text-emerald-600">
 									{busToPickupDistance && busToPickupDistance < 1000
 										? `${Math.round(busToPickupDistance)}m`
@@ -186,45 +186,45 @@ export default function BookingPanel({
 								</p>
 							</div>
 							<div className="text-right">
-								<p className="text-xs text-slate-600 uppercase font-bold">Seats</p>
-								<p className="text-lg font-bold text-slate-900">{selectedBus.availableSeats}</p>
+								<p className="text-xs text-muted-foreground uppercase font-bold">Seats</p>
+								<p className="text-lg font-bold text-foreground">{selectedBus.availableSeats}</p>
 							</div>
 						</div>
 
 						{/* Optional Details Accordion */}
 						<details className="group">
-							<summary className="flex items-center justify-center gap-2 text-xs font-black text-slate-500 cursor-pointer hover:text-orange-600 transition-colors py-2 uppercase tracking-widest">
+							<summary className="flex items-center justify-center gap-2 text-xs font-black text-muted-foreground cursor-pointer hover:text-primary-hover transition-colors py-2 uppercase tracking-widest">
 								<span>BOOK Now</span>
 								<div className="w-4 h-4 transition-transform group-open:rotate-180">▼</div>
 							</summary>
-							<div className="pt-4 space-y-4 border-t border-slate-200 mt-2">
+							<div className="pt-4 space-y-4 border-t border-border mt-2">
 								<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 									<div className="space-y-2">
-										<Label htmlFor="name" className="text-xs font-bold text-slate-600 uppercase tracking-wider">Name</Label>
+										<Label htmlFor="name" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Name</Label>
 										<Input
 											id="name"
 											placeholder="Your Name"
 											value={passengerName}
 											onChange={(e) => setPassengerName(e.target.value)}
-											className={`bg-white border-slate-200 text-slate-900 h-10 ${validationErrors.name ? 'border-red-500' : ''}`}
+											className={`bg-card border-border text-foreground h-10 ${validationErrors.name ? 'border-red-500' : ''}`}
 										/>
 										{validationErrors.name && <p className="text-xs text-red-500">{validationErrors.name}</p>}
 									</div>
 									<div className="space-y-2">
-										<Label htmlFor="phone" className="text-xs font-bold text-slate-600 uppercase tracking-wider">Phone</Label>
+										<Label htmlFor="phone" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Phone</Label>
 										<Input
 											id="phone"
 											type="tel"
 											placeholder="Phone Number"
 											value={phoneNumber}
 											onChange={(e) => setPhoneNumber(e.target.value)}
-											className={`bg-white border-slate-200 text-slate-900 h-10 ${validationErrors.phone ? 'border-red-500' : ''}`}
+											className={`bg-card border-border text-foreground h-10 ${validationErrors.phone ? 'border-red-500' : ''}`}
 										/>
 										{validationErrors.phone && <p className="text-xs text-red-500">{validationErrors.phone}</p>}
 									</div>
 								</div>
 								<div className="space-y-2">
-									<Label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Passengers</Label>
+									<Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Passengers</Label>
 									<div className="flex flex-wrap gap-2">
 										{Array.from({ length: 5 }).map((_, idx) => (
 											<Button
@@ -232,7 +232,7 @@ export default function BookingPanel({
 												type="button"
 												size="sm"
 												variant={idx + 1 === numberOfPassengers ? 'default' : 'outline'}
-												className={`h-8 w-8 p-0 font-black ${idx + 1 === numberOfPassengers ? 'bg-blue-600' : 'bg-white border-slate-200 text-slate-600'}`}
+												className={`h-8 w-8 p-0 font-black ${idx + 1 === numberOfPassengers ? 'bg-secondary text-secondary-foreground' : 'bg-card border-border text-muted-foreground'}`}
 												onClick={() => setNumberOfPassengers(idx + 1)}
 											>
 												{idx + 1}
@@ -242,7 +242,7 @@ export default function BookingPanel({
 								</div>
 
 								<Button
-									className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-10 mt-2"
+									className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground font-bold h-11 min-h-11 mt-2"
 									onClick={() => handleBooking(false)}
 									disabled={loading || seatsUnavailable}
 								>
@@ -253,12 +253,12 @@ export default function BookingPanel({
 					</div>
 				) : (
 					/* Empty State */
-					<div className="text-center py-8 px-4 border-2 border-dashed border-slate-200 rounded-xl bg-orange-50">
-						<div className="w-12 h-12 rounded-full bg-white border border-slate-100 flex items-center justify-center mx-auto mb-3">
-							<Navigation className="w-6 h-6 text-slate-400" />
+					<div className="text-center py-8 px-4 border-2 border-dashed border-border rounded-xl bg-primary-soft">
+						<div className="w-12 h-12 rounded-full bg-card border border-border flex items-center justify-center mx-auto mb-3">
+							<Navigation className="w-6 h-6 text-muted-foreground" />
 						</div>
-						<p className="text-slate-600 font-medium mb-2">Select a Bus</p>
-						<p className="text-xs text-slate-600 max-w-[200px] mx-auto">
+						<p className="text-muted-foreground font-medium mb-2">Select a Bus</p>
+						<p className="text-xs text-muted-foreground max-w-[200px] mx-auto">
 							Tap any bus on the map to hail it instantly.
 						</p>
 					</div>

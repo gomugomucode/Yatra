@@ -2,6 +2,61 @@
 
 All notable changes to the Yatra project will be documented in this file.
 
+## [1.8.1] - 2026-05-05
+### CSS Stability & Visual Polish
+
+#### CSS Parsing & Theme Stability
+- **Global Imports**: Fixed a Turbopack build error by moving the Google Fonts `@import url()` to the absolute top of `globals.css`, ahead of all Tailwind injections. This ensures strict CSS parsing compliance.
+
+#### Accessibility & Visibility
+- **Contrast & Visibility Fixes**: Identified a widespread issue where the semantic `text-accent` token (which maps to a light background color in the Pashmina Rust theme) was rendering text invisible on light backgrounds. Replaced all instances of `text-accent` with the correct `text-accent-foreground` token across `button.tsx`, `page.tsx`, `driver/page.tsx`, `YatraHero.tsx`, and `YatraOnboardingWizard.tsx`.
+- **Button Definition**: Added `border border-accent/20` to the `secondary` button variant in `components/ui/button.tsx` to ensure its bounds are clearly visible, preventing the button from visually merging into the light page background.
+
+## [1.8.0] - 2026-05-05
+### Pashmina Rust Theme Redesign & ReactBits Integration
+
+#### Global Design System
+- Overhauled the global UI to match a new "Pashmina Rust" theme, emphasizing a warm cream base, light beige surfaces, rust primary accents, and desaturated lake blue highlights.
+- Implemented a complete CSS variable-based token system using Tailwind v4 `@theme`, stripping out all legacy hardcoded colors (`bg-white`, `text-black`, `border-gray-200`) and harsh gradient backgrounds (`bg-gradient-to-br`).
+- Ensured the light theme (`var(--background)`: `#FDFAF7`) acts as the default, offering a calm, minimal, fabric-inspired visual aesthetic without neon glows or harsh contrasts.
+
+#### Component Refactoring
+- **Hero Section**: Replaced harsh teal/green backgrounds with a flat warm cream base and subtle blurred beige depth. Switched primary CTAs to solid rust without continuous glow loops.
+- **Buttons**: Adjusted `buttonVariants` to strictly enforce the Rust (Primary) and Lake Blue (Secondary) dynamics without high-contrast drop shadows.
+- **UI States**: Refactored static hardcoded UI logic into semantic tokens (`--seat-available`, `--seat-selected`, `--seat-booked`, `--seat-expiring`).
+
+#### Dark Mode System
+- Implemented a fully semantic, `.dark` class-driven system supporting deep chocolate/espresso tones (`#211915`) as the background.
+- Refactored `layout.tsx` to handle hydration-safe theme persistence with a robust `useTheme` hook, toggling dark mode reliably without FOUC.
+
+#### Animation & ReactBits Integration
+- Designed the integration strategy for ReactBits.dev components to provide controlled, premium interactions that enhance clarity.
+- **Hero**: Added `BlurText` and `Aurora` (at 15% opacity) for subtle, slow motion.
+- **Metrics**: Added `CountUp` for dashboard data points.
+- **Interactions**: Applied `SpotlightCard` for seat selection glow and `Ripple` for live connection and map marker pulsing, minimizing distraction and removing visual noise.
+
+## [1.7.5] - 2026-05-02
+### Theme System Overhaul, Surface Layering, and Accessibility Polish
+
+#### Design System and Tokenization
+- Completed a repo-wide migration to semantic theme tokens centered on a calm neutral base with layered surfaces (`background`, `section`, `card`, `surface-soft`, `primary`, `secondary`, `accent`).
+- Standardized color usage across key pages and shared UI primitives to remove ad-hoc palette drift and improve long-term maintainability.
+- Added reusable utility patterns in `app/globals.css` for elevated cards, sunken surfaces, and touch-target consistency.
+
+#### Component and Page Refactors
+- Refactored major user-facing flows (`landing`, `auth`, `profile`, `driver`, `passenger`, `admin`) to align with the new teal/indigo-led visual hierarchy.
+- Updated foundational UI components (`Button`, `Input`, `Card`, `Dialog`, `Sheet`, `Navbar`) for consistent contrast, elevation, and interaction states.
+- Reworked hero and CTA styling to use branded gradients and semantic tokens while preserving readability and visual depth.
+
+#### Accessibility and Contrast Improvements
+- Replaced remaining hardcoded orange/inline hex accents in critical UI paths with token-aligned colors to reduce inconsistency and improve visual cohesion.
+- Tuned multiple low-contrast edge cases (inputs, map search, selection states, icon tones, disabled states) to better align with WCAG AA expectations.
+- Increased mobile ergonomics by enforcing larger tap targets (`min-h/min-w` utility patterns) in high-frequency controls.
+
+#### QA and Verification
+- Performed final repo-wide scans for hardcoded orange/legacy accent usage and resolved remaining findings in active UI components.
+- Verified touched files with linter checks after the final pass to ensure no new diagnostics were introduced.
+
 ## [1.7.4] - 2026-05-01
 ### Runtime Warning Remediation (Radix A11y + Firebase Indexing)
 

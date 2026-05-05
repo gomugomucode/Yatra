@@ -78,20 +78,20 @@ export default function LocationSearch({ onLocationSelect, placeholder = "Search
     return (
         <div ref={wrapperRef} className={`relative ${className}`}>
             <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder={placeholder}
-                    className="pl-9 bg-slate-50/80 border-slate-200 text-white placeholder:text-slate-600 focus:ring-cyan-500"
+                    className="pl-9 bg-surface-soft/80 border-border text-foreground placeholder:text-muted-foreground focus:ring-primary"
                 />
                 {loading && (
-                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-500 animate-spin" />
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary animate-spin" />
                 )}
             </div>
 
             {isOpen && results.length > 0 && (
-                <Card className="absolute top-full left-0 right-0 mt-2 z-50 bg-slate-50 border-slate-200 overflow-hidden shadow-xl">
+                <Card className="absolute top-full left-0 right-0 mt-2 z-50 bg-surface-soft border-border overflow-hidden shadow-xl">
                     <ul className="max-h-60 overflow-y-auto">
                         {results.map((result) => (
                             <li key={result.place_id}>
@@ -99,12 +99,12 @@ export default function LocationSearch({ onLocationSelect, placeholder = "Search
                                     onClick={() => handleSelect(result)}
                                     className="w-full text-left px-4 py-3 hover:bg-slate-100 transition-colors flex items-start gap-3 group"
                                 >
-                                    <MapPin className="w-4 h-4 text-slate-600 group-hover:text-cyan-400 mt-1 shrink-0" />
+                                    <MapPin className="w-4 h-4 text-muted-foreground group-hover:text-primary mt-1 shrink-0" />
                                     <div>
-                                        <div className="text-sm font-medium text-slate-200 group-hover:text-white">
+                                        <div className="text-sm font-medium text-foreground group-hover:text-primary-hover">
                                             {result.display_name.split(',')[0]}
                                         </div>
-                                        <div className="text-xs text-slate-600 line-clamp-1">
+                                        <div className="text-xs text-muted-foreground line-clamp-1">
                                             {result.display_name}
                                         </div>
                                     </div>

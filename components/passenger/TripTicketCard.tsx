@@ -43,7 +43,7 @@ export default function TripTicketCard({
 
     return (
         <div
-            className={`relative overflow-hidden rounded-2xl border transition-all duration-300 ${hasReceipt ? 'border-purple-200 bg-white shadow-md' : 'border-slate-200 bg-slate-50' }`}
+            className={`relative overflow-hidden rounded-2xl border transition-all duration-300 ${hasReceipt ? 'border-secondary/30 bg-card shadow-md' : 'border-border bg-surface-soft' }`}
         >
             {/* Decorative ticket-hole strip */}
             {hasReceipt && (
@@ -56,8 +56,8 @@ export default function TripTicketCard({
                     <div className="flex items-center gap-3">
                         <span className="text-3xl" role="img" aria-label="vehicle">{emoji}</span>
                         <div>
-                            <p className="font-black text-slate-900 text-sm">{route || 'Trip'}</p>
-                            <p className="text-xs text-slate-600 mt-0.5">
+                            <p className="font-black text-foreground text-sm">{route || 'Trip'}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
                                 {typeof timestamp === 'string' || timestamp instanceof Date
                                     ? new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                                     : 'Unknown date'
@@ -87,7 +87,7 @@ export default function TripTicketCard({
                         </div>
 
                         {/* Mint address */}
-                        <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 font-mono text-[11px] text-slate-600 flex items-center justify-between gap-2">
+                        <div className="bg-surface-soft rounded-xl p-3 border border-border font-mono text-[11px] text-muted-foreground flex items-center justify-between gap-2">
                             <span className="truncate">
                                 {receipt.mintAddress.slice(0, 8)}...{receipt.mintAddress.slice(-8)}
                             </span>
@@ -96,7 +96,7 @@ export default function TripTicketCard({
 
                         {/* Minted at */}
                         {receipt.mintedAt && (
-                            <p className="text-[11px] text-slate-600">
+                            <p className="text-[11px] text-muted-foreground">
                                 Minted: {formatTime(receipt.mintedAt)}
                             </p>
                         )}
@@ -112,7 +112,7 @@ export default function TripTicketCard({
                     </div>
                 ) : (
                     <div className="mt-3 flex flex-col gap-3">
-                        <div className="flex items-center gap-2 text-[11px] text-slate-600">
+                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                             <Ticket className="w-3.5 h-3.5" />
                             <span>
                                 {['cancelled', 'rejected', 'expired'].includes(booking.status) 
@@ -129,7 +129,7 @@ export default function TripTicketCard({
                                 size="sm"
                                 variant="outline"
                                 onClick={() => onReclaim(booking.id)}
-                                className="w-full h-9 text-xs font-bold border-orange-200 text-orange-600 hover:bg-orange-50"
+                                className="w-full h-9 text-xs font-bold border-primary/25 text-primary-hover hover:bg-primary-soft"
                             >
                                 Reclaim Locked Funds (SOL)
                             </Button>

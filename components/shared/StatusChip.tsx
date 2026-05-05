@@ -11,8 +11,8 @@ interface StatusChipProps {
 export function StatusChip({ status, className }: StatusChipProps) {
   const styles = {
     online: "bg-emerald-50 text-emerald-700 border-emerald-100",
-    offline: "bg-slate-100 text-slate-600 border-slate-200",
-    busy: "bg-orange-50 text-orange-700 border-orange-100",
+    offline: "bg-slate-100 text-muted-foreground border-border",
+    busy: "bg-primary-soft text-primary-hover border-primary/15",
     sos: "bg-red-50 text-red-700 border-red-200",
   };
 

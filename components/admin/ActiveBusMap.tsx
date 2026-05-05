@@ -66,7 +66,7 @@ export default function ActiveBusMap() {
     }, [buses.map(b => b.id).join(',')]); // Re-subscribe if bus list changes
 
     return (
-        <div className="w-full h-full rounded-xl overflow-hidden border border-slate-100 relative">
+        <div className="w-full h-full rounded-xl overflow-hidden border border-border relative">
             <MapWrapper
                 role="admin"
                 buses={buses}
@@ -76,14 +76,14 @@ export default function ActiveBusMap() {
             />
 
             {/* Legend Overlay */}
-            <div className="absolute top-4 right-4 z-[1000] bg-white/90 backdrop-blur p-3 rounded-lg shadow-lg border border-slate-200 text-xs text-slate-700">
+            <div className="absolute top-4 right-4 z-[1000] bg-card/95 backdrop-blur-md p-3 rounded-lg shadow-md border border-border text-xs text-foreground/90">
                 <div className="font-bold mb-2">Bus Status</div>
                 <div className="flex items-center gap-2 mb-1">
                     <span className="w-3 h-3 rounded-full bg-blue-500 border border-white shadow-sm"></span>
                     <span>Active (Moving)</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-slate-500 border border-white shadow-sm"></span>
+                    <span className="w-3 h-3 rounded-full bg-surface-soft0 border border-white shadow-sm"></span>
                     <span>Inactive (Offline)</span>
                 </div>
             </div>

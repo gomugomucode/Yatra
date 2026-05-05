@@ -1,127 +1,499 @@
+/* ============================================================
+   YATRA — Pashmina Rust Theme
+   globals.css · Tailwind v4 · ShadCN new-york · cssVariables:true
+   Stack: Next.js 16 · React 19 · tw-animate-css · Framer Motion 12
+   Internal name: bus-tra
+   ============================================================ */
+
+/* Google Fonts — Pashmina Rust pairing
+   Display: Sora (transport signage energy, uppercase tracking)
+   Body:    Outfit (warm, readable, works at small data-dense sizes)
+   Mono:    Geist Mono (wallet addresses, NFT hashes, seat IDs) */
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=Outfit:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap");
+
+/* ── Core imports ─────────────────────────────────────────── */
 @import "tailwindcss";
+@import "tw-animate-css";
 
-@plugin "tailwindcss-animate";
-
+/* ── Dark mode variant ────────────────────────────────────── */
 @custom-variant dark (&:is(.dark *));
 
+/* ── Tailwind v4 theme mapping ────────────────────────────── */
+/* Maps CSS custom properties → Tailwind utility classes.
+   e.g. bg-background, text-foreground, border-border, etc.   */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-outfit);
-  --font-mono: var(--font-jetbrains-mono);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
+  /* Typography */
+  --font-sans:    "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
+  --font-mono:    "Geist Mono", ui-monospace, monospace;
+
+  /* ShadCN token → Tailwind utility bridge */
+  --color-background:         var(--background);
+  --color-foreground:         var(--foreground);
+  --color-card:               var(--card);
+  --color-card-foreground:    var(--card-foreground);
+  --color-popover:            var(--popover);
   --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
+  --color-primary:            var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary:          var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted:              var(--muted);
+  --color-muted-foreground:   var(--muted-foreground);
+  --color-accent:             var(--accent);
+  --color-accent-foreground:  var(--accent-foreground);
+  --color-destructive:        var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border:             var(--border);
+  --color-input:              var(--input);
+  --color-ring:               var(--ring);
+
+  /* Chart palette — Pashmina Rust data visualization */
+  --color-chart-1:            var(--chart-1);
+  --color-chart-2:            var(--chart-2);
+  --color-chart-3:            var(--chart-3);
+  --color-chart-4:            var(--chart-4);
+  --color-chart-5:            var(--chart-5);
+
+  /* Sidebar tokens (ShadCN sidebar component) */
+  --color-sidebar:                    var(--sidebar);
+  --color-sidebar-foreground:         var(--sidebar-foreground);
+  --color-sidebar-primary:            var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent:             var(--sidebar-accent);
+  --color-sidebar-accent-foreground:  var(--sidebar-accent-foreground);
+  --color-sidebar-border:             var(--sidebar-border);
+  --color-sidebar-ring:               var(--sidebar-ring);
+
+  /* Yatra-specific semantic tokens (use these in components) */
+  --color-yatra-rust:        var(--yatra-rust);
+  --color-yatra-lake:        var(--yatra-lake);
+  --color-yatra-terracotta:  var(--yatra-terracotta);
+  --color-yatra-cream:       var(--yatra-cream);
+  --color-yatra-soil:        var(--yatra-soil);
+
+  /* Status tokens — seat availability, ZK states, NFT minting */
+  --color-seat-available:    var(--seat-available);
+  --color-seat-occupied:     var(--seat-occupied);
+  --color-seat-minting:      var(--seat-minting);
+  --color-zk-verified:       var(--zk-verified);
+  --color-zk-pending:        var(--zk-pending);
+
+  /* Border radius — new-york style uses tighter corners */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* ── Light mode (Pashmina Rust) ───────────────────────────── */
+/*
+   Palette logic:
+   Background:  warm cream #FDFAF7  — natural paper, not cold white
+   Card:        warm parchment #F5EFE8 — depth without darkness
+   Primary:     rust orange #C4501A  — Nepali clay pot, terracotta
+   Secondary:   lake blue #2D6A9F   — Himalayan lake reflection
+   Accent:      warm brown #8B5E3C  — mountain soil, aged wood
+   Destructive: deep crimson        — SOS / errors
+   Text:        near-black warm #1A1208
+   Muted text:  warm stone #6B5B4E
+*/
 :root {
-  --radius: 0.625rem;
+  --radius: 0.5rem;
 
-  --background: #FFFFFF;
-  --foreground: #111827;
+  /* Base surfaces */
+  --background:         oklch(98.5% 0.008 68);   /* #FDFAF7 warm cream    */
+  --foreground:         oklch(14%  0.025 55);    /* #1A1208 deep espresso */
+  --card:               oklch(95%  0.018 68);    /* #F5EFE8 parchment     */
+  --card-foreground:    oklch(14%  0.025 55);    /* #1A1208               */
+  --popover:            oklch(98%  0.01  68);    /* slightly warm white   */
+  --popover-foreground: oklch(14%  0.025 55);
 
-  --card: #FFFFFF;
-  --card-foreground: #111827;
+  /* Primary — Pashmina Rust orange */
+  --primary:            oklch(53%  0.178 40);    /* #C4501A rust          */
+  --primary-foreground: oklch(98.5% 0.008 68);  /* cream on rust         */
 
-  --popover: #FFFFFF;
-  --popover-foreground: #111827;
+  /* Secondary — Himalayan lake blue */
+  --secondary:          oklch(48%  0.12  248);   /* #2D6A9F lake blue     */
+  --secondary-foreground: oklch(98% 0.005 248);  /* pale blue-white       */
 
-  --primary: #f97316;
-  --primary-foreground: #FFFFFF;
+  /* Muted surfaces */
+  --muted:              oklch(91%  0.022 68);    /* #EDE3D6 warm linen    */
+  --muted-foreground:   oklch(43%  0.035 58);    /* #6B5B4E warm stone    */
 
-  --secondary: #F3F4F6;
-  --secondary-foreground: #1F2937;
+  /* Accent — warm soil brown */
+  --accent:             oklch(91%  0.022 68);    /* matches muted bg      */
+  --accent-foreground:  oklch(48%  0.08  58);    /* #8B5E3C warm brown    */
 
-  --muted: #F3F4F6;
-  --muted-foreground: #6B7280;
+  /* Destructive — Nepali crimson for SOS / delete */
+  --destructive:        oklch(51%  0.22  28);    /* deep crimson red      */
+  --destructive-foreground: oklch(98.5% 0.008 68);
 
-  --accent: #FFF7ED;
-  --accent-foreground: #C2410C;
+  /* Borders & inputs */
+  --border: oklch(82%  0.035 68);               /* #D4C4B0 warm tan      */
+  --input:  oklch(82%  0.035 68);
+  --ring:   oklch(53%  0.178 40);               /* rust focus ring       */
 
-  --destructive: #EF4444;
-  --destructive-foreground: #FFFFFF;
+  /* Charts — data viz in Pashmina Rust palette */
+  --chart-1: oklch(53%  0.178 40);              /* rust primary          */
+  --chart-2: oklch(48%  0.12  248);             /* lake blue             */
+  --chart-3: oklch(48%  0.08  58);              /* warm brown            */
+  --chart-4: oklch(62%  0.15  78);              /* amber-gold            */
+  --chart-5: oklch(38%  0.12  25);              /* deep terracotta       */
 
-  --border: #E5E7EB;
-  --input: #E5E7EB;
-  --ring: #f97316;
+  /* Sidebar — driver console left panel */
+  --sidebar:                    oklch(95%  0.018 68);  /* parchment card  */
+  --sidebar-foreground:         oklch(14%  0.025 55);
+  --sidebar-primary:            oklch(53%  0.178 40);  /* rust            */
+  --sidebar-primary-foreground: oklch(98.5% 0.008 68);
+  --sidebar-accent:             oklch(91%  0.022 68);  /* warm linen      */
+  --sidebar-accent-foreground:  oklch(14%  0.025 55);
+  --sidebar-border:             oklch(82%  0.035 68);  /* tan border      */
+  --sidebar-ring:               oklch(53%  0.178 40);
 
-  --chart-1: #f97316;
-  --chart-2: #0ea5e9;
-  --chart-3: #fbbf24;
-  --chart-4: #38bdf8;
-  --chart-5: #fb7185;
+  /* ── Yatra-specific semantic tokens ──────────────────────── */
 
-  --sidebar: #FFFFFF;
-  --sidebar-foreground: #111827;
-  --sidebar-primary: #f97316;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F3F4F6;
-  --sidebar-accent-foreground: #1F2937;
-  --sidebar-border: #E5E7EB;
-  --sidebar-ring: #f97316;
+  /* Brand palette (raw values, use in inline styles or extend above) */
+  --yatra-rust:       #C4501A;
+  --yatra-lake:       #2D6A9F;
+  --yatra-terracotta: #8B3A0F;
+  --yatra-cream:      #FDFAF7;
+  --yatra-soil:       #8B5E3C;
+
+  /* Seat status — used in passenger booking grid */
+  --seat-available: oklch(52%  0.15  148);    /* mountain green         */
+  --seat-occupied:  oklch(51%  0.22  28);     /* crimson — taken        */
+  --seat-minting:   oklch(52%  0.16  272);    /* indigo — NFT minting   */
+
+  /* ZK identity states */
+  --zk-verified: oklch(52%  0.15  148);       /* verified green         */
+  --zk-pending:  oklch(62%  0.15  78);        /* amber — proof pending  */
+
+  /* Sonner toast overrides */
+  --normal-bg:  oklch(95%  0.018 68);
+  --normal-text: oklch(14%  0.025 55);
+  --normal-border: oklch(82%  0.035 68);
+  --success-bg: oklch(93%  0.05  148);
+  --error-bg:   oklch(94%  0.04  28);
 }
 
+/* ── Dark mode (Pashmina Dusk) ────────────────────────────── */
+/*
+   Dark inversion: warm charcoal #1C1208 base, not cold slate.
+   Rust accent brightens to #E0673A for legibility.
+   Lake blue lifts to #5BA3D9.
+   Keeps the warmth — feels like firelight, not a terminal.
+*/
+.dark {
+  --background:         oklch(14%  0.022 55);   /* #1A1208 deep espresso */
+  --foreground:         oklch(95%  0.012 68);   /* warm cream text       */
+  --card:               oklch(18%  0.025 55);   /* #251810 lifted card   */
+  --card-foreground:    oklch(95%  0.012 68);
+  --popover:            oklch(18%  0.025 55);
+  --popover-foreground: oklch(95%  0.012 68);
+
+  /* Primary — rust brightened for dark bg legibility */
+  --primary:            oklch(65%  0.178 42);   /* #E0673A brighter rust */
+  --primary-foreground: oklch(14%  0.022 55);   /* dark on bright rust   */
+
+  /* Secondary — lake blue lifted */
+  --secondary:          oklch(60%  0.12  248);  /* #5BA3D9 lighter blue  */
+  --secondary-foreground: oklch(14%  0.022 55);
+
+  /* Muted */
+  --muted:              oklch(22%  0.025 55);   /* #2E1E14 deep surface  */
+  --muted-foreground:   oklch(65%  0.03  62);   /* #A08878 warm taupe    */
+
+  /* Accent */
+  --accent:             oklch(22%  0.025 55);
+  --accent-foreground:  oklch(75%  0.06  62);   /* lighter warm brown    */
+
+  /* Destructive */
+  --destructive:        oklch(60%  0.22  28);   /* brighter red on dark  */
+  --destructive-foreground: oklch(14%  0.022 55);
+
+  /* Borders */
+  --border: oklch(28%  0.03  55);              /* #3D2A1A subtle dark   */
+  --input:  oklch(28%  0.03  55);
+  --ring:   oklch(65%  0.178 42);              /* bright rust ring      */
+
+  /* Charts — dark mode variants */
+  --chart-1: oklch(65%  0.178 42);            /* bright rust           */
+  --chart-2: oklch(60%  0.12  248);           /* lifted lake blue      */
+  --chart-3: oklch(62%  0.08  58);            /* warm tan              */
+  --chart-4: oklch(72%  0.15  78);            /* bright amber          */
+  --chart-5: oklch(55%  0.15  28);            /* terracotta            */
+
+  /* Sidebar — dark driver console */
+  --sidebar:                    oklch(18%  0.025 55);
+  --sidebar-foreground:         oklch(95%  0.012 68);
+  --sidebar-primary:            oklch(65%  0.178 42);
+  --sidebar-primary-foreground: oklch(14%  0.022 55);
+  --sidebar-accent:             oklch(22%  0.025 55);
+  --sidebar-accent-foreground:  oklch(95%  0.012 68);
+  --sidebar-border:             oklch(28%  0.03  55);
+  --sidebar-ring:               oklch(65%  0.178 42);
+
+  /* Yatra semantic (dark variants) */
+  --seat-available: oklch(62%  0.15  148);
+  --seat-occupied:  oklch(60%  0.22  28);
+  --seat-minting:   oklch(62%  0.16  272);
+  --zk-verified:    oklch(62%  0.15  148);
+  --zk-pending:     oklch(72%  0.15  78);
+
+  /* Sonner dark toasts */
+  --normal-bg:   oklch(22%  0.025 55);
+  --normal-text: oklch(95%  0.012 68);
+  --normal-border: oklch(28%  0.03  55);
+}
+
+/* ── Base layer ───────────────────────────────────────────── */
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
 
   html {
-    @apply scroll-smooth;
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
   body {
-    @apply text-foreground bg-background antialiased selection:bg-orange-100 selection:text-orange-900;
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.6;
   }
+
+  /* Display headings use Sora — for hero, section titles, route names */
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+
+  h4, h5, h6 {
+    font-family: var(--font-sans);
+    font-weight: 500;
+    line-height: 1.3;
+  }
+
+  /* Monospace — for wallet addresses, NFT hashes, ZK proofs, seat IDs */
+  code, pre, kbd, .font-mono,
+  [data-wallet], [data-hash], [data-address] {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+  }
+
+  /* Selection color — warm rust */
+  ::selection {
+    background-color: oklch(53% 0.178 40 / 0.2);
+    color: oklch(14% 0.025 55);
+  }
+
+  /* Scrollbar — subtle and theme-aware */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: oklch(82% 0.035 68);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(70% 0.05 60);
+  }
+  .dark ::-webkit-scrollbar-thumb { background: oklch(28% 0.03 55); }
+  .dark ::-webkit-scrollbar-thumb:hover { background: oklch(38% 0.04 55); }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  @apply bg-slate-50;
-}
-
-::-webkit-scrollbar-thumb {
-  @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
-}
-
-/* Utility classes for the new SaaS UI */
+/* ── Yatra component utilities ────────────────────────────── */
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+
+  /* Font family utilities */
+  .font-display { font-family: var(--font-display); }
+  .font-body    { font-family: var(--font-sans); }
+
+  /* ── Seat status badge utilities ──────────────────────────── */
+  .seat-available {
+    background-color: color-mix(in oklch, var(--seat-available) 15%, transparent);
+    color: var(--seat-available);
+    border: 1px solid color-mix(in oklch, var(--seat-available) 35%, transparent);
   }
+  .seat-occupied {
+    background-color: color-mix(in oklch, var(--seat-occupied) 12%, transparent);
+    color: var(--seat-occupied);
+    border: 1px solid color-mix(in oklch, var(--seat-occupied) 30%, transparent);
+  }
+  .seat-minting {
+    background-color: color-mix(in oklch, var(--seat-minting) 15%, transparent);
+    color: var(--seat-minting);
+    border: 1px solid color-mix(in oklch, var(--seat-minting) 35%, transparent);
+  }
+
+  /* ── ZK verification state utilities ─────────────────────── */
+  .zk-verified {
+    color: var(--zk-verified);
+    border-left: 3px solid var(--zk-verified);
+  }
+  .zk-pending {
+    color: var(--zk-pending);
+    border-left: 3px solid var(--zk-pending);
+  }
+
+  /* ── Leaflet map container override ──────────────────────── */
+  /* Prevents map tile bleed into app chrome */
+  .leaflet-container {
+    background-color: oklch(88% 0.025 68) !important; /* warm off-map bg */
+    border-radius: var(--radius-lg);
+  }
+  .dark .leaflet-container {
+    background-color: oklch(20% 0.02 55) !important;
+  }
+  /* Leaflet popups inherit Pashmina Rust */
+  .leaflet-popup-content-wrapper {
+    background: var(--card) !important;
+    color: var(--card-foreground) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: 0 4px 20px oklch(14% 0.025 55 / 0.12) !important;
+    border-radius: var(--radius-md) !important;
+    font-family: var(--font-sans) !important;
+  }
+  .leaflet-popup-tip { background: var(--card) !important; }
+
+  /* ── Sonner toast overrides ───────────────────────────────── */
+  [data-sonner-toaster] {
+    --normal-bg: var(--card);
+    --normal-border: var(--border);
+    --normal-text: var(--foreground);
+    --success-bg: var(--card);
+    --success-border: var(--seat-available);
+    --success-text: var(--foreground);
+    --error-bg: var(--card);
+    --error-border: var(--destructive);
+    --error-text: var(--foreground);
+    font-family: var(--font-sans) !important;
+    font-size: 14px;
+  }
+
+  /* ── Bus route badge ─────────────────────────────────────── */
+  /* Use: <span className="route-badge">Kathmandu → Pokhara</span> */
+  .route-badge {
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    background-color: color-mix(in oklch, var(--primary) 12%, transparent);
+    color: var(--primary);
+    border: 1px solid color-mix(in oklch, var(--primary) 28%, transparent);
+  }
+
+  /* ── NFT receipt card accent border ─────────────────────── */
+  /* Use: <div className="nft-card"> on Soulbound receipt cards */
+  .nft-card {
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--seat-minting);
+    background: var(--card);
+    border-radius: var(--radius-lg);
+  }
+
+  /* ── Glass surface (landing page hero sections) ─────────── */
+  .glass {
+    background: oklch(98.5% 0.008 68 / 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid oklch(82% 0.035 68 / 0.5);
+  }
+  .dark .glass {
+    background: oklch(18% 0.025 55 / 0.7);
+    border-color: oklch(28% 0.03 55 / 0.5);
+  }
+
+  /* ── Pashmina gradient — hero section background ─────────── */
+  /* Use: <section className="hero-gradient"> */
+  .hero-gradient {
+    background: linear-gradient(
+      135deg,
+      oklch(95% 0.02 68)   0%,
+      oklch(92% 0.03 60)  40%,
+      oklch(90% 0.04 55)  100%
+    );
+  }
+  .dark .hero-gradient {
+    background: linear-gradient(
+      135deg,
+      oklch(16% 0.025 55) 0%,
+      oklch(14% 0.022 52) 100%
+    );
+  }
+
+  /* ── Shimmer loading skeleton ────────────────────────────── */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--muted) 25%,
+      oklch(93% 0.018 68) 50%,
+      var(--muted) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+    border-radius: var(--radius-sm);
+  }
+  .dark .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--muted) 25%,
+      oklch(25% 0.02 55) 50%,
+      var(--muted) 75%
+    );
+    background-size: 200% 100%;
+  }
+
+  /* ── ZK pulse ring (proof-generating animation) ─────────── */
+  /* Use: <div className="zk-pulse"> inside verification steps  */
+  .zk-pulse {
+    position: relative;
+  }
+  .zk-pulse::after {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    border-radius: inherit;
+    border: 2px solid var(--seat-minting);
+    animation: zk-ring 1.8s ease-out infinite;
+    pointer-events: none;
+  }
+
+  /* ── Wallet address truncation ───────────────────────────── */
+  .wallet-address {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    color: var(--muted-foreground);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 16ch;
+  }
+}
+
+/* ── Keyframe animations ──────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+@keyframes zk-ring {
+  0%   { opacity: 0.9; transform: scale(1); }
+  100% { opacity: 0;   transform: scale(1.5); }
+}
+
+/* tw-animate-css overrides — standardize duration & easing */
+:root {
+  --animate-duration: 0.4s;
+  --animate-delay:    0s;
+  --animate-repeat:   1;
 }

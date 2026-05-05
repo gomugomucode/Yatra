@@ -67,10 +67,10 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-orange-100 selection:text-orange-900 overflow-x-hidden">
+    <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary-soft selection:text-primary overflow-x-hidden">
 
       {/* ═══ NAVBAR ═══ */}
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100">
+      <nav className="sticky top-0 z-50 bg-background/85 backdrop-blur-xl border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             {/* Left: Logo */}
@@ -99,10 +99,10 @@ export default function Home() {
                 >
                   <Link
                     href={item.href}
-                    className="text-sm font-semibold text-slate-600 hover:text-orange-500 transition-colors relative group"
+                    className="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors relative group"
                   >
                     {item.label}
-                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-orange-500 transition-all group-hover:w-full" />
+                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full" />
                   </Link>
                 </motion.div>
               ))}
@@ -117,12 +117,12 @@ export default function Home() {
               {isClient && currentUser ? (
                 <>
                   <Link href={role === 'driver' ? '/driver' : '/passenger'}>
-                    <Button variant="ghost" className="font-bold text-slate-600 hover:bg-slate-50">Dashboard</Button>
+                    <Button variant="ghost" className="font-bold text-muted-foreground hover:bg-surface-soft">Dashboard</Button>
                   </Link>
                   <Button
                     onClick={() => signOut()}
                     variant="outline"
-                    className="rounded-full border-slate-200 font-bold hover:bg-slate-50 transition-all"
+                    className="rounded-full border-border font-bold hover:bg-surface-soft transition-all"
                   >
                     Logout
                   </Button>
@@ -130,7 +130,7 @@ export default function Home() {
               ) : (
                 <>
                   <Link href="/auth">
-                    <Button variant="ghost" className="font-bold text-slate-600 hover:bg-slate-50">Login</Button>
+                    <Button variant="ghost" className="font-bold text-muted-foreground hover:bg-surface-soft">Login</Button>
                   </Link>
                   <Link href="/auth?isSignUp=true">
                     <motion.div
@@ -138,12 +138,12 @@ export default function Home() {
                       whileTap={{ scale: 0.95 }}
                       className="relative"
                     >
-                      <Button className="bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-full px-8 shadow-lg shadow-orange-200 transition-all">
+                      <Button className="bg-primary hover:bg-primary-hover text-primary-foreground font-bold rounded-full px-8 shadow-md shadow-primary/20 transition-all">
                         Sign Up
                       </Button>
                       <motion.div
                         aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 rounded-full border border-orange-300/50"
+                        className="pointer-events-none absolute inset-0 rounded-full border border-primary/50"
                         animate={{ scale: [1, 1.08, 1], opacity: [0.3, 0.06, 0.3] }}
                         transition={{ duration: 2.6, repeat: Infinity }}
                       />
@@ -157,7 +157,7 @@ export default function Home() {
             <div className="md:hidden">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="p-2 text-slate-600 hover:text-orange-500 transition-colors"
+                className="touch-target -mr-1 text-muted-foreground hover:text-primary transition-colors"
               >
                 {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
@@ -172,7 +172,7 @@ export default function Home() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="md:hidden bg-white border-b border-slate-100 overflow-hidden"
+              className="md:hidden bg-background border-b border-border overflow-hidden"
             >
               <div className="py-6 px-4 space-y-4">
                 {[
@@ -185,18 +185,18 @@ export default function Home() {
                   <Link
                     key={item.label}
                     href={item.href}
-                    className="block text-lg font-bold text-slate-900 hover:text-orange-500 transition-colors"
+                    className="block min-h-11 py-2 text-lg font-bold text-foreground hover:text-primary transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     {item.label}
                   </Link>
                 ))}
-                <div className="pt-4 border-t border-slate-100 flex flex-col gap-4">
+                <div className="pt-4 border-t border-border flex flex-col gap-4">
                   <Link href="/auth" onClick={() => setIsMenuOpen(false)}>
-                    <Button variant="outline" className="w-full h-12 rounded-xl font-bold">Login</Button>
+                    <Button variant="outline" className="w-full h-12 min-h-12 rounded-xl font-bold">Login</Button>
                   </Link>
                   <Link href="/auth?isSignUp=true" onClick={() => setIsMenuOpen(false)}>
-                    <Button className="w-full h-12 bg-orange-500 text-white rounded-xl font-bold">Sign Up</Button>
+                    <Button className="w-full h-12 min-h-12 bg-primary text-primary-foreground hover:bg-primary-hover rounded-xl font-bold">Sign Up</Button>
                   </Link>
                 </div>
               </div>
@@ -206,32 +206,20 @@ export default function Home() {
       </nav>
 
       {/* ═══ HERO SECTION ═══ */}
-      <section className="relative pt-24 pb-32 overflow-hidden bg-white">
-        {/* Pulsing background glow */}
+      <section className="relative pt-24 pb-32 overflow-hidden bg-background text-foreground">
+        {/* Subtle warm depth, no neon glows */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[700px] pointer-events-none">
           <motion.div
             animate={{
-              scale: [1, 1.1, 1],
-              opacity: [0.3, 0.5, 0.3]
+              scale: [1, 1.05, 1],
+              opacity: [0.1, 0.2, 0.1]
             }}
             transition={{
               duration: 8,
               repeat: Infinity,
               ease: "easeInOut"
             }}
-            className="absolute top-0 right-0 w-[600px] h-[600px] bg-orange-50/50 rounded-full blur-[120px]"
-          />
-          <motion.div
-            animate={{
-              scale: [1.1, 1, 1.1],
-              opacity: [0.2, 0.4, 0.2]
-            }}
-            transition={{
-              duration: 10,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-            className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-50/50 rounded-full blur-[100px]"
+            className="absolute top-0 right-0 w-[600px] h-[600px] bg-secondary rounded-full blur-[120px]"
           />
         </div>
 
@@ -244,30 +232,23 @@ export default function Home() {
             className="text-center max-w-4xl mx-auto"
           >
             <motion.div variants={itemVariants}>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-50 border border-orange-100 mb-8 shadow-sm">
-                <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
-                <span className="text-sm font-bold text-orange-700 tracking-tight">Now Live in Butwal, Nepal</span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20 mb-8">
+                <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                <span className="text-sm font-bold text-accent-foreground tracking-tight">Now Live in Butwal, Nepal</span>
               </div>
             </motion.div>
 
             <motion.h1
               variants={itemVariants}
-              className="text-6xl md:text-8xl font-black text-slate-900 tracking-tight mb-8 leading-[0.95]"
+              className="text-5xl sm:text-6xl md:text-8xl font-black text-foreground tracking-tight mb-8 leading-[0.95]"
             >
               Move Smarter. <br />
-              <motion.span
-                initial={{ backgroundPosition: '0% 50%' }}
-                animate={{ backgroundPosition: '100% 50%' }}
-                transition={{ duration: 5, repeat: Infinity, repeatType: "reverse" }}
-                className="text-orange-500 bg-linear-to-r from-orange-500 via-orange-400 to-orange-600 bg-clip-text"
-              >
-                Connect Better.
-              </motion.span>
+              <span className="text-primary">Connect Better.</span>
             </motion.h1>
 
             <motion.p
               variants={itemVariants}
-              className="text-xl md:text-2xl text-slate-600 mb-12 max-w-2xl mx-auto font-medium leading-relaxed"
+              className="text-lg sm:text-xl md:text-2xl text-muted-foreground mb-12 max-w-2xl mx-auto font-medium leading-relaxed"
             >
               Real-time transit tracking and seamless booking for Nepal.
               Experience safe, fast, and transparent travel at your fingertips.
@@ -280,22 +261,17 @@ export default function Home() {
             >
               <Link href="/auth?role=passenger&redirect=/passenger" className="w-full sm:w-auto">
                 <motion.div whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}>
-                  <Button className="w-full sm:w-auto h-16 px-10 text-lg font-black rounded-2xl bg-orange-500 hover:bg-orange-600 text-white shadow-xl shadow-orange-200 transition-all group overflow-hidden relative">
+                  <Button className="w-full sm:w-auto h-16 min-h-14 px-10 text-lg font-black rounded-2xl shadow-sm border-0">
                     <span className="relative z-10 flex items-center">
                       Ride as Passenger
                       <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </span>
-                    <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                      animate={{ x: ['-120%', '120%'] }}
-                      transition={{ duration: 2.4, repeat: Infinity, ease: 'linear' }}
-                    />
                   </Button>
                 </motion.div>
               </Link>
               <Link href="/auth?role=driver&redirect=/driver" className="w-full sm:w-auto">
                 <motion.div whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}>
-                  <Button variant="outline" className="w-full sm:w-auto h-16 px-10 text-lg font-black rounded-2xl border-2 border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all">
+                  <Button variant="secondary" className="w-full sm:w-auto h-16 min-h-14 px-10 text-lg font-black rounded-2xl">
                     Drive with Yatra
                   </Button>
                 </motion.div>
@@ -304,7 +280,7 @@ export default function Home() {
 
             <motion.div
               variants={itemVariants}
-              className="mt-20 flex items-center justify-center gap-10 opacity-60 grayscale hover:grayscale-0 transition-all duration-700"
+              className="mt-20 flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-muted-foreground transition-all duration-700"
             >
               {[
                 { icon: ShieldCheck, text: "Verified Drivers" },
@@ -312,8 +288,8 @@ export default function Home() {
                 { icon: Smartphone, text: "Paperless Tickets" }
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-2.5">
-                  <item.icon className="w-5 h-5 text-slate-700" />
-                  <span className="text-sm font-bold text-slate-900 tracking-tight">{item.text}</span>
+                  <item.icon className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-sm font-bold text-muted-foreground tracking-tight">{item.text}</span>
                 </div>
               ))}
             </motion.div>
@@ -322,14 +298,14 @@ export default function Home() {
       </section>
 
       {/* ═══ FEATURES SECTION ═══ */}
-      <section id="features" className="py-32 bg-slate-50/50">
+      <section id="features" className="py-32 bg-section/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-24">
             <ScrollReveal>
-              <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-6">
+              <h2 className="text-4xl md:text-5xl font-black text-foreground tracking-tight mb-6">
                 Engineered for Modern Transit
               </h2>
-              <p className="text-lg text-slate-600 max-w-2xl mx-auto font-medium">
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto font-medium">
                 We've combined satellite technology and secure identity to bring you a travel experience like never before.
               </p>
             </ScrollReveal>
@@ -338,32 +314,32 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
-                icon: <Map className="w-8 h-8 text-orange-500" />,
+                icon: <Map className="w-8 h-8 text-primary" />,
                 title: "Live GPS Tracking",
                 desc: "Never wait at the stop again. See exactly where your bus is with sub-10m accuracy and 3s refresh rates."
               },
               {
-                icon: <ShieldCheck className="w-8 h-8 text-orange-500" />,
+                icon: <ShieldCheck className="w-8 h-8 text-primary" />,
                 title: "Verified Identity",
                 desc: "Safe travel starts with knowing your driver. Every Yatra driver undergoes rigorous verification."
               },
               {
-                icon: <Smartphone className="w-8 h-8 text-orange-500" />,
+                icon: <Smartphone className="w-8 h-8 text-primary" />,
                 title: "One-Tap Booking",
                 desc: "No more paper tickets or cash hassles. Book your seat in seconds and pay securely through the app."
               },
               {
-                icon: <Clock className="w-8 h-8 text-orange-500" />,
+                icon: <Clock className="w-8 h-8 text-primary" />,
                 title: "Predictive ETA",
                 desc: "Our algorithms calculate precise arrival times based on current traffic and route conditions."
               },
               {
-                icon: <TrendingUp className="w-8 h-8 text-orange-500" />,
+                icon: <TrendingUp className="w-8 h-8 text-primary" />,
                 title: "Dynamic Pricing",
                 desc: "Transparent and fair pricing for both passengers and drivers, optimized for Nepal's transit market."
               },
               {
-                icon: <CreditCard className="w-8 h-8 text-orange-500" />,
+                icon: <CreditCard className="w-8 h-8 text-primary" />,
                 title: "Secure Payments",
                 desc: "Multiple payment options integrated seamlessly, ensuring fast and reliable transactions."
               }
@@ -372,18 +348,18 @@ export default function Home() {
                 <motion.div
                   whileHover={{ y: -8, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
                   whileTap={{ scale: 0.995 }}
-                  className="group p-10 rounded-[32px] bg-white border border-slate-100 shadow-sm transition-all duration-500 relative overflow-hidden"
+                  className="group p-10 rounded-[32px] bg-card border border-border shadow-md transition-all duration-500 relative overflow-hidden"
                 >
-                  <div className="w-16 h-16 rounded-2xl bg-orange-50 flex items-center justify-center mb-8 group-hover:bg-orange-500 transition-colors duration-500">
+                  <div className="w-16 h-16 rounded-2xl bg-primary-soft flex items-center justify-center mb-8 group-hover:bg-primary transition-colors duration-500">
                     <div className="group-hover:text-white transition-colors duration-500">
                       {feature.icon}
                     </div>
                   </div>
-                  <h3 className="text-2xl font-bold text-slate-900 mb-4 group-hover:text-orange-600 transition-colors">{feature.title}</h3>
-                  <p className="text-slate-600 leading-relaxed font-medium opacity-80 group-hover:opacity-100 transition-opacity">
+                  <h3 className="text-2xl font-bold text-foreground mb-4 group-hover:text-primary-hover transition-colors">{feature.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed font-medium opacity-80 group-hover:opacity-100 transition-opacity">
                     {feature.desc}
                   </p>
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
                 </motion.div>
               </ScrollReveal>
             ))}
@@ -392,14 +368,14 @@ export default function Home() {
       </section>
 
       {/* ═══ HOW IT WORKS ═══ */}
-      <section id="ride" className="py-32 bg-white overflow-hidden">
+      <section id="ride" className="py-32 bg-card overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row items-center gap-20">
             <div className="lg:w-1/2">
               <ScrollReveal direction="left">
-                <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-10 leading-tight">
+                <h2 className="text-4xl md:text-5xl font-black text-foreground tracking-tight mb-10 leading-tight">
                   Travel simplified. <br />
-                  <span className="text-orange-500">Three easy steps.</span>
+                  <span className="text-primary">Three easy steps.</span>
                 </h2>
 
                 <div className="space-y-10">
@@ -426,10 +402,10 @@ export default function Home() {
                       whileHover={{ x: 10 }}
                       transition={{ type: "spring", stiffness: 400, damping: 25 }}
                     >
-                      <div className="text-5xl font-black text-orange-100 leading-none group-hover:text-orange-200 transition-colors">{step.step}</div>
+                      <div className="text-5xl font-black text-primary-soft leading-none group-hover:text-primary/80 transition-colors">{step.step}</div>
                       <div>
-                        <h4 className="text-2xl font-bold text-slate-900 mb-3 group-hover:text-orange-600 transition-colors">{step.title}</h4>
-                        <p className="text-lg text-slate-600 font-medium opacity-80">{step.desc}</p>
+                        <h4 className="text-2xl font-bold text-foreground mb-3 group-hover:text-primary-hover transition-colors">{step.title}</h4>
+                        <p className="text-lg text-muted-foreground font-medium opacity-80">{step.desc}</p>
                       </div>
                     </motion.div>
                   ))}
@@ -440,29 +416,29 @@ export default function Home() {
             <div className="lg:w-1/2 relative">
               <ScrollReveal direction="right" delay={0.2}>
                 <div className="relative p-2 bg-slate-100 rounded-[48px] shadow-2xl">
-                  <div className="rounded-[40px] overflow-hidden border-4 border-white shadow-inner bg-white">
+                  <div className="rounded-[40px] overflow-hidden border-4 border-white shadow-inner bg-card">
                     {/* Map Mockup */}
-                    <div className="aspect-[4/5] bg-slate-50 relative group">
-                      <div className="absolute inset-0 bg-orange-100/10" />
+                    <div className="aspect-[4/5] bg-surface-soft relative group">
+                      <div className="absolute inset-0 bg-primary-soft/10" />
                       <motion.div
                         animate={{
                           scale: [1, 1.2, 1],
                           opacity: [0.1, 0.2, 0.1]
                         }}
                         transition={{ duration: 4, repeat: Infinity }}
-                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-orange-500 rounded-full"
+                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-primary rounded-full"
                       />
                       <motion.div
-                        className="absolute top-[40%] left-[30%] p-4 bg-white rounded-2xl shadow-2xl flex items-center gap-4 border border-slate-100 z-10"
+                        className="absolute top-[40%] left-[30%] p-4 bg-card rounded-2xl shadow-2xl flex items-center gap-4 border border-border z-10"
                         animate={{ y: [0, -10, 0] }}
                         transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                       >
-                        <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-200">
+                        <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-md shadow-primary/25">
                           <Bus className="w-6 h-6 text-white" />
                         </div>
                         <div>
-                          <div className="text-sm font-black text-slate-900 tracking-tight">Bus #402</div>
-                          <div className="text-[11px] font-bold text-orange-500 uppercase tracking-widest mt-0.5">2 mins away</div>
+                          <div className="text-sm font-black text-foreground tracking-tight">Bus #402</div>
+                          <div className="text-[11px] font-bold text-primary uppercase tracking-widest mt-0.5">2 mins away</div>
                         </div>
                       </motion.div>
 
@@ -480,28 +456,28 @@ export default function Home() {
       </section>
 
       {/* ═══ PASSENGER & DRIVER CTA BLOCKS ═══ */}
-      <section className="py-32 px-4 bg-slate-50/50">
+      <section className="py-32 px-4 bg-section/50">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-8">
           {/* Passenger CTA */}
           <ScrollReveal direction="left" className="flex-1">
             <motion.div
               whileHover={{ scale: 1.01, y: -5 }}
-              className="h-full p-14 rounded-[48px] bg-white border-2 border-orange-500 flex flex-col justify-between shadow-sm hover:shadow-2xl hover:shadow-orange-100/50 transition-all duration-500 relative overflow-hidden group"
+              className="h-full p-14 rounded-[48px] bg-card border-2 border-primary flex flex-col justify-between shadow-md hover:shadow-2xl hover:shadow-primary/15 transition-all duration-500 relative overflow-hidden group"
             >
               <div className="relative z-10">
-                <h3 className="text-4xl font-black text-slate-900 mb-6 leading-tight">Book a Ride in Seconds</h3>
-                <p className="text-xl text-slate-600 mb-10 max-w-sm font-medium leading-relaxed opacity-80">
+                <h3 className="text-4xl font-black text-foreground mb-6 leading-tight">Book a Ride in Seconds</h3>
+                <p className="text-xl text-muted-foreground mb-10 max-w-sm font-medium leading-relaxed opacity-80">
                   Get where you need to go without the stress. Fast, safe, and transparent travel for everyone.
                 </p>
               </div>
               <Link href="/auth?role=passenger&redirect=/passenger" className="relative z-10">
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button size="lg" className="h-16 px-10 text-lg font-black rounded-2xl bg-orange-500 hover:bg-orange-600 text-white shadow-xl shadow-orange-200 transition-all">
+                  <Button size="lg" className="h-16 min-h-14 px-10 text-lg font-black rounded-2xl bg-primary hover:bg-primary-hover text-primary-foreground shadow-lg shadow-primary/25 transition-all">
                     Book My First Ride
                   </Button>
                 </motion.div>
               </Link>
-              <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-orange-500/5 rounded-full group-hover:scale-150 transition-transform duration-700" />
+              <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-primary/5 rounded-full group-hover:scale-150 transition-transform duration-700" />
             </motion.div>
           </ScrollReveal>
 
@@ -509,21 +485,21 @@ export default function Home() {
           <ScrollReveal direction="right" className="flex-1">
             <motion.div
               whileHover={{ scale: 1.01, y: -5 }}
-              className="h-full p-14 rounded-[48px] bg-white border-2 border-slate-200 flex flex-col justify-between shadow-sm hover:shadow-2xl hover:shadow-slate-100 transition-all duration-500 relative overflow-hidden group"
+              className="h-full p-14 rounded-[48px] bg-card border-2 border-border flex flex-col justify-between shadow-sm hover:shadow-2xl hover:shadow-slate-100 transition-all duration-500 relative overflow-hidden group"
             >
               <div className="relative z-10">
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-8">
                   <TrendingUp className="w-4 h-4 text-emerald-600" />
                   <span className="text-[11px] font-black text-emerald-600 uppercase tracking-widest">Earn with Yatra</span>
                 </div>
-                <h3 className="text-4xl font-black text-slate-900 mb-6 leading-tight">Maximize Your Earnings</h3>
-                <p className="text-xl text-slate-600 mb-10 max-w-sm font-medium leading-relaxed opacity-80">
+                <h3 className="text-4xl font-black text-foreground mb-6 leading-tight">Maximize Your Earnings</h3>
+                <p className="text-xl text-muted-foreground mb-10 max-w-sm font-medium leading-relaxed opacity-80">
                   Join our network of elite drivers. Lower commissions, flexible hours, and guaranteed passengers.
                 </p>
               </div>
               <Link href="/auth?role=driver&redirect=/driver" className="relative z-10">
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button size="lg" variant="outline" className="h-16 px-10 text-lg font-black rounded-2xl border-2 border-slate-200 text-slate-900 hover:bg-slate-50 hover:border-slate-300 transition-all duration-500">
+                  <Button size="lg" variant="outline" className="h-16 px-10 text-lg font-black rounded-2xl border-2 border-border text-foreground hover:bg-surface-soft hover:border-slate-300 transition-all duration-500">
                     Start Driving Today
                   </Button>
                 </motion.div>
@@ -535,8 +511,8 @@ export default function Home() {
       </section>
 
       {/* ═══ FOOTER ═══ */}
-      <footer className="bg-white border-t border-slate-100 pt-28 pb-12 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-slate-50 rounded-full blur-[100px] -mr-48 -mt-48 opacity-50" />
+      <footer className="bg-card border-t border-border pt-28 pb-12 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-surface-soft rounded-full blur-[100px] -mr-48 -mt-48 opacity-50" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-16 mb-24">
@@ -544,16 +520,16 @@ export default function Home() {
               <div className="flex items-center gap-2 mb-8">
                 <Image src="/yatra-logo.png" alt="Yatra" width={40} height={40} className="rounded-xl" />
               </div>
-              <p className="text-slate-500 text-base leading-relaxed mb-8 font-medium opacity-80">
+              <p className="text-muted-foreground text-base leading-relaxed mb-8 font-medium opacity-80">
                 Modernizing Nepal's transit ecosystem with real-time tracking and secure identity.
               </p>
               <div className="flex items-center gap-3">
-                <div className="relative inline-flex items-center gap-3 px-4 py-2 rounded-full bg-slate-50 border border-slate-100 shadow-sm">
+                <div className="relative inline-flex items-center gap-3 px-4 py-2 rounded-full bg-surface-soft border border-border shadow-sm">
                   <span className="relative flex h-2.5 w-2.5">
                     <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${onlineBuses && onlineBuses > 0 ? 'bg-emerald-400 animate-ping' : 'bg-slate-400'}`} />
-                    <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${onlineBuses && onlineBuses > 0 ? 'bg-emerald-500' : 'bg-slate-500'}`} />
+                    <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${onlineBuses && onlineBuses > 0 ? 'bg-emerald-500' : 'bg-muted-foreground/50'}`} />
                   </span>
-                  <span className="text-xs font-black text-slate-700 uppercase tracking-widest">
+                  <span className="text-xs font-black text-foreground/90 uppercase tracking-widest">
                     {onlineBuses === null ? 'Checking...' : `${onlineBuses} Buses Active`}
                   </span>
                 </div>
@@ -578,11 +554,11 @@ export default function Home() {
               }
             ].map((col) => (
               <div key={col.title}>
-                <h5 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.25em] mb-8">{col.title}</h5>
+                <h5 className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.25em] mb-8">{col.title}</h5>
                 <ul className="space-y-5">
                   {col.links.map(item => (
                     <li key={item.label}>
-                      <Link href={item.href} className="text-base text-slate-600 hover:text-orange-500 transition-colors font-bold opacity-80 hover:opacity-100">
+                      <Link href={item.href} className="text-base text-muted-foreground hover:text-primary transition-colors font-bold opacity-80 hover:opacity-100">
                         {item.label}
                       </Link>
                     </li>
@@ -592,13 +568,13 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="pt-12 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-8">
-            <p className="text-sm text-slate-500 font-bold tracking-tight">
+          <div className="pt-12 border-t border-border flex flex-col md:flex-row justify-between items-center gap-8">
+            <p className="text-sm text-muted-foreground font-bold tracking-tight">
               © {new Date().getFullYear()} Yatra Technologies. Engineered for Nepal.
             </p>
             <div className="flex gap-10">
-              <Link href="https://x.com" className="text-sm font-black text-slate-500 hover:text-orange-500 transition-colors tracking-widest uppercase">Twitter</Link>
-              <Link href="https://facebook.com" className="text-sm font-black text-slate-500 hover:text-orange-500 transition-colors tracking-widest uppercase">Facebook</Link>
+              <Link href="https://x.com" className="text-sm font-black text-muted-foreground hover:text-primary transition-colors tracking-widest uppercase">Twitter</Link>
+              <Link href="https://facebook.com" className="text-sm font-black text-muted-foreground hover:text-primary transition-colors tracking-widest uppercase">Facebook</Link>
             </div>
           </div>
         </div>

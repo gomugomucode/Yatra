@@ -51,16 +51,16 @@ export default function DriverPanel({
 	return (
 		<div className="space-y-5">
 			{/* ── Vehicle ID Card ── */}
-			<div className="rounded-2xl border border-slate-200 overflow-hidden bg-white">
+			<div className="rounded-2xl border border-border overflow-hidden bg-card shadow-sm">
 
 				{/* Header bar */}
-				<div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+				<div className="flex items-center justify-between px-4 py-3 border-b border-border">
 					<div className="flex items-center gap-2">
 						<Cpu className="w-3.5 h-3.5 text-cyan-600" />
 						<span className="text-[10px] font-black tracking-widest text-cyan-600 uppercase">Vehicle Status Report</span>
 					</div>
 					<Badge variant="outline"
-						className={`text-[10px] px-2 py-0 font-bold ${bus.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+						className={`text-[10px] px-2 py-0 font-bold ${bus.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-surface-soft text-muted-foreground border-border'}`}>
 						{bus.isActive ? 'ACTIVE' : 'INACTIVE'}
 					</Badge>
 				</div>
@@ -68,9 +68,9 @@ export default function DriverPanel({
 				<div className="p-4 space-y-3">
 					{/* Vehicle Number — monospace license plate */}
 					<div className="flex items-center justify-between">
-						<span className="text-xs text-slate-600 uppercase tracking-wider">Plate No.</span>
+						<span className="text-xs text-muted-foreground uppercase tracking-wider">Plate No.</span>
 						<span
-							className="font-mono text-base font-bold tracking-widest text-slate-900 px-3 py-1 rounded-lg border border-slate-200 bg-slate-100"
+							className="font-mono text-base font-bold tracking-widest text-foreground px-3 py-1 rounded-lg border border-border bg-slate-100"
 							style={{ letterSpacing: '0.15em' }}
 						>
 							{bus.busNumber}
@@ -79,8 +79,8 @@ export default function DriverPanel({
 
 					{vehicleType && (
 						<div className="flex items-center justify-between">
-							<span className="text-xs text-slate-600 uppercase tracking-wider">Type</span>
-							<Badge variant="outline" className="bg-slate-50 border-slate-200 text-slate-600 gap-1">
+							<span className="text-xs text-muted-foreground uppercase tracking-wider">Type</span>
+							<Badge variant="outline" className="bg-surface-soft border-border text-muted-foreground gap-1">
 								<span>{vehicleType.icon}</span>
 								<span>{vehicleType.name}</span>
 							</Badge>
@@ -88,20 +88,20 @@ export default function DriverPanel({
 					)}
 
 					<div className="flex items-center justify-between">
-						<span className="text-xs text-slate-600 uppercase tracking-wider">Route</span>
+						<span className="text-xs text-muted-foreground uppercase tracking-wider">Route</span>
 						<span className="text-sm font-bold text-cyan-700">{bus.route}</span>
 					</div>
 
 					<div className="flex items-center justify-between">
-						<span className="text-xs text-slate-600 uppercase tracking-wider">Operator</span>
-						<span className="text-sm font-bold text-slate-900">{bus.driverName}</span>
+						<span className="text-xs text-muted-foreground uppercase tracking-wider">Operator</span>
+						<span className="text-sm font-bold text-foreground">{bus.driverName}</span>
 					</div>
 				</div>
 			</div>
 
 			{/* ── Seat Dashboard ── */}
-			<div className="rounded-2xl border border-slate-200 p-4 space-y-4 bg-white">
-				<p className="text-[10px] font-bold tracking-widest text-slate-600 uppercase">Capacity Dashboard</p>
+			<div className="rounded-2xl border border-border p-4 space-y-4 bg-card shadow-sm">
+				<p className="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">Capacity Dashboard</p>
 
 				{/* Stat counters */}
 				<div className="grid grid-cols-3 gap-2">
@@ -132,7 +132,7 @@ export default function DriverPanel({
 				</div>
 
 				{/* Legend */}
-				<div className="flex items-center gap-4 text-[10px] text-slate-600">
+				<div className="flex items-center gap-4 text-[10px] text-muted-foreground">
 					<span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> Free</span>
 					<span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" /> Online</span>
 					<span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-500 inline-block" /> Offline</span>
@@ -160,8 +160,8 @@ export default function DriverPanel({
 			{/* ── Location Sharing ── */}
 			<div className="flex items-center justify-between px-4 py-3 rounded-2xl border border-cyan-100 bg-cyan-50/30">
 				<div className="flex items-center gap-3">
-					<MapPin className={`w-4 h-4 ${locationEnabled ? 'text-cyan-600' : 'text-slate-400'}`} />
-					<span className="text-sm text-slate-600 font-bold">Share Location</span>
+					<MapPin className={`w-4 h-4 ${locationEnabled ? 'text-primary' : 'text-muted-foreground'}`} />
+					<span className="text-sm text-muted-foreground font-bold">Share Location</span>
 				</div>
 				<Switch checked={locationEnabled} onCheckedChange={onLocationToggle}
 					className="data-[state=checked]:bg-cyan-500" />

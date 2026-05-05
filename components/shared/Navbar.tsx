@@ -23,15 +23,15 @@ export function Navbar({
   children
 }: NavbarProps) {
   return (
-    <nav className="sticky top-0 z-50 w-full h-16 bg-white border-b border-slate-100 flex items-center justify-between px-4 sm:px-6">
+    <nav className="sticky top-0 z-50 w-full h-16 bg-background/90 backdrop-blur-md border-b border-border flex items-center justify-between px-4 sm:px-6">
       <div className="flex items-center gap-3">
         <Link href="/" className="flex items-center gap-3">
           <Image src="/yatra-logo.png" alt="Yatra" width={40} height={40} className="rounded-xl" priority />
           <div className="flex flex-col">
-            <h1 className="text-base font-black text-slate-900 leading-none tracking-tight">
+            <h1 className="text-base font-black text-foreground leading-none tracking-tight">
               {title}
             </h1>
-            <p className="text-[10px] font-bold text-slate-600 leading-none uppercase tracking-widest mt-1">
+            <p className="text-[10px] font-bold text-muted-foreground leading-none uppercase tracking-widest mt-1">
               {subtitle}
             </p>
           </div>
@@ -47,7 +47,7 @@ export function Navbar({
           <Button
             onClick={onSosClick}
             variant="destructive"
-            className="h-10 px-4 bg-red-500 hover:bg-red-600 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-lg shadow-red-100 border-none"
+            className="h-11 min-h-11 px-4 bg-red-500 hover:bg-red-600 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-lg shadow-red-100 border-none"
           >
             <ShieldAlert className="w-4 h-4 mr-2" />
             SOS

@@ -61,7 +61,7 @@ export default function AccidentAlert({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
-            <DialogContent className="bg-white border-red-500 text-slate-900 sm:max-w-md border-2 shadow-2xl">
+            <DialogContent className="bg-card border-red-500 text-foreground sm:max-w-md border-2 shadow-2xl">
                 <DialogHeader>
                     <DialogTitle className="text-3xl font-black text-red-600 flex items-center gap-3 uppercase tracking-wider">
                         <AlertTriangle className="w-10 h-10 animate-bounce" />
@@ -74,7 +74,7 @@ export default function AccidentAlert({
 
                 <div className="py-6 space-y-6">
                     <div className="text-center">
-                        <div className="text-6xl font-black text-slate-900 mb-2 font-mono">
+                        <div className="text-6xl font-black text-foreground mb-2 font-mono">
                             {secondsLeft}
                         </div>
                         <p className="text-red-700 text-sm uppercase tracking-widest font-black">Seconds to Auto-Alert</p>
@@ -86,7 +86,7 @@ export default function AccidentAlert({
                 <DialogFooter className="flex-col sm:flex-row gap-3 sm:gap-0">
                     <Button
                         variant="ghost"
-                        className="w-full sm:w-auto h-14 text-lg bg-slate-50 hover:bg-slate-100 text-slate-600 border-2 border-slate-200 font-bold"
+                        className="w-full sm:w-auto h-14 text-lg bg-surface-soft hover:bg-slate-100 text-muted-foreground border-2 border-border font-bold"
                         onClick={onCancel}
                     >
                         <X className="w-6 h-6 mr-2" />

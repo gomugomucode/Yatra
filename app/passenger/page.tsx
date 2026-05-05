@@ -14,6 +14,10 @@ import {
   Ticket,
   Navigation,
   Clock,
+  Map,
+  History,
+  UserRound,
+  BookOpen,
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -42,6 +46,8 @@ interface PassengerBookingData {
   paymentMethod?: 'cash' | 'digital';
   status?: string;
 }
+
+type PassengerTab = 'map' | 'book' | 'history' | 'profile';
 
 export default function PassengerDashboard() {
   const router = useRouter();
@@ -88,6 +94,7 @@ export default function PassengerDashboard() {
   const [activeTripPickup, setActiveTripPickup] = useState<{ lat: number; lng: number; status: string } | null>(null);
   const [showRideHereAlert, setShowRideHereAlert] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<PassengerTab>('book');
   const [ratingTripId, setRatingTripId] = useState<string | null>(null);
   const [ratingDriverName, setRatingDriverName] = useState<string>('');
   const hasLocationErrorRef = useRef(false);
@@ -941,7 +948,7 @@ export default function PassengerDashboard() {
     return (
       <div className="min-h-screen bg-linear-to-br from-white via-slate-50 to-white flex flex-col">
         {/* Skeleton Header */}
-        <div className="h-16 border-b border-slate-100 bg-white/80 p-4 flex items-center justify-between">
+        <div className="h-16 border-b border-border bg-background/80 p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Skeleton className="w-8 h-8 rounded-full" />
             <div className="space-y-1">
@@ -953,7 +960,7 @@ export default function PassengerDashboard() {
         </div>
 
         {/* Skeleton Map */}
-        <div className="w-full h-[65vh] relative bg-slate-50">
+        <div className="w-full h-[65vh] relative bg-surface-soft">
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
               <div className="relative w-20 h-20 mx-auto mb-6">
@@ -962,7 +969,7 @@ export default function PassengerDashboard() {
                   <Navigation className="w-10 h-10 text-white animate-pulse" />
                 </div>
               </div>
-              <p className="text-slate-600 text-lg font-medium">Locating nearby buses...</p>
+              <p className="text-muted-foreground text-lg font-medium">Locating nearby buses...</p>
             </div>
           </div>
         </div>
@@ -978,13 +985,13 @@ export default function PassengerDashboard() {
 
   // --- UI Render ---
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {showRideHereAlert && (
         <div className="fixed inset-0 z-1200 bg-emerald-600/95 flex flex-col items-center justify-center text-white px-6 text-center">
           <p className="text-4xl font-extrabold tracking-wide">YOUR RIDE IS HERE</p>
           <p className="mt-3 text-sm opacity-90">Your driver is within 10 meters.</p>
           <Button
-            className="mt-8 bg-white text-emerald-700 hover:bg-white/90 font-bold"
+            className="mt-8 bg-card text-primary hover:bg-card/90 font-bold min-h-12"
             onClick={() => setShowRideHereAlert(false)}
           >
             Dismiss
@@ -993,7 +1000,7 @@ export default function PassengerDashboard() {
       )}
 
       {/* 1. Header (Sticky Top) */}
-      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200 px-4 pt-4 pb-3">
+      <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border px-4 pt-4 pb-3">
         <div className="flex items-center justify-between gap-4">
           {/* Left: Animated Brand */}
           <div className="flex items-center gap-3">
@@ -1006,7 +1013,7 @@ export default function PassengerDashboard() {
                 style={{ overflow: 'visible' }}
               >
                 {/* Pulsing glow ring */}
-                <circle cx="20" cy="20" r="19" fill="none" stroke="rgba(249,115,22,0.15)" strokeWidth="1.5">
+                <circle cx="20" cy="20" r="19" fill="none" stroke="rgba(15,118,110,0.18)" strokeWidth="1.5">
                   <animate attributeName="r" values="17;20;17" dur="2.5s" repeatCount="indefinite" />
                   <animate attributeName="opacity" values="0.6;0.15;0.6" dur="2.5s" repeatCount="indefinite" />
                 </circle>
@@ -1016,31 +1023,31 @@ export default function PassengerDashboard() {
                   <animateTransform attributeName="transform" attributeType="XML" type="translate"
                     values="0,0;2,0;0,0" dur="1.8s" repeatCount="indefinite" />
                   {/* Bus body rect */}
-                  <rect x="6" y="14" width="26" height="14" rx="3" fill="#c2410c" />
+                  <rect x="6" y="14" width="26" height="14" rx="3" fill="#0F766E" />
                   {/* Roof accent */}
-                  <rect x="8" y="12" width="22" height="4" rx="2" fill="#f97316" />
+                  <rect x="8" y="12" width="22" height="4" rx="2" fill="#115E59" />
                   {/* Windows */}
-                  <rect x="9" y="16" width="5" height="5" rx="1" fill="#e0f9ff" opacity="0.9" />
-                  <rect x="16" y="16" width="5" height="5" rx="1" fill="#e0f9ff" opacity="0.9" />
-                  <rect x="23" y="16" width="5" height="5" rx="1" fill="#e0f9ff" opacity="0.9" />
+                  <rect x="9" y="16" width="5" height="5" rx="1" fill="#E2E8F0" opacity="0.9" />
+                  <rect x="16" y="16" width="5" height="5" rx="1" fill="#E2E8F0" opacity="0.9" />
+                  <rect x="23" y="16" width="5" height="5" rx="1" fill="#E2E8F0" opacity="0.9" />
                   {/* Front headlight */}
-                  <rect x="30" y="18" width="3" height="3" rx="1" fill="#fde68a" opacity="0.9">
+                  <rect x="30" y="18" width="3" height="3" rx="1" fill="#F59E0B" opacity="0.9">
                     <animate attributeName="opacity" values="0.9;0.4;0.9" dur="1.4s" repeatCount="indefinite" />
                   </rect>
                   {/* Wheels */}
-                  <circle cx="13" cy="29" r="3.5" fill="#1e293b" stroke="#f97316" strokeWidth="1.5" />
-                  <circle cx="25" cy="29" r="3.5" fill="#1e293b" stroke="#f97316" strokeWidth="1.5" />
+                  <circle cx="13" cy="29" r="3.5" fill="#1E293B" stroke="#4F46E5" strokeWidth="1.5" />
+                  <circle cx="25" cy="29" r="3.5" fill="#1E293B" stroke="#4F46E5" strokeWidth="1.5" />
                   {/* Wheel spin dots */}
-                  <circle cx="13" cy="27" r="1" fill="#f97316">
+                  <circle cx="13" cy="27" r="1" fill="#4F46E5">
                     <animateTransform attributeName="transform" type="rotate" from="0 13 29" to="360 13 29" dur="0.6s" repeatCount="indefinite" />
                   </circle>
-                  <circle cx="25" cy="27" r="1" fill="#f97316">
+                  <circle cx="25" cy="27" r="1" fill="#4F46E5">
                     <animateTransform attributeName="transform" type="rotate" from="0 25 29" to="360 25 29" dur="0.6s" repeatCount="indefinite" />
                   </circle>
                   {/* Road dashes */}
-                  <rect x="4" y="33" width="6" height="1.5" rx="0.75" fill="#334155" />
-                  <rect x="14" y="33" width="6" height="1.5" rx="0.75" fill="#334155" />
-                  <rect x="24" y="33" width="6" height="1.5" rx="0.75" fill="#334155" />
+                  <rect x="4" y="33" width="6" height="1.5" rx="0.75" fill="#64748B" />
+                  <rect x="14" y="33" width="6" height="1.5" rx="0.75" fill="#64748B" />
+                  <rect x="24" y="33" width="6" height="1.5" rx="0.75" fill="#64748B" />
                 </g>
               </svg>
             </div>
@@ -1051,18 +1058,18 @@ export default function PassengerDashboard() {
                 className="text-[22px] font-extrabold leading-none tracking-wide"
                 style={{
                   fontFamily: 'var(--font-mukta), sans-serif',
-                  background: 'linear-gradient(135deg, #f97316 30%, #fb923c 100%)',
+                  background: 'linear-gradient(135deg, #0F766E 30%, #4F46E5 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
-                  filter: 'drop-shadow(0 0 8px rgba(249,115,22,0.4))',
+                  filter: 'drop-shadow(0 0 8px rgba(15,118,110,0.35))',
                 }}
               >
                 यात्री
 
               </h1>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
-                <span className="text-[10px] text-orange-600 font-bold tracking-wide">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                <span className="text-[10px] text-primary-hover font-bold tracking-wide">
                   {buses.filter(b => b.isActive).length} Active
                 </span>
               </div>
@@ -1077,7 +1084,7 @@ export default function PassengerDashboard() {
               <Button
                 variant="outline"
                 size="icon"
-                className="w-10 h-10 rounded-full bg-white border-2 border-orange-500/50 shadow-sm"
+                className="w-11 h-11 min-w-11 min-h-11 rounded-full bg-card border-2 border-primary/50 shadow-md"
               onClick={() => setIsDrawerOpen(true)}
             >
               {/* Check if userData and the initial exist.
@@ -1085,11 +1092,11 @@ export default function PassengerDashboard() {
        instead of jumping to the logout door.
     */}
               {userData?.name ? (
-                <span className="text-sm font-black text-orange-500">
+                <span className="text-sm font-black text-primary">
                   {userData.name[0].toUpperCase()}
                 </span>
               ) : (
-                <div className="h-4 w-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               )}
             </Button>
 
@@ -1103,7 +1110,7 @@ export default function PassengerDashboard() {
         {/* Search Bar with magnifying glass */}
         <div className="mt-3 px-1 relative">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
               <circle cx="11" cy="11" r="8" />
               <path d="m21 21-4.35-4.35" />
             </svg>
@@ -1122,7 +1129,7 @@ export default function PassengerDashboard() {
           <Button
             size="sm"
             variant={vehicleFilter === 'all' ? 'default' : 'secondary'}
-            className={`h-7 rounded-full text-[11px] font-black uppercase tracking-wider border ${vehicleFilter === 'all' ? 'bg-orange-500 border-orange-600 text-white shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+            className={`min-h-11 px-3 rounded-full text-[11px] font-black uppercase tracking-wider border inline-flex items-center justify-center ${vehicleFilter === 'all' ? 'bg-primary border-primary-hover text-primary-foreground shadow-sm' : 'bg-card text-muted-foreground border-border hover:bg-surface-soft'}`}
             onClick={() => setVehicleFilter('all')}
           >
             All
@@ -1132,7 +1139,7 @@ export default function PassengerDashboard() {
               key={type.id}
               size="sm"
               variant={vehicleFilter === type.id ? 'default' : 'secondary'}
-              className={`h-7 rounded-full text-[11px] font-black uppercase tracking-wider border flex items-center gap-1.5 ${vehicleFilter === type.id ? 'bg-orange-500 border-orange-600 text-white shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+              className={`min-h-11 px-3 rounded-full text-[11px] font-black uppercase tracking-wider border flex items-center gap-1.5 ${vehicleFilter === type.id ? 'bg-primary border-primary-hover text-primary-foreground shadow-sm' : 'bg-card text-muted-foreground border-border hover:bg-surface-soft'}`}
               onClick={() => setVehicleFilter(type.id)}
             >
               <span>{type.icon}</span>
@@ -1156,7 +1163,7 @@ export default function PassengerDashboard() {
       </div>
 
       {/* 2. Map Section (Priority View) */}
-      <div className="relative w-full h-[65vh] shrink-0 border-b border-slate-200">
+      <div className="relative w-full h-[65vh] shrink-0 border-b border-border">
         <MapWrapper
           role="passenger"
           buses={filteredBuses}
@@ -1197,9 +1204,9 @@ export default function PassengerDashboard() {
 
         {/* Pickup guide — shown when a driver is selected but no pickup set */}
         {selectedBus && isSelectingPickup && requestStatus === 'idle' && (
-          <div className="absolute bottom-4 left-4 right-4 z-400 bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-3 text-sm shadow-xl animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="absolute bottom-4 left-4 right-4 z-400 bg-card border border-border rounded-xl p-4 flex items-center gap-3 text-sm shadow-xl animate-in slide-in-from-bottom-4 fade-in duration-300">
             <MapPin className="w-5 h-5 text-emerald-600 shrink-0" />
-            <span className="text-slate-900 font-bold flex-1">Tap the map to set your pickup point, or use your current location</span>
+            <span className="text-foreground font-bold flex-1">Tap the map to set your pickup point, or use your current location</span>
             <Button size="sm" variant="outline" className="text-xs shrink-0"
               onClick={() => {
                 if (userLocation) {
@@ -1217,7 +1224,7 @@ export default function PassengerDashboard() {
 
         {selectedBus && requestStatus === 'idle' && (
           <div className="absolute bottom-4 left-4 right-4 z-[500] pointer-events-auto animate-in slide-in-from-bottom-4 fade-in duration-300">
-            <div className="relative rounded-2xl border border-slate-200 bg-white shadow-2xl p-4 flex items-center gap-4">
+            <div className="relative rounded-2xl border border-border bg-card shadow-2xl p-4 flex items-center gap-4">
               <button
                 className="absolute -top-3 left-1/2 -translate-x-1/2 w-10 h-1 bg-slate-400 rounded-full"
                 onClick={() => {
@@ -1229,12 +1236,12 @@ export default function PassengerDashboard() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-lg">{selectedBus.emoji || '🚌'}</span>
-                  <span className="font-bold text-sm truncate text-slate-900">
+                  <span className="font-bold text-sm truncate text-foreground">
                     {selectedBus.busNumber || 'Driver'}
                   </span>
                   <span className="text-xs text-emerald-500 font-medium">● Online</span>
                 </div>
-                <div className="text-xs text-slate-600 mt-1">
+                <div className="text-xs text-muted-foreground mt-1">
                   {selectedBus.vehicleType || 'Micro Bus'} · {selectedBus.route || 'Local'}
                 </div>
               </div>
@@ -1260,7 +1267,7 @@ export default function PassengerDashboard() {
 
         {/* Waiting banner — shown while request is pending, with cancel button */}
         {requestStatus === 'requesting' && (
-          <div className="absolute bottom-4 left-4 right-4 z-400 bg-white border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3 shadow-xl animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="absolute bottom-4 left-4 right-4 z-400 bg-card border border-accent/30 rounded-xl px-4 py-3 flex items-center gap-3 shadow-xl animate-in slide-in-from-bottom-4 fade-in duration-300">
             <div className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin shrink-0" />
             <span className="text-amber-700 text-sm font-bold flex-1">Waiting for driver to accept…</span>
             <Button
@@ -1293,7 +1300,7 @@ export default function PassengerDashboard() {
       />
 
       {/* 3. Scrollable Content (Below Map) */}
-      <div className="flex-1 bg-white p-4 space-y-6">
+      <div className="flex-1 bg-background p-4 space-y-6">
 
         {/* Active Trip Card — replaces all other content during an active trip */}
         {requestStatus !== 'idle' ? (
@@ -1310,20 +1317,20 @@ export default function PassengerDashboard() {
                   </span>
                 </div>
                 {(etaToPickup !== null || etaToDestination !== null) && ['accepted', 'on-trip'].includes(requestStatus) && (
-                  <span className="text-xs font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
+                  <span className="text-xs font-bold text-foreground bg-slate-100 px-2.5 py-1 rounded-full border border-border">
                     {etaToPickup !== null ? `${etaToPickup} min` : `${etaToDestination} min`}
                   </span>
                 )}
               </div>
 
               {selectedBus && (
-                <div className="flex items-center gap-3 pt-1 border-t border-slate-100">
-                  <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-base">
+                <div className="flex items-center gap-3 pt-1 border-t border-border">
+                  <div className="w-9 h-9 rounded-full bg-slate-100 border border-border flex items-center justify-center text-base">
                     {selectedBus.emoji}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-slate-900 truncate">{selectedBus.driverName}</p>
-                    <p className="text-xs text-slate-600">{selectedBus.busNumber} · {selectedBus.vehicleType}</p>
+                    <p className="text-sm font-bold text-foreground truncate">{selectedBus.driverName}</p>
+                    <p className="text-xs text-muted-foreground">{selectedBus.busNumber} · {selectedBus.vehicleType}</p>
                   </div>
                   {requestStatus === 'requesting' && (
                     <Button
@@ -1339,13 +1346,13 @@ export default function PassengerDashboard() {
               )}
 
               {pickupLocation && (
-                <div className="flex items-center gap-2 text-xs text-slate-600">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                   <span className="truncate">{pickupLocation.address ?? `${pickupLocation.lat.toFixed(4)}, ${pickupLocation.lng.toFixed(4)}`}</span>
                 </div>
               )}
               {dropoffLocation && (
-                <div className="flex items-center gap-2 text-xs text-slate-600">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Navigation className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                   <span className="truncate">{dropoffLocation.address ?? `${dropoffLocation.lat.toFixed(4)}, ${dropoffLocation.lng.toFixed(4)}`}</span>
                 </div>
@@ -1359,71 +1366,139 @@ export default function PassengerDashboard() {
           </div>
         ) : (
           <>
-            {/* Location / nearby driver status */}
-            {locationPending ? (
-              <div className="flex flex-col items-center justify-center h-16 gap-2 text-muted-foreground">
-                <MapPin className="w-5 h-5 animate-pulse text-slate-600" />
-                <p className="text-xs text-center text-slate-600">Grant location permission to see nearby drivers</p>
-              </div>
-            ) : (
-              <p className="text-xs text-slate-600">
-                {filteredBuses.length} driver{filteredBuses.length !== 1 ? 's' : ''} within {NEARBY_DRIVER_RADIUS_KM}km
-              </p>
+            {(activeTab === 'map' || activeTab === 'book') && (
+              <>
+                {/* Location / nearby driver status */}
+                {locationPending ? (
+                  <div className="flex flex-col items-center justify-center h-16 gap-2 text-muted-foreground">
+                    <MapPin className="w-5 h-5 animate-pulse text-muted-foreground" />
+                    <p className="text-xs text-center text-muted-foreground">Grant location permission to see nearby drivers</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    {filteredBuses.length} driver{filteredBuses.length !== 1 ? 's' : ''} within {NEARBY_DRIVER_RADIUS_KM}km
+                  </p>
+                )}
+
+                {/* Wallet Settings */}
+                <WalletSettings />
+              </>
             )}
 
-            {/* Wallet Settings */}
-            <WalletSettings />
-
-            {/* Booking Panel */}
-            <div className="space-y-2">
-              <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
-                <Ticket className="w-5 h-5 text-blue-400" />
-                Ride Details
-              </h2>
-              <BookingPanel
-                pickupLocation={pickupLocation}
-                dropoffLocation={dropoffLocation}
-                selectedBus={selectedBus}
-                onBook={handleBookBus}
-                onReset={handleResetLocations}
-                loading={bookingLoading}
-              />
-            </div>
-
-            {/* Trip History & NFT Receipts */}
-            <div id="trip-history">
-              <TripHistory onReclaim={handleReclaimEscrow} />
-            </div>
-
-            {/* Instructions / Tips */}
-            {!selectedBus && (
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl flex flex-col items-center text-center gap-2 shadow-sm">
-                  <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100">
-                    <MapPin className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <span className="text-xs font-black text-slate-600">1. Tap Bus</span>
+            {activeTab === 'book' && (
+              <>
+                <div className="space-y-2">
+                  <h2 className="text-lg font-black text-foreground flex items-center gap-2">
+                    <Ticket className="w-5 h-5 text-secondary" />
+                    Ride Details
+                  </h2>
+                  <BookingPanel
+                    pickupLocation={pickupLocation}
+                    dropoffLocation={dropoffLocation}
+                    selectedBus={selectedBus}
+                    onBook={handleBookBus}
+                    onReset={handleResetLocations}
+                    loading={bookingLoading}
+                  />
                 </div>
-                <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl flex flex-col items-center text-center gap-2 shadow-sm">
-                  <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100">
-                    <Navigation className="w-4 h-4 text-emerald-600" />
+
+                {!selectedBus && (
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-surface-soft border border-border p-3 rounded-xl flex flex-col items-center text-center gap-2 shadow-sm">
+                      <div className="w-8 h-8 rounded-full bg-primary-soft flex items-center justify-center border border-primary/20">
+                        <MapPin className="w-4 h-4 text-primary" />
+                      </div>
+                      <span className="text-xs font-black text-muted-foreground">1. Tap Bus</span>
+                    </div>
+                    <div className="bg-surface-soft border border-border p-3 rounded-xl flex flex-col items-center text-center gap-2 shadow-sm">
+                      <div className="w-8 h-8 rounded-full bg-primary-soft flex items-center justify-center border border-primary/20">
+                        <Navigation className="w-4 h-4 text-primary" />
+                      </div>
+                      <span className="text-xs font-black text-muted-foreground">2. Hail</span>
+                    </div>
+                    <div className="bg-surface-soft border border-border p-3 rounded-xl flex flex-col items-center text-center gap-2 shadow-sm">
+                      <div className="w-8 h-8 rounded-full bg-secondary-soft/60 flex items-center justify-center border border-secondary/20">
+                        <Clock className="w-4 h-4 text-secondary" />
+                      </div>
+                      <span className="text-xs font-black text-muted-foreground">3. Ride</span>
+                    </div>
                   </div>
-                  <span className="text-xs font-black text-slate-600">2. Hail</span>
-                </div>
-                <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl flex flex-col items-center text-center gap-2 shadow-sm">
-                  <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center border border-purple-100">
-                    <Clock className="w-4 h-4 text-purple-600" />
-                  </div>
-                  <span className="text-xs font-black text-slate-600">3. Ride</span>
-                </div>
+                )}
+              </>
+            )}
+
+            {activeTab === 'history' && (
+              <div id="trip-history">
+                <TripHistory onReclaim={handleReclaimEscrow} />
               </div>
             )}
 
-            {/* Bottom Padding for scrolling */}
-            <div className="h-8" />
+            {activeTab === 'profile' && (
+              <div className="space-y-4">
+                <div className="card-elevated p-5">
+                  <p className="text-xs uppercase tracking-widest text-muted-foreground font-black">Passenger Profile</p>
+                  <p className="mt-2 text-lg font-black text-foreground">{userData?.name || 'Yatra User'}</p>
+                  <p className="text-sm text-muted-foreground">{userData?.email || currentUser?.email || 'No email on file'}</p>
+                  <Button
+                    className="mt-4 h-11 min-h-11 bg-accent hover:bg-amber-600 text-white font-bold"
+                    onClick={() => setIsDrawerOpen(true)}
+                  >
+                    <UserRound className="w-4 h-4 mr-2" />
+                    Open Profile & Settings
+                  </Button>
+                </div>
+                <WalletSettings />
+              </div>
+            )}
+
+            {/* Bottom Padding for tab bar */}
+            <div className="h-24" />
           </>
         )}
       </div>
+
+      <nav
+        aria-label="Passenger tabs"
+        className="fixed inset-x-0 bottom-0 z-[1300] border-t border-border bg-background/95 backdrop-blur-xl px-3 py-2"
+      >
+        <div className="mx-auto grid max-w-md grid-cols-4 gap-2">
+          <Button
+            variant="ghost"
+            className={`min-h-11 flex-col gap-1 rounded-xl ${activeTab === 'map' ? 'bg-primary-soft text-primary' : 'text-muted-foreground'}`}
+            onClick={() => setActiveTab('map')}
+          >
+            <Map className="h-4 w-4" />
+            <span className="text-[10px] font-black tracking-wide">Map</span>
+          </Button>
+          <Button
+            variant="ghost"
+            className={`min-h-11 flex-col gap-1 rounded-xl ${activeTab === 'book' ? 'bg-primary-soft text-primary' : 'text-muted-foreground'}`}
+            onClick={() => setActiveTab('book')}
+          >
+            <BookOpen className="h-4 w-4" />
+            <span className="text-[10px] font-black tracking-wide">Book Ride</span>
+          </Button>
+          <Button
+            variant="ghost"
+            className={`min-h-11 flex-col gap-1 rounded-xl ${activeTab === 'history' ? 'bg-primary-soft text-primary' : 'text-muted-foreground'}`}
+            onClick={() => setActiveTab('history')}
+          >
+            <History className="h-4 w-4" />
+            <span className="text-[10px] font-black tracking-wide">History</span>
+          </Button>
+          <Button
+            variant="ghost"
+            className={`min-h-11 flex-col gap-1 rounded-xl ${activeTab === 'profile' ? 'bg-primary-soft text-primary' : 'text-muted-foreground'}`}
+            onClick={() => {
+              setActiveTab('profile');
+              setIsDrawerOpen(true);
+            }}
+          >
+            <UserRound className="h-4 w-4" />
+            <span className="text-[10px] font-black tracking-wide">Profile</span>
+          </Button>
+        </div>
+      </nav>
     </div>
   );
 }
