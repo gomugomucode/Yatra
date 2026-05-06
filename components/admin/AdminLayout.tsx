@@ -15,6 +15,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const navItems = [
         { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
         { href: '/admin/buses', label: 'Bus Management', icon: Bus },
+        { href: '/admin/reputation', label: 'Driver Reputation', icon: LayoutDashboard },
     ];
 
     const [activeAlert, setActiveAlert] = useState<import('@/lib/types').Alert | null>(null);

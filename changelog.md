@@ -2,6 +2,27 @@
 
 All notable changes to the Yatra project will be documented in this file.
 
+## [1.9.0] - 2026-05-06
+### Yatra Platform Stabilization (Phases 5-10)
+
+#### SOS / Emergency System
+- **Structured Backend Logging:** Migrated driver SOS reporting to a secure server-side endpoint (`POST /api/emergency`).
+- **Zod Validation:** Hardened the emergency route with rigorous schema validation for location coordinates and payload integrity.
+
+#### Security & Access Control
+- **Rate Limiting:** Implemented strict request throttling (10 requests/hour) on Solana Escrow routes (`release`, `reclaim`, `create`) via `checkRateLimit`.
+- **Database Hardening:** Locked down Firebase Realtime Database rules (`database.rules.json`), strictly enforcing participant-owner visibility for `trips` and `locations`.
+- **Environment Integrity:** Verified exclusion of sensitive configuration (`.env`, `.env.local`) via `.gitignore`.
+
+#### Codebase Stability & Fallbacks
+- **Error Boundaries:** Integrated Next.js `error.tsx` components for both Passenger and Driver layouts to capture and gracefully recover from unexpected client-side crashes.
+- **Dead Code Elimination:** Purged all non-functional placeholders ("Coming Soon", "Loyalty", "Analytics") from the active UI components to accurately reflect current capabilities.
+
+#### Testing & Documentation
+- **Unit Testing Scaffold:** Configured Vitest and introduced core tests for profile completion logic (`lib/types.test.ts`) and trip state machine transitions (`lib/tripStateMachine.test.ts`).
+- **README Alignment:** Updated documentation to truthfully reflect live features (e.g., Driver accept/reject panel, Route Polylines, ZK Verification, Fare Escrow).
+
+
 ## [1.8.1] - 2026-05-05
 ### CSS Stability & Visual Polish
 

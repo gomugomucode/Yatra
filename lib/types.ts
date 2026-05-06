@@ -186,24 +186,11 @@ type PartialDriverProfile = Partial<Driver> & { isApproved?: boolean };
 type PartialPassengerProfile = Partial<PassengerUser>;
 type PartialProfile = PartialDriverProfile | PartialPassengerProfile | null | undefined;
 
-export const checkProfileCompletion = (data: PartialProfile): boolean => {
-  if (!data || !data.role) return false;
-  if (!data.name || !data.name.trim()) return false;
-
-  if (data.role === 'driver') {
-    const driverData = data as PartialDriverProfile;
-    const badge = driverData.verificationBadge;
-    return !!(
-      driverData.vehicleNumber &&
-      driverData.licenseNumber &&
-      driverData.solanaWallet &&
-      driverData.route &&
-      badge?.mintAddress &&
-      badge?.explorerLink &&
-      badge?.verifiedAt &&
-      driverData.isApproved
-    );
-  }
+export const checkProfileCompletion = (data: PartialProfile, explicitRole?: string): boolean => {
+  if (!data) return false;
+  const effectiveRole = data.role || explicitRole;
+  if (!effectiveRole) return false;
+  if (!data.name || typeof data.name !== 'string' || data.name.trim() === '') return false;
 
   return true;
 };

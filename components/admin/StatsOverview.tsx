@@ -5,6 +5,7 @@ interface StatsOverviewProps {
     totalBuses: number;
     activeBuses: number;
     totalBookings: number;
+    tripsToday?: number;
     totalRevenue: number;
 }
 
@@ -12,6 +13,7 @@ export default function StatsOverview({
     totalBuses,
     activeBuses,
     totalBookings,
+    tripsToday = 0,
     totalRevenue,
 }: StatsOverviewProps) {
     const stats = [
@@ -27,7 +29,7 @@ export default function StatsOverview({
             title: 'Total Bookings',
             value: totalBookings,
             icon: Ticket,
-            description: '+12% from yesterday',
+            description: `${tripsToday} trips today`,
             color: 'text-purple-400',
             bg: 'bg-purple-500/10',
         },

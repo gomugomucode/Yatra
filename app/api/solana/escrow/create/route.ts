@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getConnection, getServerKeypair } from '@/lib/solana/connection';
 import { createEscrowAccount } from '@/lib/solana/escrow';
 import { getAdminDb } from '@/lib/firebaseAdmin';
+import { checkRateLimit } from '@/lib/utils/rateLimit';
 
 export const runtime = 'nodejs';
 
@@ -11,6 +12,10 @@ export async function POST(request: Request) {
 
         if (!tripId || !passengerWallet || !driverWallet || !amountNPR) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        }
+
+        if (!checkRateLimit(`create-escrow:${tripId}`, 10, 3_600_000)) {
+            return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
         }
 
         const connection = getConnection();

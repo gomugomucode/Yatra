@@ -76,12 +76,7 @@ async function resolvePostLoginRedirect(
 
   setRole(role);
 
-  if (isSignIn && hasProfile) {
-    window.location.assign(role === 'driver' ? '/driver' : '/passenger');
-    return 'dashboard';
-  }
-
-  if (hasProfile) {
+  if (isSignIn || hasProfile) {
     window.location.assign(role === 'driver' ? '/driver' : '/passenger');
     return 'dashboard';
   }

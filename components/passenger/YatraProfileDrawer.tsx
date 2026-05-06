@@ -27,6 +27,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { subscribeToBookings } from '@/lib/firebaseDb';
 import { Booking } from '@/lib/types';
 import { useToast } from '@/components/ui/use-toast';
+import { getLoyaltyTier, LoyaltyTier } from '@/lib/loyalty';
 
 const SOLSCAN_TX = 'https://solscan.io/tx/';
 
@@ -60,6 +61,8 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = isControlled ? onOpenChange : setInternalOpen;
 
+  const [loyalty, setLoyalty] = useState<LoyaltyTier | null>(null);
+
   const wallet = userData?.solanaWallet;
   const displayName = userData?.name || currentUser?.email?.split('@')[0] || 'Rider';
   const initial = displayName.charAt(0).toUpperCase();
@@ -76,6 +79,10 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
         (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
       setBookingsWithReceipts(sorted);
+
+      // 3. Calculate loyalty tier
+      const completedCount = data.filter(b => b.status === 'completed').length;
+      setLoyalty(getLoyaltyTier(completedCount));
     });
     return () => unsubscribe();
   }, [currentUser, open]);
@@ -134,6 +141,11 @@ export function YatraProfileDrawer({ open: controlledOpen, onOpenChange }: Yatra
                   <span className="inline-flex items-center rounded-full bg-cyan-50 border border-cyan-200 px-2.5 py-0.5 text-[10px] font-black text-cyan-700 tracking-widest uppercase">
                     PASSENGER
                   </span>
+                  {loyalty && loyalty.id !== 'none' && (
+                    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-black tracking-widest uppercase ${loyalty.bgColor} ${loyalty.color} border-${loyalty.color.replace('text-', '')}/30`}>
+                      {loyalty.name}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>            {wallet && (

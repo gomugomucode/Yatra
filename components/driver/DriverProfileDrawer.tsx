@@ -47,6 +47,7 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
   const [internalOpen, setInternalOpen] = useState(false);
   const [reputationScore, setReputationScore] = useState<number>(0);
   const [totalTrips, setTotalTrips] = useState<number>(0);
+  const [completedTrips, setCompletedTrips] = useState<number>(0);
   const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
 
   const isControlled = controlledOpen !== undefined && onOpenChange !== undefined;
@@ -71,7 +72,8 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
         if (snap.exists()) {
           const data = snap.val();
           setReputationScore(data.score || 0);
-          setTotalTrips(data.completedTrips || 0);
+          setTotalTrips(data.totalTrips || 0);
+          setCompletedTrips(data.completedTrips || 0);
         }
       } catch (error) {
         console.error('Failed to fetch reputation', error);
@@ -141,9 +143,13 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
                   <span className="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-black text-emerald-700 tracking-widest uppercase">
                     DRIVER
                   </span>
-                  {isZkVerified && (
+                  {isZkVerified ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-black text-blue-700 tracking-widest uppercase">
                       <ShieldCheck className="w-3 h-3" /> ZK Verified
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-[10px] font-black text-red-700 tracking-widest uppercase">
+                      Unverified
                     </span>
                   )}
                 </div>
@@ -155,6 +161,18 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
                 <span className="text-xs font-bold text-muted-foreground">Connected Wallet</span>
                 <span className="text-xs font-mono font-bold text-emerald-700 ml-auto">{truncateAddress(wallet)}</span>
               </div>
+            )}
+            {!isZkVerified && (
+              <Button
+                className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold h-10 rounded-xl"
+                onClick={() => {
+                  setOpen(false);
+                  router.push('/auth/profile');
+                }}
+              >
+                <ShieldCheck className="w-4 h-4 mr-2" />
+                Verify Identity via ZK
+              </Button>
             )}
           </div>
 
@@ -177,9 +195,11 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
                 <div className="absolute -right-4 -top-4 w-16 h-16 bg-cyan-500/5 rounded-full blur-xl group-hover:bg-cyan-500/10 transition-all"></div>
                 <div className="flex items-center gap-2 mb-1 relative z-10">
                   <Activity className="w-4 h-4 text-cyan-600" />
-                  <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Total Trips</span>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Completion</span>
                 </div>
-                <div className="text-2xl font-black text-foreground relative z-10">{totalTrips}</div>
+                <div className="text-2xl font-black text-foreground relative z-10">
+                  {totalTrips > 0 ? Math.round((completedTrips / totalTrips) * 100) : 0}%
+                </div>
               </div>
             </div>
           </div>

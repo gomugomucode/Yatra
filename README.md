@@ -440,15 +440,16 @@ yatra/
 - [x] OSRM integration for ETA and routing
 - [x] 3D immersive landing page (Three.js + scroll animation)
 - [x] Trip request + FCM push notification to driver
-- [ ] Driver accept/reject panel with 90-second countdown
-- [ ] Two-phase ETA (pickup + destination) with route polyline
-- [ ] Participant-only visibility (tripLocations path)
-- [ ] Passenger wallet connect (Phantom) + NFT receipt delivery
-- [ ] DriverReputation PDA (Anchor program on devnet)
-- [ ] PassengerReputation PDA + loyalty badges
-- [ ] ZK verifier wired to `snarkjs.groth16.verify()`
-- [ ] Fare escrow with GPS-verified release
-- [ ] Transport office dashboard (number plate → live map)
+- [x] Driver accept/reject panel with 90-second countdown
+- [x] Two-phase ETA (pickup + destination) with route polyline
+- [x] Participant-only visibility (tripLocations path)
+- [x] Passenger wallet connect (Phantom) + NFT receipt delivery
+- [x] DriverReputation tracking via TRRL integration
+- [x] Passenger loyalty tiers (Bronze/Silver/Gold)
+- [x] ZK verifier wired to `snarkjs.groth16.verify()`
+- [x] Fare escrow with GPS-verified release
+- [x] Transport office dashboard (Live map & Analytics)
+- [x] Driver Reputation Lookup UI for Transport Office
 - [x] Typed SDK query layer (`lib/sdk`) for third-party integration
 - [ ] SparrowSMS integration for real notifications
 - [ ] Mainnet deployment
