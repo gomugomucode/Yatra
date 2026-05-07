@@ -313,6 +313,8 @@ function ProfilePageContent() {
       }
 
       toast({ title: 'Success!', description: 'Profile verified and created.' });
+      document.cookie = `role=driver; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`;
+      await new Promise(resolve => setTimeout(resolve, 500));
       window.location.assign('/driver');
     } catch (error) {
       console.error('[driver-submit]', error);
@@ -369,6 +371,8 @@ function ProfilePageContent() {
       });
 
       toast({ title: 'Success!', description: 'Profile created.' });
+      document.cookie = `role=passenger; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`;
+      await new Promise(resolve => setTimeout(resolve, 500));
       window.location.assign('/passenger');
     } catch (error) {
       console.error('Error:', error);

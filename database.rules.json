@@ -82,6 +82,10 @@
         ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (!data.exists() && root.child('users').child(auth.uid).child('role').val() === 'driver' && newData.child('busId').val() === auth.uid && newData.child('status').val() === 'active'))",
         ".validate": "newData.hasChildren(['id','busId','driverName','busNumber','type','location','timestamp','status']) && newData.child('id').isString() && newData.child('id').val() === $alertId && newData.child('busId').isString() && newData.child('driverName').isString() && newData.child('busNumber').isString() && (newData.child('type').val() === 'accident' || newData.child('type').val() === 'breakdown' || newData.child('type').val() === 'emergency') && newData.child('location').hasChildren(['lat','lng','timestamp']) && newData.child('location').child('lat').isNumber() && newData.child('location').child('lng').isNumber() && newData.child('timestamp').isString() && (newData.child('status').val() === 'active' || newData.child('status').val() === 'resolved')"
       }
+    },
+    "reputation": {
+      ".read": "auth != null",
+      ".write": false
     }
   }
 }

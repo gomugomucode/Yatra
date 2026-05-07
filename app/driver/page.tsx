@@ -953,19 +953,24 @@ export default function DriverDashboard() {
     }
 
     try {
-      await createAlert({
-        busId: selectedBus.id,
-        busNumber: selectedBus.busNumber,
-        driverName: selectedBus.driverName,
-        type,
-        location: {
-          lat: userLocation.lat,
-          lng: userLocation.lng,
-          timestamp: new Date()
-        },
-        timestamp: new Date().toISOString(),
-        status: 'active'
+      const res = await fetch('/api/emergency', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          busId: selectedBus.id,
+          busNumber: selectedBus.busNumber,
+          driverName: selectedBus.driverName,
+          type,
+          location: {
+            lat: userLocation.lat,
+            lng: userLocation.lng
+          }
+        })
       });
+
+      if (!res.ok) {
+        throw new Error('Failed to report emergency');
+      }
 
       toast({
         title: 'Emergency Reported',

@@ -1,24 +1,31 @@
 import { NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebaseAdmin';
+import { z } from 'zod';
+
+const emergencySchema = z.object({
+    busId: z.string().min(1),
+    busNumber: z.string().min(1),
+    driverName: z.string().min(1),
+    type: z.enum(['accident', 'breakdown', 'emergency']),
+    location: z.object({
+        lat: z.number().min(-90).max(90),
+        lng: z.number().min(-180).max(180)
+    })
+});
 
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { busId, busNumber, driverName, location, type } = body;
-
-        if (
-            !busId ||
-            !busNumber ||
-            !driverName ||
-            !type ||
-            !Number.isFinite(location?.lat) ||
-            !Number.isFinite(location?.lng)
-        ) {
+        
+        const parseResult = emergencySchema.safeParse(body);
+        if (!parseResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Missing required emergency payload fields.' },
+                { success: false, error: 'Invalid emergency payload fields.', details: parseResult.error.format() },
                 { status: 400 }
             );
         }
+
+        const { busId, busNumber, driverName, location, type } = parseResult.data;
 
         const adminDb = getAdminDb();
         const incidentRef = adminDb.ref('emergencyIncidents').push();

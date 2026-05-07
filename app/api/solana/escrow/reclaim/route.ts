@@ -3,6 +3,7 @@ import { getConnection, getServerKeypair } from '@/lib/solana/connection';
 import { reclaimEscrow } from '@/lib/solana/escrow';
 import { canReclaimEscrow } from '@/lib/solana/escrowPolicy';
 import { getAdminDb } from '@/lib/firebaseAdmin';
+import { checkRateLimit } from '@/lib/utils/rateLimit';
 
 export const runtime = 'nodejs';
 
@@ -21,6 +22,10 @@ export async function POST(request: Request) {
 
         if (typeof tripId !== 'string' || !tripId.trim()) {
             return NextResponse.json({ error: 'Missing tripId' }, { status: 400 });
+        }
+
+        if (!checkRateLimit(`reclaim-escrow:${tripId}`, 10, 3_600_000)) {
+            return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
         }
 
         const adminDb = getAdminDb();

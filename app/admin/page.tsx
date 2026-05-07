@@ -57,6 +57,10 @@ export default function AdminDashboard() {
     const activeBuses = buses.filter(b => b.isActive).length;
     const totalRevenue = bookings.reduce((sum, b) => sum + (b.fare || 0), 0);
 
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const tripsToday = bookings.filter(b => new Date(b.timestamp) >= todayStart).length;
+
     return (
         <AdminLayout>
             <div className="space-y-8">
@@ -69,6 +73,7 @@ export default function AdminDashboard() {
                     totalBuses={buses.length}
                     activeBuses={activeBuses}
                     totalBookings={bookings.length}
+                    tripsToday={tripsToday}
                     totalRevenue={totalRevenue}
                 />
 
