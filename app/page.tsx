@@ -689,7 +689,6 @@ function TransformSection() {
   const frameImgRef = useRef<HTMLImageElement>(null);
   const preloadRef  = useRef<HTMLImageElement[]>([]);
   const frameRef    = useRef(-1);
-  const autoPosRef  = useRef(0); // float frame index driven by auto-play + scroll
 
   const [frameIndex, setFrameIndex] = useState(0);
 
@@ -726,27 +725,15 @@ function TransformSection() {
       setFrameIndex(c);
     };
 
-    let lastTs = performance.now();
     let rafId: number;
-
-    const tick = (ts: number) => {
-      const dt = Math.min((ts - lastTs) / 1000, 0.05); // seconds, capped
-      lastTs = ts;
-
+    const tick = () => {
       const rect      = section.getBoundingClientRect();
       const inView    = rect.top < window.innerHeight && rect.bottom > 0;
 
       if (inView) {
-        // Scroll-driven position (0 → FRAME_COUNT-1)
-        const maxScroll   = section.offsetHeight - window.innerHeight;
-        const scrollPct   = maxScroll > 0 ? Math.max(0, Math.min(1, -rect.top / maxScroll)) : 0;
-        const scrollFrame = scrollPct * (FRAME_COUNT - 1);
-
-        // Bidirectional lerp — tracks scroll forward AND backward
-        const lerpFactor = 1 - Math.exp(-14 * dt);
-        autoPosRef.current += (scrollFrame - autoPosRef.current) * lerpFactor;
-
-        renderFrame(Math.round(autoPosRef.current));
+        const maxScroll = section.offsetHeight - window.innerHeight;
+        const scrollPct = maxScroll > 0 ? Math.max(0, Math.min(1, -rect.top / maxScroll)) : 0;
+        renderFrame(Math.round(scrollPct * (FRAME_COUNT - 1)));
       }
 
       rafId = requestAnimationFrame(tick);
@@ -760,7 +747,7 @@ function TransformSection() {
     <section
       id="transform"
       ref={sectionRef}
-      style={{ height: '300vh', position: 'relative' }}
+      style={{ height: '400vh', position: 'relative' }}
     >
       <div
         className="sticky top-0 h-screen overflow-hidden"
