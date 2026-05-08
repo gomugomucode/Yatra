@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Outfit, JetBrains_Mono, Mukta } from "next/font/google";
+import { Outfit, JetBrains_Mono, Mukta, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
@@ -22,6 +22,13 @@ const mukta = Mukta({
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
   subsets: ["latin"],
+});
+
+const playfairDisplay = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800", "900"],
+  style: ["normal", "italic"],
 });
 
 export const viewport: Viewport = {
@@ -55,7 +62,7 @@ export default function RootLayout({
   return (
     <html lang="en" data-scroll-behavior="smooth">
       <body
-        className={`${outfit.variable} ${jetbrainsMono.variable} ${mukta.variable} antialiased font-sans bg-background text-foreground`}
+        className={`${outfit.variable} ${jetbrainsMono.variable} ${mukta.variable} ${playfairDisplay.variable} antialiased font-sans bg-background text-foreground`}
       >
         <AuthProvider>
           <ClientWalletProvider>

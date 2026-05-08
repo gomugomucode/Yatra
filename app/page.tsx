@@ -1,584 +1,1345 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import {
-  Bus,
-  Users,
-  ArrowRight,
-  Star,
-  MapPin,
-  ShieldCheck,
-  Smartphone,
-  Clock,
-  Menu,
-  X,
-  ChevronRight,
-  TrendingUp,
-  CreditCard,
-  Map
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+  motion,
+  AnimatePresence,
+  useScroll,
+  useTransform,
+  useMotionValue,
+  useMotionValueEvent,
+  useSpring,
+  MotionValue,
+} from 'framer-motion';
+import Lenis from 'lenis';
+import { ArrowRight, ChevronDown } from 'lucide-react';
+import TextPressure from '@/components/landing/TextPressure';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { subscribeToBuses } from '@/lib/firebaseDb';
-import { ScrollReveal } from '@/components/ui/ScrollReveal';
 
-export default function Home() {
+// ─── Design constants ────────────────────────────────────────────────────────
+const CYAN    = '#00D4AA';
+const CHARCOAL = '#1A1A1A';
+const RUST    = '#C4501A';
+const WHITE   = '#FAFAFA';
+
+const PLAYFAIR = 'var(--font-playfair)';
+const MONO     = 'var(--font-jetbrains-mono)';
+
+// ─── Nepal map data ──────────────────────────────────────────────────────────
+const NEPAL_PATH = `M 60,140 L 80,130 L 110,125 L 140,120 L 160,115 L 190,110
+  L 220,108 L 250,105 L 280,100 L 310,98 L 340,95 L 370,90 L 400,88
+  L 430,85 L 460,82 L 490,80 L 510,78 L 530,80 L 550,82 L 565,88
+  L 570,100 L 560,112 L 545,118 L 530,125 L 510,130 L 490,135
+  L 465,140 L 440,145 L 415,150 L 390,155 L 360,158 L 330,160
+  L 300,162 L 270,165 L 240,163 L 210,158 L 180,155 L 150,152
+  L 120,148 L 90,145 L 65,142 Z`;
+
+const NEPAL_ROUTES = [
+  { id: 'r1', d: 'M 80,138 Q 200,125 350,110 Q 450,98 555,90' },
+  { id: 'r2', d: 'M 100,142 Q 220,132 360,118 Q 460,108 545,100' },
+  { id: 'r3', d: 'M 120,145 Q 250,135 380,125 Q 470,115 540,108' },
+  { id: 'r4', d: 'M 150,148 Q 280,140 400,132 Q 500,124 555,118' },
+];
+
+const NEPAL_CITIES = [
+  { x: 100, y: 140, name: 'Dhangadhi',  primary: false },
+  { x: 185, y: 132, name: 'Nepalganj',  primary: false },
+  { x: 260, y: 130, name: 'Butwal',     primary: true  },
+  { x: 320, y: 118, name: 'Pokhara',    primary: false },
+  { x: 390, y: 112, name: 'Kathmandu',  primary: true  },
+  { x: 470, y: 100, name: 'Biratnagar', primary: false },
+  { x: 535, y: 95,  name: 'Ilam',       primary: false },
+];
+
+// ─── Transformation phases ───────────────────────────────────────────────────
+type PhaseKey = 'FOLK' | 'SHIFT' | 'CODE' | 'PROTOCOL';
+
+const PHASES: Record<PhaseKey, { badge: string; title: string; body: string; isTech: boolean }> = {
+  FOLK: {
+    badge: '01 · HERITAGE SYSTEM',
+    title: 'Hand-written\nledgers.\nShouted routes.',
+    body: 'Thousands of buses across Nepal, zero data. Drivers kept records in notebooks. Fares settled in cash at the window. Generations of passengers, none of it recorded.',
+    isTech: false,
+  },
+  SHIFT: {
+    badge: '02 · TRANSFORMATION',
+    title: 'Every journey\nbecomes a\nsignal.',
+    body: 'GPS pings, seat confirmations, driver check-ins — each action converted into protocol data. The bus does not change. Its relationship to the ledger does.',
+    isTech: false,
+  },
+  CODE: {
+    badge: '03 · PROTOCOL LAYER',
+    title: 'The bus\nbecomes\na node.',
+    body: 'DRIVER_REPUTATION: 98.4\nZK_PROOF: VALID ✓\nROUTES_VERIFIED: 1,247\n\nEach vehicle submits zero-knowledge proofs. Each fare settles on Solana. Immutable. Trustless.',
+    isTech: true,
+  },
+  PROTOCOL: {
+    badge: '04 · DEPIN NETWORK',
+    title: "Nepal's roads,\ntokenized.",
+    body: 'A self-sustaining transit mesh. No central operator. No paper tickets. No gatekeepers. Just protocol, physics, and the open road.',
+    isTech: false,
+  },
+};
+
+// ─── Grain overlay ───────────────────────────────────────────────────────────
+function Grain() {
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none fixed inset-0 z-[200] overflow-hidden"
+      style={{ opacity: 0.038 }}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="100%"
+        height="100%"
+        style={{ animation: 'grain 0.6s steps(1) infinite' }}
+      >
+        <filter id="grain-f">
+          <feTurbulence type="fractalNoise" baseFrequency="0.68" numOctaves="4" stitchTiles="stitch" />
+          <feColorMatrix type="saturate" values="0" />
+        </filter>
+        <rect width="100%" height="100%" filter="url(#grain-f)" />
+      </svg>
+    </div>
+  );
+}
+
+// ─── Nepal map SVG ────────────────────────────────────────────────────────────
+function NepalMap({
+  routeColor = RUST,
+  mapOpacity = 0.06,
+  animated = false,
+}: {
+  routeColor?: string;
+  mapOpacity?: number;
+  animated?: boolean;
+}) {
+  return (
+    <svg
+      viewBox="40 75 540 100"
+      className="w-full h-auto"
+      preserveAspectRatio="xMidYMid meet"
+      style={{ filter: `drop-shadow(0 0 12px ${routeColor}22)` }}
+    >
+      <defs>
+        {NEPAL_ROUTES.map((r) => (
+          <linearGradient key={`lg-${r.id}`} id={`lg-${r.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stopColor={routeColor} stopOpacity="0" />
+            <stop offset="40%"  stopColor={routeColor} stopOpacity="1" />
+            <stop offset="60%"  stopColor={routeColor} stopOpacity="1" />
+            <stop offset="100%" stopColor={routeColor} stopOpacity="0" />
+          </linearGradient>
+        ))}
+        <filter id="dot-glow">
+          <feGaussianBlur stdDeviation="1.5" result="b" />
+          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+
+      {/* Nepal silhouette */}
+      <path
+        d={NEPAL_PATH}
+        fill={`rgba(26,26,26,${mapOpacity * 1.5})`}
+        stroke={`${routeColor}`}
+        strokeWidth="0.8"
+        strokeOpacity={mapOpacity * 8}
+      />
+
+      {/* Route lines */}
+      {NEPAL_ROUTES.map((r, i) => (
+        <g key={r.id}>
+          <path d={r.d} fill="none" stroke={routeColor} strokeWidth="0.5" opacity={mapOpacity * 5} />
+          {animated && (
+            <path
+              d={r.d}
+              fill="none"
+              stroke={`url(#lg-${r.id})`}
+              strokeWidth="1.8"
+              strokeDasharray="50 220"
+              style={{
+                animation: `routeFlow 4s linear infinite`,
+                animationDelay: `${i * 1.1}s`,
+              }}
+            />
+          )}
+        </g>
+      ))}
+
+      {/* City dots */}
+      {NEPAL_CITIES.map((c) => (
+        <g key={c.name} opacity={mapOpacity * 12} filter="url(#dot-glow)">
+          {c.primary && (
+            <circle
+              cx={c.x} cy={c.y} r="5"
+              fill="none"
+              stroke={routeColor}
+              strokeWidth="0.8"
+              opacity="0.5"
+              style={{ animation: `cityPulse 3s ease-out infinite`, animationDelay: `${NEPAL_CITIES.indexOf(c) * 0.5}s` }}
+            />
+          )}
+          <circle cx={c.x} cy={c.y} r="2" fill={routeColor} />
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+// ─── Bus SVG (folk + tech crossfade) ─────────────────────────────────────────
+function TransformBus({ progress }: { progress: MotionValue<number> }) {
+  const folkOpacity = useTransform(progress, [0.18, 0.58], [1, 0]);
+  const techOpacity = useTransform(progress, [0.28, 0.68], [0, 1]);
+
+  return (
+    <svg viewBox="0 0 480 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full drop-shadow-xl">
+      <defs>
+        <filter id="cyan-glow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="3" result="b" />
+          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+        <filter id="window-glow" x="-10%" y="-10%" width="120%" height="120%">
+          <feGaussianBlur stdDeviation="1.5" result="b" />
+          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+
+      {/* ── FOLK LAYER ── */}
+      <motion.g style={{ opacity: folkOpacity }}>
+        {/* Roof rack */}
+        <rect x="55" y="26" width="295" height="10" rx="3" fill="#6B2A00" opacity="0.9" />
+        {[75, 120, 165, 210, 255, 295].map((x) => (
+          <rect key={x} x={x} y="22" width="3.5" height="15" rx="1.5" fill="#5A2308" />
+        ))}
+
+        {/* Main roof */}
+        <rect x="40" y="35" width="320" height="24" rx="7" fill="#8B3A0F" />
+
+        {/* Roof stripe — gold */}
+        <rect x="40" y="56" width="320" height="7" fill="#D4A017" opacity="0.9" />
+
+        {/* Main body */}
+        <rect x="10" y="60" width="390" height="95" rx="8" fill={RUST} />
+
+        {/* Lower decorative band */}
+        <rect x="10" y="130" width="390" height="16" fill="#8B3A0F" />
+        {/* Diamond pattern on lower band */}
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+          <polygon
+            key={i}
+            points={`${28 + i * 42},130 ${42 + i * 42},138 ${28 + i * 42},146 ${14 + i * 42},138`}
+            fill={i % 2 === 0 ? '#D4A017' : '#3A8B30'}
+            opacity="0.85"
+          />
+        ))}
+
+        {/* Side windows */}
+        {[18, 78, 138, 198, 258].map((x) => (
+          <g key={x}>
+            <rect x={x} y="67" width="50" height="36" rx="4" fill="#AADCF0" opacity="0.85" />
+            <rect x={x} y="67" width="50" height="36" rx="4" fill="none" stroke="#7A2A00" strokeWidth="1.5" />
+          </g>
+        ))}
+
+        {/* Door */}
+        <rect x="318" y="67" width="40" height="58" rx="4" fill="#8B3A0F" />
+        <rect x="318" y="67" width="40" height="58" rx="4" fill="none" stroke="#6B2A00" strokeWidth="1.5" />
+        <circle cx="353" cy="96" r="3" fill={RUST} />
+
+        {/* Front section */}
+        <rect x="395" y="50" width="52" height="108" rx="8" fill="#B04520" />
+        {/* Windshield */}
+        <rect x="401" y="58" width="38" height="44" rx="4" fill="#AADCF0" opacity="0.82" />
+        <rect x="401" y="58" width="38" height="44" rx="4" fill="none" stroke="#7A2A00" strokeWidth="1.5" />
+        {/* Headlights */}
+        <ellipse cx="425" cy="120" rx="9" ry="6" fill="#FFF8C0" opacity="0.92" />
+        <ellipse cx="425" cy="133" rx="6" ry="4" fill="#FF5722" opacity="0.8" />
+        {/* Front bumper */}
+        <rect x="395" y="154" width="52" height="7" rx="3" fill="#6B2A00" />
+
+        {/* Wheel arches */}
+        <ellipse cx="97"  cy="157" rx="32" ry="8" fill="#6B2A00" />
+        <ellipse cx="315" cy="157" rx="32" ry="8" fill="#6B2A00" />
+
+        {/* Wheels */}
+        {[97, 315].map((cx) => (
+          <g key={cx}>
+            <circle cx={cx} cy="168" r="26" fill="#1A1A1A" />
+            <circle cx={cx} cy="168" r="17" fill="#272727" />
+            <circle cx={cx} cy="168" r="8"  fill="#333" />
+            <circle cx={cx} cy="168" r="3"  fill="#555" />
+            {[0, 60, 120, 180, 240, 300].map((a) => (
+              <line
+                key={a}
+                x1={cx + 4 * Math.cos((a * Math.PI) / 180)}
+                y1={168 + 4 * Math.sin((a * Math.PI) / 180)}
+                x2={cx + 16 * Math.cos((a * Math.PI) / 180)}
+                y2={168 + 16 * Math.sin((a * Math.PI) / 180)}
+                stroke="#444" strokeWidth="1.5"
+              />
+            ))}
+          </g>
+        ))}
+
+        {/* Devanagari text */}
+        <text x="420" y="105" textAnchor="middle" fill="#D4A017" fontSize="11" fontFamily="var(--font-mukta)" fontWeight="700" opacity="0.9">
+          यात्रा
+        </text>
+      </motion.g>
+
+      {/* ── TECH LAYER ── */}
+      <motion.g style={{ opacity: techOpacity }}>
+        {/* Dark roof */}
+        <rect x="40" y="35" width="320" height="24" rx="7" fill="#0D0D0D" stroke={CYAN} strokeWidth="0.8" strokeOpacity="0.5" />
+
+        {/* Dark body */}
+        <rect x="10" y="60" width="390" height="95" rx="8" fill="#111111" />
+
+        {/* Cyan body outline glow */}
+        <rect x="10" y="60" width="390" height="95" rx="8" fill="none" stroke={CYAN} strokeWidth="1.5" filter="url(#cyan-glow)" />
+
+        {/* HUD corner brackets */}
+        <path d="M 10 60 L 10 78 M 10 60 L 28 60"   stroke={CYAN} strokeWidth="2"   />
+        <path d="M 400 60 L 400 78 M 400 60 L 382 60" stroke={CYAN} strokeWidth="2"   />
+        <path d="M 10 155 L 10 137 M 10 155 L 28 155"   stroke={CYAN} strokeWidth="2" />
+        <path d="M 400 155 L 400 137 M 400 155 L 382 155" stroke={CYAN} strokeWidth="2" />
+
+        {/* Circuit traces */}
+        <path d="M 45 82 H 80 V 72 H 120 V 82 H 160" stroke={CYAN} strokeWidth="0.7" opacity="0.45" />
+        <path d="M 200 82 H 240 V 92 H 280 V 82"      stroke={CYAN} strokeWidth="0.7" opacity="0.45" />
+        <path d="M 45 118 H 390"                        stroke={CYAN} strokeWidth="0.5" strokeDasharray="4 8" opacity="0.25" />
+        <path d="M 45 108 H 130 V 118"                  stroke={CYAN} strokeWidth="0.6" opacity="0.35" />
+        <path d="M 290 108 H 370 V 118"                 stroke={CYAN} strokeWidth="0.6" opacity="0.35" />
+
+        {/* Cyan bottom strip */}
+        <rect x="10" y="149" width="390" height="4" rx="2" fill={CYAN} opacity="0.6" />
+
+        {/* Cyan windows */}
+        {[18, 78, 138, 198, 258].map((x) => (
+          <g key={x}>
+            <rect x={x} y="67" width="50" height="36" rx="4" fill={`${CYAN}18`} stroke={CYAN} strokeWidth="1" filter="url(#window-glow)" />
+            <line x1={x + 25} y1="67" x2={x + 25} y2="103" stroke={CYAN} strokeWidth="0.5" opacity="0.4" />
+          </g>
+        ))}
+
+        {/* Dark door */}
+        <rect x="318" y="67" width="40" height="58" rx="4" fill={`${CYAN}10`} stroke={CYAN} strokeWidth="1" />
+
+        {/* Front section tech */}
+        <rect x="395" y="50" width="52" height="108" rx="8" fill="#0D0D0D" stroke={CYAN} strokeWidth="0.8" strokeOpacity="0.5" />
+        <rect x="401" y="58" width="38" height="44" rx="4" fill={`${CYAN}22`} stroke={CYAN} strokeWidth="1" />
+
+        {/* Headlights — cyan */}
+        <ellipse cx="425" cy="120" rx="9" ry="6" fill={CYAN} opacity="0.8" filter="url(#cyan-glow)" />
+        <ellipse cx="425" cy="133" rx="5" ry="3.5" fill={CYAN} opacity="0.4" />
+
+        {/* GPS antenna */}
+        <line x1="240" y1="35" x2="240" y2="12" stroke={CYAN} strokeWidth="1.5" />
+        <circle cx="240" cy="9" r="5" fill={CYAN} filter="url(#cyan-glow)" />
+        <circle cx="240" cy="9" r="9" fill="none" stroke={CYAN} strokeWidth="0.8" opacity="0.5" style={{ animation: 'cityPulse 2s ease-out infinite' }} />
+
+        {/* Protocol text on bus */}
+        <rect x="65" y="123" width="200" height="14" rx="3" fill={`${CYAN}15`} />
+        <text x="165" y="133" textAnchor="middle" fill={CYAN} fontSize="7.5" fontFamily="var(--font-jetbrains-mono)" fontWeight="600">
+          YATRA_PROTOCOL · v1.0 · BUTWAL
+        </text>
+
+        {/* Dark wheel covers */}
+        {[97, 315].map((cx) => (
+          <g key={cx}>
+            <circle cx={cx} cy="168" r="26" fill="#0D0D0D" stroke={CYAN} strokeWidth="1" />
+            <circle cx={cx} cy="168" r="16" fill="none" stroke={CYAN} strokeWidth="0.5" opacity="0.4" />
+            <circle cx={cx} cy="168" r="5"  fill={CYAN} opacity="0.6" filter="url(#cyan-glow)" />
+          </g>
+        ))}
+      </motion.g>
+    </svg>
+  );
+}
+
+// ─── Navbar ───────────────────────────────────────────────────────────────────
+function Navbar({ onlineBuses }: { onlineBuses: number | null }) {
+  const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const { currentUser, role, signOut } = useAuth();
   const [isClient, setIsClient] = useState(false);
-  const [onlineBuses, setOnlineBuses] = useState<number | null>(null);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { scrollYProgress } = useScroll();
-  const heroScale = useTransform(scrollYProgress, [0, 0.25], [1, 0.965]);
-  const heroY = useTransform(scrollYProgress, [0, 0.25], [0, -24]);
 
   useEffect(() => {
     setIsClient(true);
+    const fn = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', fn, { passive: true });
+    return () => window.removeEventListener('scroll', fn);
   }, []);
 
-  useEffect(() => {
-    const unsubscribe = subscribeToBuses((buses) => {
-      const activeCount = buses.filter((bus) => (bus as any).isActive || (bus as any).locationSharingEnabled).length;
-      setOnlineBuses(activeCount);
-    });
-    return () => unsubscribe();
-  }, []);
+  return (
+    <motion.nav
+      initial={{ y: -80, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+      className="fixed top-0 left-0 right-0 z-50"
+      style={{
+        background: scrolled ? 'rgba(250,250,250,0.82)' : 'rgba(250,250,250,0.6)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderBottom: scrolled ? '0.5px solid rgba(26,26,26,0.08)' : '0.5px solid transparent',
+        transition: 'background 0.3s, border-color 0.3s',
+      }}
+    >
+      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        {/* Logo + wordmark */}
+        <div className="flex items-center gap-3">
+          <Image src="/yatra-logo.png" alt="Yatra" width={38} height={38} className="rounded-lg" priority />
+          <span style={{ fontFamily: MONO, fontSize: '11px', color: CHARCOAL, letterSpacing: '0.2em', fontWeight: 700 }}>
+            YATRA
+          </span>
+          {onlineBuses !== null && onlineBuses > 0 && (
+            <div
+              className="flex items-center gap-1.5 px-2 py-0.5 rounded-full ml-1"
+              style={{ background: `${CYAN}12`, border: `0.5px solid ${CYAN}50` }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: CYAN, animation: 'pulse 2s infinite' }} />
+              <span style={{ fontFamily: MONO, fontSize: '9px', color: CYAN, letterSpacing: '0.12em', fontWeight: 600 }}>
+                {onlineBuses} LIVE
+              </span>
+            </div>
+          )}
+        </div>
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.3
-      }
-    }
+        {/* Desktop links */}
+        <div className="hidden md:flex items-center gap-10">
+          {[
+            { label: 'OVERVIEW',   href: '#overview'    },
+            { label: 'TRANSFORM',  href: '#transform'   },
+            { label: 'DEPIN',      href: '#depin'       },
+            { label: 'REPUTATION', href: '#reputation'  },
+          ].map(({ label, href }) => (
+            <a
+              key={label}
+              href={href}
+              style={{ fontFamily: MONO, fontSize: '10px', color: `${CHARCOAL}70`, letterSpacing: '0.15em', textDecoration: 'none', transition: 'color 0.2s' }}
+              onMouseEnter={(e) => ((e.target as HTMLElement).style.color = CHARCOAL)}
+              onMouseLeave={(e) => ((e.target as HTMLElement).style.color = `${CHARCOAL}70`)}
+            >
+              {label}
+            </a>
+          ))}
+        </div>
+
+        {/* Auth CTAs */}
+        <div className="hidden md:flex items-center gap-3">
+          {isClient && currentUser ? (
+            <>
+              <Link href={role === 'driver' ? '/driver' : '/passenger'}>
+                <button style={{ fontFamily: MONO, fontSize: '10px', background: 'none', color: `${CHARCOAL}70`, border: 'none', cursor: 'pointer', letterSpacing: '0.12em', padding: '6px 0' }}>
+                  DASHBOARD
+                </button>
+              </Link>
+              <button
+                onClick={() => signOut()}
+                style={{ fontFamily: MONO, fontSize: '10px', background: CHARCOAL, color: WHITE, border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', letterSpacing: '0.12em', fontWeight: 600 }}
+              >
+                LOGOUT
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/auth">
+                <button style={{ fontFamily: MONO, fontSize: '10px', background: 'none', color: `${CHARCOAL}70`, border: 'none', cursor: 'pointer', letterSpacing: '0.12em', padding: '6px 0' }}>
+                  LOGIN
+                </button>
+              </Link>
+              <Link href="/auth?isSignUp=true">
+                <button style={{ fontFamily: MONO, fontSize: '10px', background: CHARCOAL, color: WHITE, border: 'none', padding: '8px 18px', borderRadius: '6px', cursor: 'pointer', letterSpacing: '0.12em', fontWeight: 600 }}>
+                  JOIN WAITLIST
+                </button>
+              </Link>
+            </>
+          )}
+        </div>
+
+        {/* Mobile hamburger */}
+        <button
+          className="md:hidden p-2"
+          onClick={() => setOpen(!open)}
+          style={{ color: CHARCOAL, background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px' }}
+        >
+          {open ? '✕' : '☰'}
+        </button>
+      </div>
+
+      {/* Mobile menu */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            style={{ background: 'rgba(250,250,250,0.98)', borderTop: '0.5px solid rgba(0,0,0,0.06)', overflow: 'hidden' }}
+          >
+            <div className="px-6 py-6 space-y-1">
+              {[
+                { label: 'OVERVIEW',   href: '#overview'   },
+                { label: 'TRANSFORM',  href: '#transform'  },
+                { label: 'DEPIN',      href: '#depin'      },
+                { label: 'REPUTATION', href: '#reputation' },
+              ].map(({ label, href }) => (
+                <a
+                  key={label}
+                  href={href}
+                  className="block py-3"
+                  style={{ fontFamily: MONO, fontSize: '12px', color: CHARCOAL, letterSpacing: '0.15em', textDecoration: 'none' }}
+                  onClick={() => setOpen(false)}
+                >
+                  {label}
+                </a>
+              ))}
+              <div className="pt-4" style={{ borderTop: '0.5px solid rgba(0,0,0,0.08)' }}>
+                <Link href="/auth?isSignUp=true" onClick={() => setOpen(false)}>
+                  <button style={{ width: '100%', padding: '14px', background: CHARCOAL, color: WHITE, border: 'none', borderRadius: '8px', fontFamily: MONO, fontSize: '11px', letterSpacing: '0.12em', cursor: 'pointer', fontWeight: 600 }}>
+                    JOIN WAITLIST
+                  </button>
+                </Link>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.nav>
+  );
+}
+
+// ─── Hero section ─────────────────────────────────────────────────────────────
+function HeroSection({ onlineBuses }: { onlineBuses: number | null }) {
+  const containerV = {
+    hidden: {},
+    visible: { transition: { staggerChildren: 0.12, delayChildren: 0.4 } },
   };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: { duration: 0.5, ease: [0.21, 0.47, 0.32, 0.98] as any }
-    }
+  const itemV = {
+    hidden:  { opacity: 0, y: 30 },
+    visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 20 } },
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary-soft selection:text-primary overflow-x-hidden">
+    <section id="overview" className="relative min-h-screen flex flex-col justify-center overflow-hidden pt-16" style={{ background: WHITE }}>
+      {/* Nepal map watermark */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ opacity: 0.055 }}>
+        <div className="w-full max-w-5xl px-8">
+          <NepalMap routeColor={RUST} mapOpacity={1} animated={false} />
+        </div>
+      </div>
 
-      {/* ═══ NAVBAR ═══ */}
-      <nav className="sticky top-0 z-50 bg-background/85 backdrop-blur-xl border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            {/* Left: Logo */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-center gap-2"
+      {/* Content */}
+      <motion.div
+        className="relative z-10 max-w-5xl mx-auto px-6 py-24 w-full"
+        variants={containerV}
+        initial="hidden"
+        animate="visible"
+      >
+        {/* Live badge */}
+        <motion.div variants={itemV} className="mb-10">
+          <div
+            className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full"
+            style={{ background: `${CYAN}10`, border: `1px solid ${CYAN}35` }}
+          >
+            <span
+              className="w-2 h-2 rounded-full"
+              style={{ background: CYAN, boxShadow: `0 0 8px ${CYAN}`, animation: 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite' }}
+            />
+            <span style={{ fontFamily: MONO, fontSize: '10px', color: CYAN, letterSpacing: '0.2em', fontWeight: 600 }}>
+              LIVE — BUTWAL, NEPAL
+            </span>
+            {onlineBuses !== null && (
+              <span style={{ fontFamily: MONO, fontSize: '9px', color: `${CYAN}80`, letterSpacing: '0.1em' }}>
+                · {onlineBuses} BUSES ACTIVE
+              </span>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Interactive headline — TextPressure variable font */}
+        <motion.div variants={itemV} className="mb-8 w-full">
+          <div style={{ position: 'relative', height: 'clamp(64px, 9.5vw, 128px)' }}>
+            <TextPressure
+              text="Nepal's Transit,"
+              fontFamily="Compressa VF"
+              fontUrl="https://res.cloudinary.com/dr6lvwubh/raw/upload/v1529908256/CompressaPRO-GX.woff2"
+              flex
+              weight
+              width
+              italic
+              textColor={CHARCOAL}
+              minFontSize={36}
+            />
+          </div>
+          <div style={{ position: 'relative', height: 'clamp(80px, 12vw, 160px)' }}>
+            <TextPressure
+              text="Reimagined."
+              fontFamily="Compressa VF"
+              fontUrl="https://res.cloudinary.com/dr6lvwubh/raw/upload/v1529908256/CompressaPRO-GX.woff2"
+              flex
+              weight
+              width
+              italic
+              textColor={RUST}
+              minFontSize={40}
+            />
+          </div>
+        </motion.div>
+
+        {/* Subline */}
+        <motion.p
+          variants={itemV}
+          className="mb-14 max-w-xl"
+          style={{ fontSize: '1.125rem', color: `${CHARCOAL}70`, lineHeight: 1.65, fontWeight: 400 }}
+        >
+          From the dusty roads of Butwal to the immutable ledger of the blockchain.
+          Real-time transit tracking, ZK-verified identity, Solana settlement.
+        </motion.p>
+
+        {/* CTAs */}
+        <motion.div variants={itemV} className="flex flex-col sm:flex-row gap-4">
+          <Link href="/auth?role=passenger&redirect=/passenger">
+            <motion.button
+              whileHover={{ scale: 1.03, y: -2 }}
+              whileTap={{ scale: 0.97 }}
+              style={{
+                fontFamily: MONO,
+                fontSize: '11px',
+                letterSpacing: '0.15em',
+                fontWeight: 700,
+                background: CHARCOAL,
+                color: WHITE,
+                border: 'none',
+                padding: '16px 36px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+              }}
             >
-              <Image src="/yatra-logo.png" alt="Yatra" width={64} height={64} className="rounded-xl" priority />
-            </motion.div>
+              BOARD THE BUS
+              <ArrowRight size={14} />
+            </motion.button>
+          </Link>
+          <Link href="/auth?role=driver&redirect=/driver">
+            <motion.button
+              whileHover={{ scale: 1.03, y: -2 }}
+              whileTap={{ scale: 0.97 }}
+              style={{
+                fontFamily: MONO,
+                fontSize: '11px',
+                letterSpacing: '0.15em',
+                fontWeight: 700,
+                background: 'none',
+                color: CHARCOAL,
+                border: `1.5px solid ${CHARCOAL}30`,
+                padding: '16px 36px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+              }}
+            >
+              DRIVE THE NETWORK
+            </motion.button>
+          </Link>
+        </motion.div>
 
-            {/* Center: Desktop Nav */}
-            <div className="hidden md:flex items-center gap-8">
-              {[
-                { label: 'Home', href: '/' },
-                { label: 'Features', href: '/#features' },
-                { label: 'Ride', href: '/#ride' },
-                { label: 'Passenger', href: '/auth?role=passenger&redirect=/passenger' },
-                { label: 'Driver', href: '/auth?role=driver&redirect=/driver' },
-              ].map((item, i) => (
-                <motion.div
-                  key={item.label}
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                >
-                  <Link
-                    href={item.href}
-                    className="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors relative group"
-                  >
-                    {item.label}
-                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full" />
-                  </Link>
-                </motion.div>
-              ))}
+        {/* Trust bar */}
+        <motion.div variants={itemV} className="mt-16 flex flex-wrap gap-8">
+          {[
+            { label: 'ZK-VERIFIED IDENTITY' },
+            { label: 'SOLANA SETTLEMENT'    },
+            { label: 'REAL-TIME GPS'        },
+          ].map(({ label }) => (
+            <span
+              key={label}
+              style={{ fontFamily: MONO, fontSize: '9px', color: `${CHARCOAL}45`, letterSpacing: '0.2em' }}
+            >
+              {label}
+            </span>
+          ))}
+        </motion.div>
+      </motion.div>
+
+      {/* Scroll cue */}
+      <motion.div
+        className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
+        animate={{ y: [0, 8, 0] }}
+        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ opacity: 0.35 }}
+      >
+        <span style={{ fontFamily: MONO, fontSize: '8px', color: CHARCOAL, letterSpacing: '0.2em' }}>SCROLL</span>
+        <ChevronDown size={14} color={CHARCOAL} />
+      </motion.div>
+    </section>
+  );
+}
+
+// ─── Transformation section ───────────────────────────────────────────────────
+function TransformSection() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ['start start', 'end end'],
+  });
+
+  const [phase, setPhase] = useState<PhaseKey>('FOLK');
+  useMotionValueEvent(scrollYProgress, 'change', (v) => {
+    if      (v < 0.25) setPhase('FOLK');
+    else if (v < 0.50) setPhase('SHIFT');
+    else if (v < 0.75) setPhase('CODE');
+    else               setPhase('PROTOCOL');
+  });
+
+  // Scroll-driven panel background
+  const panelBg = useTransform(
+    scrollYProgress,
+    [0, 0.4, 0.65, 1],
+    [WHITE, '#F5F0EC', '#F0F5F4', WHITE]
+  );
+
+  // Map route color transitions
+  const mapColorProgress = useTransform(scrollYProgress, [0.3, 0.7], [0, 1]);
+  const [mapColor, setMapColor] = useState(RUST);
+  useMotionValueEvent(mapColorProgress, 'change', (v) => {
+    const r = Math.round(196 + (0   - 196) * v);
+    const g = Math.round( 80 + (212 -  80) * v);
+    const b = Math.round( 26 + (170 -  26) * v);
+    setMapColor(`rgb(${r},${g},${b})`);
+  });
+
+  // HUD badges
+  const hudOpacity  = useTransform(scrollYProgress, [0.48, 0.58], [0, 1]);
+  const hudY        = useTransform(scrollYProgress, [0.48, 0.58], [16, 0]);
+  const progressPct = useTransform(scrollYProgress, [0, 1], ['0%', '100%']);
+
+  const data = PHASES[phase];
+
+  return (
+    <section
+      id="transform"
+      ref={sectionRef}
+      style={{ height: '400vh', position: 'relative' }}
+    >
+      <motion.div
+        className="sticky top-0 h-screen overflow-hidden"
+        style={{ background: panelBg }}
+      >
+        {/* Progress rail */}
+        <div
+          className="absolute right-6 top-1/2 -translate-y-1/2 w-px hidden md:block"
+          style={{ height: '140px', background: `${CHARCOAL}12`, zIndex: 10 }}
+        >
+          <motion.div
+            className="w-full"
+            style={{ height: progressPct, background: CHARCOAL, transition: 'height 0.1s' }}
+          />
+          {(['FOLK', 'SHIFT', 'CODE', 'PROTOCOL'] as PhaseKey[]).map((p, i) => (
+            <div
+              key={p}
+              className="absolute -left-1.5 w-3 h-3 rounded-full"
+              style={{
+                top: `${i * 33.3}%`,
+                background: p === phase ? CHARCOAL : `${CHARCOAL}20`,
+                border: `1.5px solid ${p === phase ? CHARCOAL : `${CHARCOAL}20`}`,
+                transition: 'background 0.3s',
+              }}
+            />
+          ))}
+        </div>
+
+        <div className="h-full max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-8 md:gap-16 py-20">
+          {/* ── LEFT: Phase text ── */}
+          <div className="w-full md:w-5/12 flex flex-col justify-center">
+            {/* Phase badge */}
+            <div
+              className="mb-8 inline-block"
+              style={{ fontFamily: MONO, fontSize: '10px', letterSpacing: '0.22em', color: data.isTech ? CYAN : `${CHARCOAL}50` }}
+            >
+              {data.badge}
             </div>
 
-            {/* Right: Auth CTAs */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="hidden md:flex items-center gap-4"
-            >
-              {isClient && currentUser ? (
-                <>
-                  <Link href={role === 'driver' ? '/driver' : '/passenger'}>
-                    <Button variant="ghost" className="font-bold text-muted-foreground hover:bg-surface-soft">Dashboard</Button>
-                  </Link>
-                  <Button
-                    onClick={() => signOut()}
-                    variant="outline"
-                    className="rounded-full border-border font-bold hover:bg-surface-soft transition-all"
-                  >
-                    Logout
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Link href="/auth">
-                    <Button variant="ghost" className="font-bold text-muted-foreground hover:bg-surface-soft">Login</Button>
-                  </Link>
-                  <Link href="/auth?isSignUp=true">
-                    <motion.div
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="relative"
-                    >
-                      <Button className="bg-primary hover:bg-primary-hover text-primary-foreground font-bold rounded-full px-8 shadow-md shadow-primary/20 transition-all">
-                        Sign Up
-                      </Button>
-                      <motion.div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 rounded-full border border-primary/50"
-                        animate={{ scale: [1, 1.08, 1], opacity: [0.3, 0.06, 0.3] }}
-                        transition={{ duration: 2.6, repeat: Infinity }}
-                      />
-                    </motion.div>
-                  </Link>
-                </>
-              )}
-            </motion.div>
-
-            {/* Mobile Menu Button */}
-            <div className="md:hidden">
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="touch-target -mr-1 text-muted-foreground hover:text-primary transition-colors"
+            {/* Headline — morphs between Playfair and Mono */}
+            <AnimatePresence mode="wait">
+              <motion.h2
+                key={phase + '-title'}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                style={{
+                  fontFamily: data.isTech ? MONO : PLAYFAIR,
+                  fontSize: data.isTech ? 'clamp(1.6rem, 4vw, 3rem)' : 'clamp(2rem, 5vw, 3.8rem)',
+                  fontWeight: data.isTech ? 700 : 700,
+                  lineHeight: data.isTech ? 1.15 : 0.95,
+                  color: CHARCOAL,
+                  letterSpacing: data.isTech ? '0.02em' : '-0.02em',
+                  whiteSpace: 'pre-line',
+                  marginBottom: '1.5rem',
+                }}
               >
-                {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-              </button>
+                {data.title}
+              </motion.h2>
+            </AnimatePresence>
+
+            {/* Body text */}
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={phase + '-body'}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.4, delay: 0.1 }}
+                style={{
+                  fontFamily: data.isTech ? MONO : 'inherit',
+                  fontSize: data.isTech ? '0.78rem' : '1rem',
+                  lineHeight: 1.75,
+                  color: data.isTech ? CYAN : `${CHARCOAL}65`,
+                  whiteSpace: 'pre-line',
+                  letterSpacing: data.isTech ? '0.04em' : 'inherit',
+                  maxWidth: '380px',
+                }}
+              >
+                {data.body}
+              </motion.p>
+            </AnimatePresence>
+
+            {/* Phase progress indicator */}
+            <div className="mt-12 flex gap-3">
+              {(['FOLK', 'SHIFT', 'CODE', 'PROTOCOL'] as PhaseKey[]).map((p) => (
+                <div
+                  key={p}
+                  style={{
+                    width: p === phase ? '28px' : '8px',
+                    height: '2px',
+                    borderRadius: '2px',
+                    background: p === phase ? (data.isTech ? CYAN : CHARCOAL) : `${CHARCOAL}20`,
+                    transition: 'width 0.4s ease, background 0.4s ease',
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* ── RIGHT: Visual ── */}
+          <div className="w-full md:w-7/12 relative flex items-center justify-center">
+            {/* Nepal map background */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ opacity: 0.18 }}>
+              <NepalMap routeColor={mapColor} mapOpacity={1} animated={phase === 'CODE' || phase === 'PROTOCOL'} />
+            </div>
+
+            {/* Bus SVG */}
+            <div className="relative w-full max-w-lg">
+              <TransformBus progress={scrollYProgress} />
+
+              {/* HUD badges — appear in CODE/PROTOCOL phases */}
+              <motion.div
+                style={{ opacity: hudOpacity, y: hudY }}
+                className="absolute inset-0 pointer-events-none"
+              >
+                {/* GPS badge — top right */}
+                <div
+                  className="absolute -top-8 right-4 px-3 py-1.5 rounded-md"
+                  style={{ background: '#0D1A14', border: `1px solid ${CYAN}40`, animation: 'hudFloat 3s ease-in-out infinite' }}
+                >
+                  <span style={{ fontFamily: MONO, fontSize: '8px', color: CYAN, letterSpacing: '0.15em' }}>
+                    GPS · LOCKED
+                  </span>
+                </div>
+
+                {/* ZK proof badge — bottom left */}
+                <div
+                  className="absolute -bottom-8 left-4 px-3 py-1.5 rounded-md"
+                  style={{ background: '#0D1A14', border: `1px solid ${CYAN}40`, animation: 'hudFloat 3.4s ease-in-out 0.8s infinite' }}
+                >
+                  <span style={{ fontFamily: MONO, fontSize: '8px', color: CYAN, letterSpacing: '0.15em' }}>
+                    ZK_PROOF · VALID ✓
+                  </span>
+                </div>
+
+                {/* Solana badge — top left */}
+                <div
+                  className="absolute -top-8 left-0 px-3 py-1.5 rounded-md"
+                  style={{ background: '#0D1A14', border: `1px solid ${CYAN}40`, animation: 'hudFloat 2.8s ease-in-out 1.4s infinite' }}
+                >
+                  <span style={{ fontFamily: MONO, fontSize: '8px', color: CYAN, letterSpacing: '0.15em' }}>
+                    SOL · MAINNET
+                  </span>
+                </div>
+              </motion.div>
             </div>
           </div>
         </div>
+      </motion.div>
+    </section>
+  );
+}
 
-        {/* Mobile Nav Menu */}
-        <AnimatePresence>
-          {isMenuOpen && (
+// ─── DePIN section ────────────────────────────────────────────────────────────
+function DePINSection() {
+  const specs = [
+    {
+      index: '01',
+      label: 'GPS LAYER',
+      value: '<10m',
+      unit: 'ACCURACY',
+      desc: 'Sub-10 meter positioning with 3-second refresh. Every bus pinged, every second, without compromise.',
+    },
+    {
+      index: '02',
+      label: 'ZK LAYER',
+      value: 'Groth16',
+      unit: 'ALGORITHM',
+      desc: 'Zero-knowledge proofs for driver identity. Personal data stays off-chain. Proof goes on-chain.',
+    },
+    {
+      index: '03',
+      label: 'SOLANA LAYER',
+      value: '0.0000025',
+      unit: 'SOL / TX',
+      desc: 'Sub-second settlement. Near-zero fees. Purpose-built for Nepal\'s transit volume.',
+    },
+  ];
+
+  return (
+    <section id="depin" className="py-32" style={{ background: CHARCOAL }}>
+      <div className="max-w-7xl mx-auto px-6">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+          className="mb-20"
+        >
+          <div className="mb-4" style={{ fontFamily: MONO, fontSize: '10px', color: CYAN, letterSpacing: '0.22em' }}>
+            ARCHITECTURE
+          </div>
+          <h2
+            style={{
+              fontFamily: PLAYFAIR,
+              fontSize: 'clamp(2.5rem, 6vw, 5rem)',
+              fontWeight: 700,
+              color: WHITE,
+              lineHeight: 0.95,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            The{' '}
+            <span style={{ color: CYAN }}>DePIN</span>
+            {' '}Layer.
+          </h2>
+        </motion.div>
+
+        {/* Spec grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-px" style={{ background: `${WHITE}08` }}>
+          {specs.map((s, i) => (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="md:hidden bg-background border-b border-border overflow-hidden"
+              key={s.index}
+              initial={{ opacity: 0, y: 32 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20, delay: i * 0.1 }}
+              className="p-10 relative overflow-hidden group"
+              style={{ background: '#0D0D0D' }}
             >
-              <div className="py-6 px-4 space-y-4">
-                {[
-                  { label: 'Home', href: '/' },
-                  { label: 'Features', href: '/#features' },
-                  { label: 'Ride', href: '/#ride' },
-                  { label: 'Passenger', href: '/auth?role=passenger&redirect=/passenger' },
-                  { label: 'Driver', href: '/auth?role=driver&redirect=/driver' },
-                ].map((item) => (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    className="block min-h-11 py-2 text-lg font-bold text-foreground hover:text-primary transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-                <div className="pt-4 border-t border-border flex flex-col gap-4">
-                  <Link href="/auth" onClick={() => setIsMenuOpen(false)}>
-                    <Button variant="outline" className="w-full h-12 min-h-12 rounded-xl font-bold">Login</Button>
-                  </Link>
-                  <Link href="/auth?isSignUp=true" onClick={() => setIsMenuOpen(false)}>
-                    <Button className="w-full h-12 min-h-12 bg-primary text-primary-foreground hover:bg-primary-hover rounded-xl font-bold">Sign Up</Button>
-                  </Link>
-                </div>
+              {/* Index */}
+              <div className="mb-6" style={{ fontFamily: MONO, fontSize: '9px', color: `${WHITE}30`, letterSpacing: '0.2em' }}>
+                {s.index}
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </nav>
 
-      {/* ═══ HERO SECTION ═══ */}
-      <section className="relative pt-24 pb-32 overflow-hidden bg-background text-foreground">
-        {/* Subtle warm depth, no neon glows */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[700px] pointer-events-none">
-          <motion.div
-            animate={{
-              scale: [1, 1.05, 1],
-              opacity: [0.1, 0.2, 0.1]
+              {/* Label */}
+              <div className="mb-3" style={{ fontFamily: MONO, fontSize: '10px', color: CYAN, letterSpacing: '0.2em' }}>
+                {s.label}
+              </div>
+
+              {/* Big value */}
+              <div
+                className="mb-2"
+                style={{ fontFamily: MONO, fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 700, color: WHITE, lineHeight: 1, letterSpacing: '-0.02em' }}
+              >
+                {s.value}
+              </div>
+              <div className="mb-6" style={{ fontFamily: MONO, fontSize: '9px', color: `${WHITE}40`, letterSpacing: '0.2em' }}>
+                {s.unit}
+              </div>
+
+              {/* Description */}
+              <p style={{ fontSize: '0.875rem', color: `${WHITE}55`, lineHeight: 1.7 }}>
+                {s.desc}
+              </p>
+
+              {/* Hover accent */}
+              <div
+                className="absolute bottom-0 left-0 right-0 h-px"
+                style={{ background: CYAN, opacity: 0, transition: 'opacity 0.3s' }}
+                onMouseEnter={(e) => { (e.currentTarget.style.opacity = '1'); }}
+                onMouseLeave={(e) => { (e.currentTarget.style.opacity = '0'); }}
+              />
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Bottom metric row */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="mt-px grid grid-cols-3 gap-px"
+          style={{ background: `${WHITE}08` }}
+        >
+          {[
+            { value: '847',    label: 'ACTIVE BUSES'   },
+            { value: '12,431', label: 'ZK PROOFS TODAY' },
+            { value: '₨ 2.4M', label: 'DAILY VOLUME'   },
+          ].map((m) => (
+            <div key={m.label} className="p-8 text-center" style={{ background: '#0D0D0D' }}>
+              <div style={{ fontFamily: MONO, fontSize: 'clamp(1.5rem, 3vw, 2.5rem)', fontWeight: 700, color: WHITE, letterSpacing: '-0.02em' }}>
+                {m.value}
+              </div>
+              <div className="mt-1" style={{ fontFamily: MONO, fontSize: '9px', color: `${WHITE}35`, letterSpacing: '0.2em' }}>
+                {m.label}
+              </div>
+            </div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Reputation section ───────────────────────────────────────────────────────
+function HUDCard({ title, value, unit, status, delay = 0 }: {
+  title:  string;
+  value:  string;
+  unit:   string | null;
+  status: string;
+  delay?: number;
+}) {
+  const cardRef    = useRef<HTMLDivElement>(null);
+  const mouseX     = useMotionValue(0);
+  const mouseY     = useMotionValue(0);
+  const rotateX    = useSpring(useTransform(mouseY, [-0.5, 0.5],  [8, -8]),  { stiffness: 300, damping: 20 });
+  const rotateY    = useSpring(useTransform(mouseX, [-0.5, 0.5], [-8,  8]),  { stiffness: 300, damping: 20 });
+
+  const handleMove = (e: React.MouseEvent) => {
+    const rect = cardRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    mouseX.set((e.clientX - rect.left) / rect.width  - 0.5);
+    mouseY.set((e.clientY - rect.top)  / rect.height - 0.5);
+  };
+  const handleLeave = () => { mouseX.set(0); mouseY.set(0); };
+
+  return (
+    <motion.div
+      ref={cardRef}
+      initial={{ opacity: 0, y: 32 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.3 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 20, delay }}
+      style={{
+        rotateX,
+        rotateY,
+        transformStyle: 'preserve-3d',
+        perspective: 800,
+      }}
+      onMouseMove={handleMove}
+      onMouseLeave={handleLeave}
+      className="p-8 rounded-2xl relative overflow-hidden cursor-default"
+      whileHover={{ scale: 1.02 }}
+    >
+      {/* Card background */}
+      <div
+        className="absolute inset-0 rounded-2xl"
+        style={{ background: WHITE, border: `1px solid ${CHARCOAL}10`, boxShadow: '0 4px 40px rgba(26,26,26,0.06)' }}
+      />
+
+      <div className="relative z-10">
+        {/* Title */}
+        <div className="mb-4" style={{ fontFamily: MONO, fontSize: '9px', color: `${CHARCOAL}50`, letterSpacing: '0.2em' }}>
+          {title}
+        </div>
+
+        {/* Value */}
+        <div
+          style={{
+            fontFamily: MONO,
+            fontSize: 'clamp(2rem, 4vw, 3.5rem)',
+            fontWeight: 700,
+            color: CHARCOAL,
+            lineHeight: 1,
+            letterSpacing: '-0.02em',
+          }}
+        >
+          {value}
+        </div>
+        {unit && (
+          <div className="mt-1" style={{ fontFamily: MONO, fontSize: '9px', color: `${CHARCOAL}35`, letterSpacing: '0.15em' }}>
+            {unit}
+          </div>
+        )}
+
+        {/* Status chip — signal cyan only here */}
+        <div
+          className="mt-6 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+          style={{ background: `${CYAN}12`, border: `1px solid ${CYAN}35` }}
+        >
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: CYAN }} />
+          <span style={{ fontFamily: MONO, fontSize: '8px', color: CYAN, letterSpacing: '0.15em', fontWeight: 600 }}>
+            {status}
+          </span>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function ReputationSection() {
+  return (
+    <section id="reputation" className="py-32" style={{ background: WHITE }}>
+      <div className="max-w-7xl mx-auto px-6">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+          className="mb-4"
+        >
+          <div style={{ fontFamily: MONO, fontSize: '10px', color: `${CHARCOAL}40`, letterSpacing: '0.22em', marginBottom: '16px' }}>
+            TRUST LAYER
+          </div>
+          <h2
+            style={{
+              fontFamily: PLAYFAIR,
+              fontSize: 'clamp(2.5rem, 6vw, 5rem)',
+              fontWeight: 700,
+              color: CHARCOAL,
+              lineHeight: 0.95,
+              letterSpacing: '-0.02em',
+              marginBottom: '20px',
             }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-            className="absolute top-0 right-0 w-[600px] h-[600px] bg-secondary rounded-full blur-[120px]"
+          >
+            Reputation<br />
+            <em>is</em> currency.
+          </h2>
+          <p style={{ fontSize: '1.0625rem', color: `${CHARCOAL}60`, maxWidth: '500px', lineHeight: 1.7 }}>
+            Every driver builds a verifiable on-chain record. Every passenger travels with certainty.
+            No operator can falsify the ledger.
+          </p>
+        </motion.div>
+
+        {/* Cards */}
+        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ perspective: '1000px' }}>
+          <HUDCard
+            title="DRIVER_REPUTATION_SCORE"
+            value="98.4"
+            unit="/ 100 · LIFETIME"
+            status="VERIFIED"
+            delay={0}
+          />
+          <HUDCard
+            title="ZK_PROOF_STATUS"
+            value="VALID"
+            unit={null}
+            status="LIVE · GROTH16"
+            delay={0.08}
+          />
+          <HUDCard
+            title="ROUTES_COMPLETED"
+            value="1,247"
+            unit="VERIFIED ON-CHAIN"
+            status="ACTIVE NODE"
+            delay={0.16}
           />
         </div>
+      </div>
+    </section>
+  );
+}
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            style={{ scale: heroScale, y: heroY }}
-            className="text-center max-w-4xl mx-auto"
+// ─── CTA section ──────────────────────────────────────────────────────────────
+function CTASection({ onlineBuses }: { onlineBuses: number | null }) {
+  return (
+    <section className="py-40 relative overflow-hidden" style={{ background: '#0D0D0D' }}>
+      {/* Nepal map background */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.04]">
+        <div className="w-full max-w-5xl">
+          <NepalMap routeColor={CYAN} mapOpacity={1} animated />
+        </div>
+      </div>
+
+      <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.6 }}
+          className="mb-5"
+        >
+          {onlineBuses !== null && onlineBuses > 0 && (
+            <div
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8"
+              style={{ background: `${CYAN}10`, border: `1px solid ${CYAN}30` }}
+            >
+              <span className="w-2 h-2 rounded-full" style={{ background: CYAN, animation: 'pulse 2s infinite' }} />
+              <span style={{ fontFamily: MONO, fontSize: '9px', color: CYAN, letterSpacing: '0.2em' }}>
+                {onlineBuses} BUSES LIVE RIGHT NOW
+              </span>
+            </div>
+          )}
+        </motion.div>
+
+        <motion.h2
+          initial={{ opacity: 0, y: 32 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+          className="mb-6"
+          style={{
+            fontFamily: PLAYFAIR,
+            fontSize: 'clamp(2.8rem, 7vw, 6rem)',
+            fontWeight: 700,
+            color: WHITE,
+            lineHeight: 0.9,
+            letterSpacing: '-0.02em',
+          }}
+        >
+          The Protocol<br />
+          <span style={{ color: CYAN }}>is Live.</span>
+        </motion.h2>
+
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.1 }}
+          className="mb-14"
+          style={{ fontFamily: MONO, fontSize: '12px', color: `${WHITE}50`, letterSpacing: '0.1em', lineHeight: 1.8 }}
+        >
+          STOP GUESSING. START TRAVELING.<br />
+          JOIN THE FUTURE OF DECENTRALIZED TRANSIT.
+        </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.2 }}
+          className="flex flex-col sm:flex-row gap-4 justify-center"
+        >
+          <Link href="/auth?role=passenger&redirect=/passenger">
+            <motion.button
+              whileHover={{ scale: 1.04, y: -2 }}
+              whileTap={{ scale: 0.97 }}
+              style={{ fontFamily: MONO, fontSize: '11px', letterSpacing: '0.15em', fontWeight: 700, background: CYAN, color: CHARCOAL, border: 'none', padding: '16px 36px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+            >
+              BOARD AS PASSENGER
+              <ArrowRight size={14} />
+            </motion.button>
+          </Link>
+          <Link href="/auth?role=driver&redirect=/driver">
+            <motion.button
+              whileHover={{ scale: 1.04, y: -2 }}
+              whileTap={{ scale: 0.97 }}
+              style={{ fontFamily: MONO, fontSize: '11px', letterSpacing: '0.15em', fontWeight: 700, background: 'none', color: WHITE, border: `1.5px solid ${WHITE}25`, padding: '16px 36px', borderRadius: '8px', cursor: 'pointer' }}
+            >
+              DRIVE THE NETWORK
+            </motion.button>
+          </Link>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Footer ───────────────────────────────────────────────────────────────────
+function Footer() {
+  return (
+    <footer className="py-12" style={{ background: '#0D0D0D', borderTop: `0.5px solid ${WHITE}08` }}>
+      <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex items-center gap-3">
+          <Image src="/yatra-logo.png" alt="Yatra" width={28} height={28} className="rounded-md opacity-70" />
+          <span style={{ fontFamily: MONO, fontSize: '9px', color: `${WHITE}30`, letterSpacing: '0.2em' }}>
+            © {new Date().getFullYear()} YATRA TECHNOLOGIES · ENGINEERED FOR NEPAL
+          </span>
+        </div>
+        <div className="flex items-center gap-8">
+          <a
+            href="https://x.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontFamily: MONO, fontSize: '9px', color: `${WHITE}30`, letterSpacing: '0.2em', textDecoration: 'none', transition: 'color 0.2s' }}
+            onMouseEnter={(e) => ((e.target as HTMLElement).style.color = `${WHITE}70`)}
+            onMouseLeave={(e) => ((e.target as HTMLElement).style.color = `${WHITE}30`)}
           >
-            <motion.div variants={itemVariants}>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20 mb-8">
-                <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                <span className="text-sm font-bold text-accent-foreground tracking-tight">Now Live in Butwal, Nepal</span>
-              </div>
-            </motion.div>
-
-            <motion.h1
-              variants={itemVariants}
-              className="text-5xl sm:text-6xl md:text-8xl font-black text-foreground tracking-tight mb-8 leading-[0.95]"
-            >
-              Move Smarter. <br />
-              <span className="text-primary">Connect Better.</span>
-            </motion.h1>
-
-            <motion.p
-              variants={itemVariants}
-              className="text-lg sm:text-xl md:text-2xl text-muted-foreground mb-12 max-w-2xl mx-auto font-medium leading-relaxed"
-            >
-              Real-time transit tracking and seamless booking for Nepal.
-              Experience safe, fast, and transparent travel at your fingertips.
-            </motion.p>
-
-
-            <motion.div
-              variants={itemVariants}
-              className="flex flex-col sm:flex-row items-center justify-center gap-6"
-            >
-              <Link href="/auth?role=passenger&redirect=/passenger" className="w-full sm:w-auto">
-                <motion.div whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}>
-                  <Button className="w-full sm:w-auto h-16 min-h-14 px-10 text-lg font-black rounded-2xl shadow-sm border-0">
-                    <span className="relative z-10 flex items-center">
-                      Ride as Passenger
-                      <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                    </span>
-                  </Button>
-                </motion.div>
-              </Link>
-              <Link href="/auth?role=driver&redirect=/driver" className="w-full sm:w-auto">
-                <motion.div whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}>
-                  <Button variant="secondary" className="w-full sm:w-auto h-16 min-h-14 px-10 text-lg font-black rounded-2xl">
-                    Drive with Yatra
-                  </Button>
-                </motion.div>
-              </Link>
-            </motion.div>
-
-            <motion.div
-              variants={itemVariants}
-              className="mt-20 flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-muted-foreground transition-all duration-700"
-            >
-              {[
-                { icon: ShieldCheck, text: "Verified Drivers" },
-                { icon: MapPin, text: "Real-time GPS" },
-                { icon: Smartphone, text: "Paperless Tickets" }
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-2.5">
-                  <item.icon className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-sm font-bold text-muted-foreground tracking-tight">{item.text}</span>
-                </div>
-              ))}
-            </motion.div>
-          </motion.div>
+            TWITTER
+          </a>
+          <a
+            href="https://facebook.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontFamily: MONO, fontSize: '9px', color: `${WHITE}30`, letterSpacing: '0.2em', textDecoration: 'none', transition: 'color 0.2s' }}
+            onMouseEnter={(e) => ((e.target as HTMLElement).style.color = `${WHITE}70`)}
+            onMouseLeave={(e) => ((e.target as HTMLElement).style.color = `${WHITE}30`)}
+          >
+            FACEBOOK
+          </a>
         </div>
-      </section>
+      </div>
+    </footer>
+  );
+}
 
-      {/* ═══ FEATURES SECTION ═══ */}
-      <section id="features" className="py-32 bg-section/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-24">
-            <ScrollReveal>
-              <h2 className="text-4xl md:text-5xl font-black text-foreground tracking-tight mb-6">
-                Engineered for Modern Transit
-              </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto font-medium">
-                We've combined satellite technology and secure identity to bring you a travel experience like never before.
-              </p>
-            </ScrollReveal>
-          </div>
+// ─── Root page ────────────────────────────────────────────────────────────────
+export default function Home() {
+  const [onlineBuses, setOnlineBuses] = useState<number | null>(null);
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                icon: <Map className="w-8 h-8 text-primary" />,
-                title: "Live GPS Tracking",
-                desc: "Never wait at the stop again. See exactly where your bus is with sub-10m accuracy and 3s refresh rates."
-              },
-              {
-                icon: <ShieldCheck className="w-8 h-8 text-primary" />,
-                title: "Verified Identity",
-                desc: "Safe travel starts with knowing your driver. Every Yatra driver undergoes rigorous verification."
-              },
-              {
-                icon: <Smartphone className="w-8 h-8 text-primary" />,
-                title: "One-Tap Booking",
-                desc: "No more paper tickets or cash hassles. Book your seat in seconds and pay securely through the app."
-              },
-              {
-                icon: <Clock className="w-8 h-8 text-primary" />,
-                title: "Predictive ETA",
-                desc: "Our algorithms calculate precise arrival times based on current traffic and route conditions."
-              },
-              {
-                icon: <TrendingUp className="w-8 h-8 text-primary" />,
-                title: "Dynamic Pricing",
-                desc: "Transparent and fair pricing for both passengers and drivers, optimized for Nepal's transit market."
-              },
-              {
-                icon: <CreditCard className="w-8 h-8 text-primary" />,
-                title: "Secure Payments",
-                desc: "Multiple payment options integrated seamlessly, ensuring fast and reliable transactions."
-              }
-            ].map((feature, i) => (
-              <ScrollReveal key={i} delay={i * 0.1}>
-                <motion.div
-                  whileHover={{ y: -8, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
-                  whileTap={{ scale: 0.995 }}
-                  className="group p-10 rounded-[32px] bg-card border border-border shadow-md transition-all duration-500 relative overflow-hidden"
-                >
-                  <div className="w-16 h-16 rounded-2xl bg-primary-soft flex items-center justify-center mb-8 group-hover:bg-primary transition-colors duration-500">
-                    <div className="group-hover:text-white transition-colors duration-500">
-                      {feature.icon}
-                    </div>
-                  </div>
-                  <h3 className="text-2xl font-bold text-foreground mb-4 group-hover:text-primary-hover transition-colors">{feature.title}</h3>
-                  <p className="text-muted-foreground leading-relaxed font-medium opacity-80 group-hover:opacity-100 transition-opacity">
-                    {feature.desc}
-                  </p>
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
-                </motion.div>
-              </ScrollReveal>
-            ))}
-          </div>
-        </div>
-      </section>
+  // Lenis smooth scroll
+  useEffect(() => {
+    const lenis = new Lenis({
+      lerp: 0.08,
+      smoothWheel: true,
+    });
 
-      {/* ═══ HOW IT WORKS ═══ */}
-      <section id="ride" className="py-32 bg-card overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row items-center gap-20">
-            <div className="lg:w-1/2">
-              <ScrollReveal direction="left">
-                <h2 className="text-4xl md:text-5xl font-black text-foreground tracking-tight mb-10 leading-tight">
-                  Travel simplified. <br />
-                  <span className="text-primary">Three easy steps.</span>
-                </h2>
+    let rafId: number;
+    function raf(time: number) {
+      lenis.raf(time);
+      rafId = requestAnimationFrame(raf);
+    }
+    rafId = requestAnimationFrame(raf);
 
-                <div className="space-y-10">
-                  {[
-                    {
-                      step: "01",
-                      title: "Open the Map",
-                      desc: "Instantly see all active buses near you. No account required to browse."
-                    },
-                    {
-                      step: "02",
-                      title: "Select your Bus",
-                      desc: "Check available seats, driver ratings, and arrival times with one tap."
-                    },
-                    {
-                      step: "03",
-                      title: "Book and Ride",
-                      desc: "Secure your seat, get your digital ticket, and enjoy the journey."
-                    }
-                  ].map((step, i) => (
-                    <motion.div
-                      key={i}
-                      className="flex gap-8 group"
-                      whileHover={{ x: 10 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                    >
-                      <div className="text-5xl font-black text-primary-soft leading-none group-hover:text-primary/80 transition-colors">{step.step}</div>
-                      <div>
-                        <h4 className="text-2xl font-bold text-foreground mb-3 group-hover:text-primary-hover transition-colors">{step.title}</h4>
-                        <p className="text-lg text-muted-foreground font-medium opacity-80">{step.desc}</p>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </ScrollReveal>
-            </div>
+    return () => {
+      cancelAnimationFrame(rafId);
+      lenis.destroy();
+    };
+  }, []);
 
-            <div className="lg:w-1/2 relative">
-              <ScrollReveal direction="right" delay={0.2}>
-                <div className="relative p-2 bg-slate-100 rounded-[48px] shadow-2xl">
-                  <div className="rounded-[40px] overflow-hidden border-4 border-white shadow-inner bg-card">
-                    {/* Map Mockup */}
-                    <div className="aspect-[4/5] bg-surface-soft relative group">
-                      <div className="absolute inset-0 bg-primary-soft/10" />
-                      <motion.div
-                        animate={{
-                          scale: [1, 1.2, 1],
-                          opacity: [0.1, 0.2, 0.1]
-                        }}
-                        transition={{ duration: 4, repeat: Infinity }}
-                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-primary rounded-full"
-                      />
-                      <motion.div
-                        className="absolute top-[40%] left-[30%] p-4 bg-card rounded-2xl shadow-2xl flex items-center gap-4 border border-border z-10"
-                        animate={{ y: [0, -10, 0] }}
-                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                      >
-                        <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-md shadow-primary/25">
-                          <Bus className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <div className="text-sm font-black text-foreground tracking-tight">Bus #402</div>
-                          <div className="text-[11px] font-bold text-primary uppercase tracking-widest mt-0.5">2 mins away</div>
-                        </div>
-                      </motion.div>
+  // Live bus count
+  useEffect(() => {
+    const unsub = subscribeToBuses((buses) => {
+      const active = buses.filter(
+        (b) => (b as any).isActive || (b as any).locationSharingEnabled
+      ).length;
+      setOnlineBuses(active);
+    });
+    return () => unsub();
+  }, []);
 
-                      {/* Decorative dots for map feel */}
-                      <div className="absolute top-[20%] right-[20%] w-3 h-3 bg-slate-200 rounded-full" />
-                      <div className="absolute bottom-[30%] left-[20%] w-3 h-3 bg-slate-200 rounded-full" />
-                      <div className="absolute bottom-[10%] right-[40%] w-3 h-3 bg-slate-200 rounded-full" />
-                    </div>
-                  </div>
-                </div>
-              </ScrollReveal>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ PASSENGER & DRIVER CTA BLOCKS ═══ */}
-      <section className="py-32 px-4 bg-section/50">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-8">
-          {/* Passenger CTA */}
-          <ScrollReveal direction="left" className="flex-1">
-            <motion.div
-              whileHover={{ scale: 1.01, y: -5 }}
-              className="h-full p-14 rounded-[48px] bg-card border-2 border-primary flex flex-col justify-between shadow-md hover:shadow-2xl hover:shadow-primary/15 transition-all duration-500 relative overflow-hidden group"
-            >
-              <div className="relative z-10">
-                <h3 className="text-4xl font-black text-foreground mb-6 leading-tight">Book a Ride in Seconds</h3>
-                <p className="text-xl text-muted-foreground mb-10 max-w-sm font-medium leading-relaxed opacity-80">
-                  Get where you need to go without the stress. Fast, safe, and transparent travel for everyone.
-                </p>
-              </div>
-              <Link href="/auth?role=passenger&redirect=/passenger" className="relative z-10">
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button size="lg" className="h-16 min-h-14 px-10 text-lg font-black rounded-2xl bg-primary hover:bg-primary-hover text-primary-foreground shadow-lg shadow-primary/25 transition-all">
-                    Book My First Ride
-                  </Button>
-                </motion.div>
-              </Link>
-              <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-primary/5 rounded-full group-hover:scale-150 transition-transform duration-700" />
-            </motion.div>
-          </ScrollReveal>
-
-          {/* Driver CTA */}
-          <ScrollReveal direction="right" className="flex-1">
-            <motion.div
-              whileHover={{ scale: 1.01, y: -5 }}
-              className="h-full p-14 rounded-[48px] bg-card border-2 border-border flex flex-col justify-between shadow-sm hover:shadow-2xl hover:shadow-slate-100 transition-all duration-500 relative overflow-hidden group"
-            >
-              <div className="relative z-10">
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-8">
-                  <TrendingUp className="w-4 h-4 text-emerald-600" />
-                  <span className="text-[11px] font-black text-emerald-600 uppercase tracking-widest">Earn with Yatra</span>
-                </div>
-                <h3 className="text-4xl font-black text-foreground mb-6 leading-tight">Maximize Your Earnings</h3>
-                <p className="text-xl text-muted-foreground mb-10 max-w-sm font-medium leading-relaxed opacity-80">
-                  Join our network of elite drivers. Lower commissions, flexible hours, and guaranteed passengers.
-                </p>
-              </div>
-              <Link href="/auth?role=driver&redirect=/driver" className="relative z-10">
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button size="lg" variant="outline" className="h-16 px-10 text-lg font-black rounded-2xl border-2 border-border text-foreground hover:bg-surface-soft hover:border-slate-300 transition-all duration-500">
-                    Start Driving Today
-                  </Button>
-                </motion.div>
-              </Link>
-              <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-slate-100 rounded-full group-hover:scale-150 transition-transform duration-700" />
-            </motion.div>
-          </ScrollReveal>
-        </div>
-      </section>
-
-      {/* ═══ FOOTER ═══ */}
-      <footer className="bg-card border-t border-border pt-28 pb-12 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-surface-soft rounded-full blur-[100px] -mr-48 -mt-48 opacity-50" />
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-16 mb-24">
-            <div className="col-span-2 md:col-span-1">
-              <div className="flex items-center gap-2 mb-8">
-                <Image src="/yatra-logo.png" alt="Yatra" width={40} height={40} className="rounded-xl" />
-              </div>
-              <p className="text-muted-foreground text-base leading-relaxed mb-8 font-medium opacity-80">
-                Modernizing Nepal's transit ecosystem with real-time tracking and secure identity.
-              </p>
-              <div className="flex items-center gap-3">
-                <div className="relative inline-flex items-center gap-3 px-4 py-2 rounded-full bg-surface-soft border border-border shadow-sm">
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${onlineBuses && onlineBuses > 0 ? 'bg-emerald-400 animate-ping' : 'bg-slate-400'}`} />
-                    <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${onlineBuses && onlineBuses > 0 ? 'bg-emerald-500' : 'bg-muted-foreground/50'}`} />
-                  </span>
-                  <span className="text-xs font-black text-foreground/90 uppercase tracking-widest">
-                    {onlineBuses === null ? 'Checking...' : `${onlineBuses} Buses Active`}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {[
-              {
-                title: 'Product',
-                links: [
-                  { label: 'Ride', href: '/auth?role=passenger&redirect=/passenger' },
-                  { label: 'Drive', href: '/auth?role=driver&redirect=/driver' },
-                  { label: 'Track', href: '/#ride' },
-                ],
-              },
-              {
-                title: 'Support',
-                links: [
-                  { label: 'Help Center', href: '/auth' },
-                  { label: 'Safety Center', href: '/admin' },
-                ],
-              }
-            ].map((col) => (
-              <div key={col.title}>
-                <h5 className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.25em] mb-8">{col.title}</h5>
-                <ul className="space-y-5">
-                  {col.links.map(item => (
-                    <li key={item.label}>
-                      <Link href={item.href} className="text-base text-muted-foreground hover:text-primary transition-colors font-bold opacity-80 hover:opacity-100">
-                        {item.label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-
-          <div className="pt-12 border-t border-border flex flex-col md:flex-row justify-between items-center gap-8">
-            <p className="text-sm text-muted-foreground font-bold tracking-tight">
-              © {new Date().getFullYear()} Yatra Technologies. Engineered for Nepal.
-            </p>
-            <div className="flex gap-10">
-              <Link href="https://x.com" className="text-sm font-black text-muted-foreground hover:text-primary transition-colors tracking-widest uppercase">Twitter</Link>
-              <Link href="https://facebook.com" className="text-sm font-black text-muted-foreground hover:text-primary transition-colors tracking-widest uppercase">Facebook</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+  return (
+    <div className="overflow-x-hidden" style={{ background: WHITE, color: CHARCOAL, position: 'relative' }}>
+      <Grain />
+      <Navbar onlineBuses={onlineBuses} />
+      <HeroSection onlineBuses={onlineBuses} />
+      <TransformSection />
+      <DePINSection />
+      <ReputationSection />
+      <CTASection onlineBuses={onlineBuses} />
+      <Footer />
     </div>
   );
 }
