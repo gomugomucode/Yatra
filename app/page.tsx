@@ -6,10 +6,8 @@ import Image from 'next/image';
 import {
   motion,
   AnimatePresence,
-  useScroll,
   useTransform,
   useMotionValue,
-  useMotionValueEvent,
   useSpring,
   MotionValue,
 } from 'framer-motion';
@@ -20,10 +18,11 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { subscribeToBuses } from '@/lib/firebaseDb';
 
 // ─── Design constants ────────────────────────────────────────────────────────
-const CYAN    = '#00D4AA';
-const CHARCOAL = '#1A1A1A';
-const RUST    = '#C4501A';
-const WHITE   = '#FAFAFA';
+const CYAN       = '#00D4AA';
+const CHARCOAL   = '#1A1A1A';
+const RUST       = '#C4501A';
+const WHITE      = '#FAFAFA';
+const DARK_GREEN = '#1A5E3A';
 
 const PLAYFAIR = 'var(--font-playfair)';
 const MONO     = 'var(--font-jetbrains-mono)';
@@ -189,7 +188,13 @@ function NepalMap({
   );
 }
 
-// ─── Bus SVG (folk + tech crossfade) ─────────────────────────────────────────
+// ─── Scroll-linked image sequence ────────────────────────────────────────────
+const FRAME_COUNT = 102;
+const frameSrc = (i: number) =>
+  `/frames/frame_${String(i + 1).padStart(3, '0')}.jpg`;
+
+// ─── Bus SVG removed — replaced by scroll-linked frame sequence ──────────────
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function TransformBus({ progress }: { progress: MotionValue<number> }) {
   const folkOpacity = useTransform(progress, [0.18, 0.58], [1, 0]);
   const techOpacity = useTransform(progress, [0.28, 0.68], [0, 1]);
@@ -419,9 +424,9 @@ function Navbar({ onlineBuses }: { onlineBuses: number | null }) {
             <a
               key={label}
               href={href}
-              style={{ fontFamily: MONO, fontSize: '10px', color: `${CHARCOAL}70`, letterSpacing: '0.15em', textDecoration: 'none', transition: 'color 0.2s' }}
-              onMouseEnter={(e) => ((e.target as HTMLElement).style.color = CHARCOAL)}
-              onMouseLeave={(e) => ((e.target as HTMLElement).style.color = `${CHARCOAL}70`)}
+              style={{ fontFamily: MONO, fontSize: '13px', color: DARK_GREEN, letterSpacing: '0.15em', textDecoration: 'none', transition: 'color 0.2s', fontWeight: 600 }}
+              onMouseEnter={(e) => ((e.target as HTMLElement).style.color = '#0D3D24')}
+              onMouseLeave={(e) => ((e.target as HTMLElement).style.color = DARK_GREEN)}
             >
               {label}
             </a>
@@ -490,7 +495,7 @@ function Navbar({ onlineBuses }: { onlineBuses: number | null }) {
                   key={label}
                   href={href}
                   className="block py-3"
-                  style={{ fontFamily: MONO, fontSize: '12px', color: CHARCOAL, letterSpacing: '0.15em', textDecoration: 'none' }}
+                  style={{ fontFamily: MONO, fontSize: '13px', color: DARK_GREEN, letterSpacing: '0.15em', textDecoration: 'none', fontWeight: 600 }}
                   onClick={() => setOpen(false)}
                 >
                   {label}
@@ -680,60 +685,93 @@ function HeroSection({ onlineBuses }: { onlineBuses: number | null }) {
 
 // ─── Transformation section ───────────────────────────────────────────────────
 function TransformSection() {
-  const sectionRef = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ['start start', 'end end'],
-  });
+  const sectionRef  = useRef<HTMLElement>(null);
+  const frameImgRef = useRef<HTMLImageElement>(null);
+  const preloadRef  = useRef<HTMLImageElement[]>([]);
+  const frameRef    = useRef(-1);
+  const autoPosRef  = useRef(0); // float frame index driven by auto-play + scroll
 
-  const [phase, setPhase] = useState<PhaseKey>('FOLK');
-  useMotionValueEvent(scrollYProgress, 'change', (v) => {
-    if      (v < 0.25) setPhase('FOLK');
-    else if (v < 0.50) setPhase('SHIFT');
-    else if (v < 0.75) setPhase('CODE');
-    else               setPhase('PROTOCOL');
-  });
+  const [frameIndex, setFrameIndex] = useState(0);
 
-  // Scroll-driven panel background
-  const panelBg = useTransform(
-    scrollYProgress,
-    [0, 0.4, 0.65, 1],
-    [WHITE, '#F5F0EC', '#F0F5F4', WHITE]
-  );
+  const phase: PhaseKey =
+    frameIndex < Math.round(FRAME_COUNT * 0.25) ? 'FOLK'     :
+    frameIndex < Math.round(FRAME_COUNT * 0.50) ? 'SHIFT'    :
+    frameIndex < Math.round(FRAME_COUNT * 0.75) ? 'CODE'     : 'PROTOCOL';
 
-  // Map route color transitions
-  const mapColorProgress = useTransform(scrollYProgress, [0.3, 0.7], [0, 1]);
-  const [mapColor, setMapColor] = useState(RUST);
-  useMotionValueEvent(mapColorProgress, 'change', (v) => {
-    const r = Math.round(196 + (0   - 196) * v);
-    const g = Math.round( 80 + (212 -  80) * v);
-    const b = Math.round( 26 + (170 -  26) * v);
-    setMapColor(`rgb(${r},${g},${b})`);
-  });
-
-  // HUD badges
-  const hudOpacity  = useTransform(scrollYProgress, [0.48, 0.58], [0, 1]);
-  const hudY        = useTransform(scrollYProgress, [0.48, 0.58], [16, 0]);
-  const progressPct = useTransform(scrollYProgress, [0, 1], ['0%', '100%']);
+  const progress    = FRAME_COUNT > 1 ? frameIndex / (FRAME_COUNT - 1) : 0;
+  const progressPct = `${progress * 100}%`;
+  const bgColor     =
+    progress < 0.40 ? WHITE     :
+    progress < 0.65 ? '#F5F0EC' :
+    progress < 0.85 ? '#F0F5F4' : WHITE;
 
   const data = PHASES[phase];
+
+  useEffect(() => {
+    preloadRef.current = Array.from({ length: FRAME_COUNT }, (_, i) => {
+      const img = document.createElement('img') as HTMLImageElement;
+      img.src = frameSrc(i);
+      return img;
+    });
+
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const renderFrame = (idx: number) => {
+      const c = Math.max(0, Math.min(FRAME_COUNT - 1, idx));
+      if (c === frameRef.current) return;
+      frameRef.current = c;
+      if (frameImgRef.current)
+        frameImgRef.current.src = preloadRef.current[c]?.src ?? frameSrc(c);
+      setFrameIndex(c);
+    };
+
+    let lastTs = performance.now();
+    let rafId: number;
+
+    const tick = (ts: number) => {
+      const dt = Math.min((ts - lastTs) / 1000, 0.05); // seconds, capped
+      lastTs = ts;
+
+      const rect      = section.getBoundingClientRect();
+      const inView    = rect.top < window.innerHeight && rect.bottom > 0;
+
+      if (inView) {
+        // Scroll-driven position (0 → FRAME_COUNT-1)
+        const maxScroll   = section.offsetHeight - window.innerHeight;
+        const scrollPct   = maxScroll > 0 ? Math.max(0, Math.min(1, -rect.top / maxScroll)) : 0;
+        const scrollFrame = scrollPct * (FRAME_COUNT - 1);
+
+        // Bidirectional lerp — tracks scroll forward AND backward
+        const lerpFactor = 1 - Math.exp(-14 * dt);
+        autoPosRef.current += (scrollFrame - autoPosRef.current) * lerpFactor;
+
+        renderFrame(Math.round(autoPosRef.current));
+      }
+
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
 
   return (
     <section
       id="transform"
       ref={sectionRef}
-      style={{ height: '400vh', position: 'relative' }}
+      style={{ height: '300vh', position: 'relative' }}
     >
-      <motion.div
+      <div
         className="sticky top-0 h-screen overflow-hidden"
-        style={{ background: panelBg }}
+        style={{ background: bgColor, transition: 'background 0.6s ease' }}
       >
         {/* Progress rail */}
         <div
           className="absolute right-6 top-1/2 -translate-y-1/2 w-px hidden md:block"
           style={{ height: '140px', background: `${CHARCOAL}12`, zIndex: 10 }}
         >
-          <motion.div
+          <div
             className="w-full"
             style={{ height: progressPct, background: CHARCOAL, transition: 'height 0.1s' }}
           />
@@ -757,7 +795,7 @@ function TransformSection() {
             {/* Phase badge */}
             <div
               className="mb-8 inline-block"
-              style={{ fontFamily: MONO, fontSize: '10px', letterSpacing: '0.22em', color: data.isTech ? CYAN : `${CHARCOAL}50` }}
+              style={{ fontFamily: MONO, fontSize: '10px', letterSpacing: '0.22em', color: data.isTech ? CYAN : DARK_GREEN }}
             >
               {data.badge}
             </div>
@@ -826,54 +864,23 @@ function TransformSection() {
 
           {/* ── RIGHT: Visual ── */}
           <div className="w-full md:w-7/12 relative flex items-center justify-center">
-            {/* Nepal map background */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ opacity: 0.18 }}>
-              <NepalMap routeColor={mapColor} mapOpacity={1} animated={phase === 'CODE' || phase === 'PROTOCOL'} />
-            </div>
+            {/* Frame sequence */}
+            <div className="relative w-full max-w-lg flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                ref={frameImgRef}
+                src={frameSrc(0)}
+                alt="transformation"
+                width={640}
+                height={511}
+                className="w-full h-auto"
+                style={{ display: 'block' }}
+              />
 
-            {/* Bus SVG */}
-            <div className="relative w-full max-w-lg">
-              <TransformBus progress={scrollYProgress} />
-
-              {/* HUD badges — appear in CODE/PROTOCOL phases */}
-              <motion.div
-                style={{ opacity: hudOpacity, y: hudY }}
-                className="absolute inset-0 pointer-events-none"
-              >
-                {/* GPS badge — top right */}
-                <div
-                  className="absolute -top-8 right-4 px-3 py-1.5 rounded-md"
-                  style={{ background: '#0D1A14', border: `1px solid ${CYAN}40`, animation: 'hudFloat 3s ease-in-out infinite' }}
-                >
-                  <span style={{ fontFamily: MONO, fontSize: '8px', color: CYAN, letterSpacing: '0.15em' }}>
-                    GPS · LOCKED
-                  </span>
-                </div>
-
-                {/* ZK proof badge — bottom left */}
-                <div
-                  className="absolute -bottom-8 left-4 px-3 py-1.5 rounded-md"
-                  style={{ background: '#0D1A14', border: `1px solid ${CYAN}40`, animation: 'hudFloat 3.4s ease-in-out 0.8s infinite' }}
-                >
-                  <span style={{ fontFamily: MONO, fontSize: '8px', color: CYAN, letterSpacing: '0.15em' }}>
-                    ZK_PROOF · VALID ✓
-                  </span>
-                </div>
-
-                {/* Solana badge — top left */}
-                <div
-                  className="absolute -top-8 left-0 px-3 py-1.5 rounded-md"
-                  style={{ background: '#0D1A14', border: `1px solid ${CYAN}40`, animation: 'hudFloat 2.8s ease-in-out 1.4s infinite' }}
-                >
-                  <span style={{ fontFamily: MONO, fontSize: '8px', color: CYAN, letterSpacing: '0.15em' }}>
-                    SOL · MAINNET
-                  </span>
-                </div>
-              </motion.div>
             </div>
           </div>
         </div>
-      </motion.div>
+      </div>
     </section>
   );
 }
@@ -915,7 +922,7 @@ function DePINSection() {
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
           className="mb-20"
         >
-          <div className="mb-4" style={{ fontFamily: MONO, fontSize: '10px', color: CYAN, letterSpacing: '0.22em' }}>
+          <div className="mb-4" style={{ fontFamily: MONO, fontSize: '10px', color: DARK_GREEN, letterSpacing: '0.22em' }}>
             ARCHITECTURE
           </div>
           <h2
@@ -1110,7 +1117,7 @@ function ReputationSection() {
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
           className="mb-4"
         >
-          <div style={{ fontFamily: MONO, fontSize: '10px', color: `${CHARCOAL}40`, letterSpacing: '0.22em', marginBottom: '16px' }}>
+          <div style={{ fontFamily: MONO, fontSize: '10px', color: DARK_GREEN, letterSpacing: '0.22em', marginBottom: '16px' }}>
             TRUST LAYER
           </div>
           <h2
@@ -1298,6 +1305,7 @@ function Footer() {
 // ─── Root page ────────────────────────────────────────────────────────────────
 export default function Home() {
   const [onlineBuses, setOnlineBuses] = useState<number | null>(null);
+  const lenisRef = useRef<Lenis | null>(null);
 
   // Lenis smooth scroll
   useEffect(() => {
@@ -1305,6 +1313,7 @@ export default function Home() {
       lerp: 0.08,
       smoothWheel: true,
     });
+    lenisRef.current = lenis;
 
     let rafId: number;
     function raf(time: number) {
@@ -1316,6 +1325,7 @@ export default function Home() {
     return () => {
       cancelAnimationFrame(rafId);
       lenis.destroy();
+      lenisRef.current = null;
     };
   }, []);
 
