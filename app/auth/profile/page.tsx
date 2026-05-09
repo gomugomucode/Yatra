@@ -162,22 +162,28 @@ function ProfilePageContent() {
     }
   }, [currentUser, userData, loading, isSubmitting]);
 
+  // Redirect to role selection if no valid role is found after auth resolves
+  useEffect(() => {
+    if (!loading && !effectiveRole) {
+      router.push('/auth');
+    }
+  }, [loading, effectiveRole, router]);
+
   // ── 4. CONDITIONAL RENDERING (Only after all hooks are declared) ──
 
   if (loading || (!currentUser && !isSubmitting)) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-section/40 to-background flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Syncing authentication...</p>
+      <div style={{ minHeight: '100vh', background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <Loader2 className="animate-spin" style={{ width: 32, height: 32, color: '#00D4AA', margin: '0 auto 12px' }} />
+          <p style={{ color: '#64748B', fontSize: '0.9rem' }}>Syncing authentication...</p>
         </div>
       </div>
     );
   }
 
-  // If auth is done but no role is found, go back to selection
+  // If auth is done but no role is found, rendering is deferred to the effect above
   if (!effectiveRole) {
-    router.push('/auth');
     return null;
   }
 
@@ -381,735 +387,518 @@ function ProfilePageContent() {
       setIsSubmitting(false);
     }
   };
+  const C = '#00D4AA'; const CD = '#009E7F'; const CL = '#E6FBF5';
+  const INK = '#0F172A'; const MUTED = '#64748B'; const BORDER = '#E2E8F0'; const SURF = '#F8FAFC';
+
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-section/40 to-background flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading...</p>
+      <div style={{ minHeight: '100vh', background: SURF, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <Loader2 style={{ width: 48, height: 48, color: C, margin: '0 auto 12px' }} className="animate-spin" />
+          <p style={{ color: MUTED, fontSize: '0.9rem' }}>Loading your profile...</p>
         </div>
       </div>
     );
   }
 
-  // No role — user arrived at /auth/profile without going through the landing page.
-  // Just send them back to pick a role. No toast in the render path.
-  if (!effectiveRole || (effectiveRole !== 'driver' && effectiveRole !== 'passenger')) {
-    router.push('/auth');
-    return null;
-  }
+  // effectiveRole is guaranteed valid here (guarded by effect + early return above)
 
   const isDriver = effectiveRole === 'driver';
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-section/40 to-background relative overflow-hidden">
-      {/* Animated Background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-sky-500/20 rounded-full blur-3xl animate-pulse delay-700"></div>
+  const baseInput: React.CSSProperties = {
+    height: 52, paddingLeft: 46, paddingRight: 16, borderRadius: 12,
+    background: SURF, border: `1.5px solid ${BORDER}`, color: INK,
+    fontSize: '0.9rem', width: '100%', outline: 'none', fontFamily: 'inherit',
+  };
+
+  const sectionHeader = (icon: React.ReactNode, title: string) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+      <div style={{ width: 36, height: 36, borderRadius: 10, background: C, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        {icon}
       </div>
+      <span style={{ fontWeight: 800, fontSize: '1.05rem', color: INK }}>{title}</span>
+    </div>
+  );
 
-      <div className="relative min-h-screen flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-4xl">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-secondary mb-6 shadow-2xl shadow-primary/25">
-              {isDriver ? (
-                <Bus className="w-10 h-10 text-white" />
-              ) : (
-                <User2 className="w-10 h-10 text-white" />
-              )}
+  const fieldError = (msg: string | undefined) => msg ? (
+    <p style={{ fontSize: '0.78rem', color: '#EF4444', marginTop: 4 }}>{msg}</p>
+  ) : null;
+
+  return (
+    <div style={{ minHeight: '100vh', background: `linear-gradient(160deg, ${CL} 0%, ${SURF} 55%, #EFF6FF 100%)`, position: 'relative' }}>
+      {/* Decorative circles */}
+      <div style={{ position: 'fixed', top: -80, right: -80, width: 300, height: 300, borderRadius: '50%', background: `${C}18`, pointerEvents: 'none' }} />
+      <div style={{ position: 'fixed', bottom: -60, left: -60, width: 240, height: 240, borderRadius: '50%', background: '#3B82F618', pointerEvents: 'none' }} />
+
+      <div style={{ position: 'relative', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 16px 48px' }}>
+        {/* Top bar */}
+        <div style={{ width: '100%', maxWidth: 640, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: C, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Bus style={{ width: 18, height: 18, color: 'white' }} />
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-foreground mb-4 tracking-tight">
-              {currentStep === 1 ? 'Welcome!' : `${isDriver ? 'Driver' : 'Passenger'} Profile`}
-            </h1>
-            <p className="text-xl text-muted-foreground">
-              {currentStep === 1
-                ? 'Authentication successful! Let\'s set up your profile'
-                : isDriver
-                  ? 'Complete your profile to start accepting rides'
-                  : 'Complete your profile to start booking rides'}
-            </p>
+            <span style={{ fontWeight: 900, fontSize: '1.1rem', color: INK, letterSpacing: '-0.02em' }}>YATRA</span>
           </div>
-
-          {/* Progress Steps */}
-          <div className="mb-12">
-            <div className="flex items-center justify-center gap-4 max-w-2xl mx-auto">
-              {/* Step 1: Authentication Complete */}
-              <div className="flex items-center gap-3">
-                <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold transition-all ${currentStep >= 1 ? 'bg-gradient-to-br from-primary to-secondary text-white shadow-lg shadow-primary/25' : 'bg-slate-700 text-muted-foreground' }`}>
-                  {currentStep > 1 ? <CheckCircle2 className="w-6 h-6" /> : '1'}
-                </div>
-                <span className={`text-sm font-bold hidden sm:inline transition-colors ${currentStep >= 1 ? 'text-foreground' : 'text-muted-foreground' }`}>
-                  Authentication
-                </span>
-              </div>
-
-              <div className={`w-16 h-1 rounded-full transition-colors ${currentStep >= 2 ? 'bg-gradient-to-r from-primary to-secondary' : 'bg-slate-700' }`}></div>
-
-              {/* Step 2: Personal Details */}
-              <div className="flex items-center gap-3">
-                <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold transition-all ${currentStep >= 2 ? 'bg-gradient-to-br from-primary to-secondary text-white shadow-lg shadow-primary/25' : 'bg-slate-700 text-muted-foreground' }`}>
-                  {currentStep > 2 ? <CheckCircle2 className="w-6 h-6" /> : '2'}
-                </div>
-                <span className={`text-sm font-bold hidden sm:inline transition-colors ${currentStep >= 2 ? 'text-foreground' : 'text-muted-foreground' }`}>
-                  Personal Details
-                </span>
-              </div>
-
-              <div className={`w-16 h-1 rounded-full transition-colors ${currentStep >= 3 ? 'bg-gradient-to-r from-primary to-secondary' : 'bg-slate-700' }`}></div>
-
-              {/* Step 3: Go! */}
-              <div className="flex items-center gap-3">
-                <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold transition-all ${currentStep >= 3 ? 'bg-gradient-to-br from-primary to-secondary text-white shadow-lg shadow-primary/25' : 'bg-slate-700 text-muted-foreground' }`}>
-                  3
-                </div>
-                <span className={`text-sm font-bold hidden sm:inline transition-colors ${currentStep >= 3 ? 'text-foreground' : 'text-muted-foreground' }`}>
-                  Go!
-                </span>
-              </div>
-            </div>
+          <div style={{ padding: '4px 12px', borderRadius: 20, background: isDriver ? CL : '#EFF6FF', border: `1.5px solid ${isDriver ? C : '#3B82F6'}`, fontSize: '0.7rem', fontWeight: 800, color: isDriver ? CD : '#2563EB', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            {isDriver ? 'Driver Setup' : 'Passenger Setup'}
           </div>
+        </div>
 
-          {/* Main Card */}
-          {currentStep === 1 ? (
-            /* Step 1: Authentication Complete */
-            <Card className="bg-card border-border shadow-2xl">
-              <CardContent className="p-12 text-center">
-                <div className="mb-8">
-                  <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 mb-6 shadow-2xl shadow-green-500/50">
-                    <CheckCircle2 className="w-12 h-12 text-white" />
+        {/* Step indicator */}
+        <div style={{ width: '100%', maxWidth: 640, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, marginBottom: 28 }}>
+          {(['Authentication', 'Profile', 'Complete'] as const).map((label, i) => {
+            const step = i + 1;
+            const done = currentStep > step;
+            const active = currentStep === step;
+            return (
+              <div key={label} style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: done || active ? C : '#F1F5F9', border: `2px solid ${done || active ? C : BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
+                    {done
+                      ? <CheckCircle2 style={{ width: 18, height: 18, color: 'white' }} />
+                      : <span style={{ fontSize: '0.8rem', fontWeight: 800, color: active ? 'white' : MUTED }}>{step}</span>}
                   </div>
-                  <h2 className="text-3xl font-bold text-foreground mb-4">
-                    Authentication Complete!
-                  </h2>
-                  <p className="text-lg text-muted-foreground max-w-md mx-auto mb-8">
-                    You&apos;ve successfully signed in. Now let&apos;s set up your {isDriver ? 'driver' : 'passenger'} profile to get started.
-                  </p>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: active || done ? CD : MUTED, letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{label}</span>
                 </div>
+                {i < 2 && <div style={{ width: 48, height: 2, background: currentStep > step ? C : BORDER, margin: '0 6px', marginBottom: 18, transition: 'background 0.3s' }} />}
+              </div>
+            );
+          })}
+        </div>
 
+        {/* Content */}
+        <div style={{ width: '100%', maxWidth: 640 }}>
+          {currentStep === 1 ? (
+            /* Step 1: Auth complete */
+            <div style={{ background: 'white', borderRadius: 20, boxShadow: '0 8px 32px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+              <div style={{ background: `linear-gradient(135deg, ${C}, ${CD})`, padding: '32px 32px 28px', textAlign: 'center' }}>
+                <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                  <CheckCircle2 style={{ width: 40, height: 40, color: 'white' }} />
+                </div>
+                <h1 style={{ color: 'white', fontWeight: 900, fontSize: '1.5rem', marginBottom: 8 }}>You&apos;re in!</h1>
+                <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.9rem' }}>Authentication successful — let&apos;s build your {isDriver ? 'driver' : 'passenger'} profile.</p>
+              </div>
+              <div style={{ padding: '28px 32px 32px', textAlign: 'center' }}>
+                <p style={{ color: MUTED, fontSize: '0.875rem', marginBottom: 24, lineHeight: 1.6 }}>
+                  Signed in as <strong style={{ color: INK }}>{currentUser.email}</strong>.<br />
+                  Your profile takes about 2 minutes to complete.
+                </p>
                 <button
                   onClick={() => setCurrentStep(2)}
-                  className="inline-flex items-center gap-3 px-8 py-4 rounded-xl bg-gradient-to-r from-primary to-secondary hover:from-primary-hover hover:to-secondary/90 text-white font-semibold shadow-lg shadow-primary/25 transition-all duration-300 hover:scale-105"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 32px', borderRadius: 12, background: C, border: 'none', color: 'white', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', transition: 'all 0.15s' }}
+                  className="active:scale-95"
                 >
-                  <span>Continue to Profile Setup</span>
-                  <ArrowRight className="w-5 h-5" />
+                  Continue to Profile Setup
+                  <ArrowRight style={{ width: 18, height: 18 }} />
                 </button>
-              </CardContent>
-            </Card>
-          ) : (
-            /* Step 2 & 3: Profile Form */
-            <Card className="bg-card border-border shadow-2xl">
-              <CardContent className="p-8 md:p-12">
-                {isDriver ? (
-                  <form onSubmit={driverForm.handleSubmit(handleDriverSubmit)} className="space-y-8">
-                    {/* Personal Information */}
-                    <div className="space-y-6">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                          <User2 className="w-5 h-5 text-white" />
-                        </div>
-                        <h2 className="text-2xl font-bold text-foreground">Personal Information</h2>
-                      </div>
+                <div style={{ marginTop: 24, paddingTop: 20, borderTop: `1px solid ${BORDER}`, display: 'flex', justifyContent: 'center', gap: 24 }}>
+                  {[['🔒', 'ZK Verified'], ['⚡', '0.4s Settlement'], ['🚌', '847+ Buses']].map(([icon, label]) => (
+                    <div key={label} style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '1rem', marginBottom: 2 }}>{icon}</div>
+                      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: MUTED, letterSpacing: '0.05em', textTransform: 'uppercase' }}>{label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : isDriver ? (
+            /* Driver form */
+            <form onSubmit={driverForm.handleSubmit(handleDriverSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Personal card */}
+              <div style={{ background: 'white', borderRadius: 20, padding: '24px 24px', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
+                {sectionHeader(<User2 style={{ width: 18, height: 18, color: 'white' }} />, 'Personal Information')}
 
-                      {/* Profile Image */}
-                      <div className="space-y-3">
-                        <Label className="text-muted-foreground text-sm font-bold">Profile Picture</Label>
-                        <div className="flex items-center gap-6">
-                          <div className="relative group">
-                            <div className="w-28 h-28 rounded-3xl bg-slate-100 border-2 border-border overflow-hidden shadow-xl">
-                              {profilePreview ? (
-                                <img src={profilePreview} alt="Profile" className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                  <User2 className="w-12 h-12 text-muted-foreground" />
-                                </div>
-                              )}
-                            </div>
-                            <label htmlFor="profileImage" className="absolute inset-0 flex items-center justify-center bg-card/60 opacity-0 group-hover:opacity-100 rounded-3xl cursor-pointer transition-opacity">
-                              <Camera className="w-8 h-8 text-white" />
-                            </label>
-                            <input
-                              id="profileImage"
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => handleImageChange(e, 'profileImage')}
-                              className="hidden"
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <label htmlFor="profileImage" className="block">
-                              <div className="px-6 py-4 bg-slate-100 border-2 border-dashed border-border hover:border-primary rounded-2xl cursor-pointer transition-all group">
-                                <div className="flex items-center gap-3">
-                                  <Upload className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                                  <div>
-                                    <p className="text-sm font-bold text-muted-foreground">Upload your photo</p>
-                                    <p className="text-xs text-muted-foreground mt-1">Max 5MB • JPG, PNG</p>
-                                  </div>
-                                </div>
-                              </div>
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Name */}
-                      <div className="space-y-3">
-                        <Label htmlFor="name" className="text-muted-foreground text-sm font-bold">
-                          Full Name <span className="text-red-400">*</span>
-                        </Label>
-                        <div className="relative">
-                          <User2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                          <Input
-                            id="name"
-                            {...driverForm.register('name')}
-                            placeholder="Enter your full name"
-                            className="h-14 pl-12 bg-slate-100 border-border text-white placeholder:text-muted-foreground rounded-xl focus:border-primary focus:ring-primary/20"
-                          />
-                        </div>
-                        {driverForm.formState.errors.name && (
-                          <p className="text-sm text-red-400 flex items-center gap-2">
-                            <span className="w-1 h-1 rounded-full bg-red-400"></span>
-                            {driverForm.formState.errors.name.message}
-                          </p>
-                        )}
+                {/* Profile photo */}
+                <div style={{ marginBottom: 20 }}>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: MUTED, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Profile Photo</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                      <div style={{ width: 80, height: 80, borderRadius: 16, background: SURF, border: `1.5px solid ${BORDER}`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {profilePreview
+                          ? <img src={profilePreview} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : <User2 style={{ width: 32, height: 32, color: MUTED }} />}
                       </div>
                     </div>
-
-                    {/* Vehicle Information */}
-                    <div className="space-y-6 pt-8 border-t border-border">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                          <Bus className="w-5 h-5 text-white" />
-                        </div>
-                        <h2 className="text-2xl font-bold text-foreground">Vehicle Information</h2>
-                      </div>
-
-                      {/* Vehicle Type */}
-                      <div className="space-y-3">
-                        <Label className="text-muted-foreground text-sm font-bold">
-                          Vehicle Type <span className="text-red-400">*</span>
-                        </Label>
-                        <Select
-                          value={driverForm.watch('vehicleType')}
-                          onValueChange={(value) =>
-                            driverForm.setValue('vehicleType', value as VehicleTypeId)
-                          }
-                        >
-                          <SelectTrigger className="h-14 bg-surface-soft border-border text-foreground rounded-xl focus:border-primary focus:ring-primary/20 font-medium">
-                            <SelectValue placeholder="Select vehicle type" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-slate-100 border-border">
-                            {VEHICLE_TYPES.map((type) => (
-                              <SelectItem key={type.id} value={type.id} className="text-foreground hover:bg-surface-soft">
-                                <span className="flex items-center gap-2">
-                                  <span className="text-2xl">{type.icon}</span>
-                                  <span>{type.name}</span>
-                                </span>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Vehicle Image */}
-                      <div className="space-y-3">
-                        <Label className="text-muted-foreground text-sm font-bold">Vehicle Photo</Label>
-                        <div className="flex items-center gap-6">
-                          <div className="relative group">
-                            <div className="w-32 h-24 rounded-2xl bg-slate-100 border-2 border-border overflow-hidden shadow-xl">
-                              {vehiclePreview ? (
-                                <img src={vehiclePreview} alt="Vehicle" className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                  <Bus className="w-10 h-10 text-muted-foreground" />
-                                </div>
-                              )}
-                            </div>
-                            <label htmlFor="vehicleImage" className="absolute inset-0 flex items-center justify-center bg-card/60 opacity-0 group-hover:opacity-100 rounded-2xl cursor-pointer transition-opacity">
-                              <Camera className="w-6 h-6 text-white" />
-                            </label>
-                            <input
-                              id="vehicleImage"
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => handleImageChange(e, 'vehicleImage')}
-                              className="hidden"
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <label htmlFor="vehicleImage" className="block">
-                              <div className="px-6 py-4 bg-slate-100 border-2 border-dashed border-border hover:border-sky-400 rounded-2xl cursor-pointer transition-all group">
-                                <div className="flex items-center gap-3">
-                                  <Upload className="w-5 h-5 text-muted-foreground group-hover:text-sky-300 transition-colors" />
-                                  <div>
-                                    <p className="text-sm font-bold text-muted-foreground">Upload vehicle photo</p>
-                                    <p className="text-xs text-muted-foreground mt-1">Clear photo of your vehicle</p>
-                                  </div>
-                                </div>
-                              </div>
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Two Column Grid */}
-                      <div className="grid md:grid-cols-2 gap-6">
-                        {/* Vehicle Number */}
-                        <div className="space-y-3">
-                          <Label htmlFor="vehicleNumber" className="text-muted-foreground text-sm font-bold">
-                            Vehicle Number <span className="text-red-400">*</span>
-                          </Label>
-                          <div className="relative">
-                            <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                            <Input
-                              id="vehicleNumber"
-                              {...driverForm.register('vehicleNumber')}
-                              placeholder="e.g., Lu 1 Pa 2345"
-                              className="h-14 pl-12 bg-surface-soft border-border text-foreground placeholder:text-slate-400 rounded-xl focus:border-primary focus:ring-primary/20 font-medium"
-                            />
-                          </div>
-                          {driverForm.formState.errors.vehicleNumber && (
-                            <p className="text-sm text-red-400">
-                              {driverForm.formState.errors.vehicleNumber.message}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Solana Wallet */}
-                        <div className="space-y-3">
-                          <Label htmlFor="solanaWallet" className="text-muted-foreground text-sm font-bold">
-                            Solana Wallet Address <span className="text-red-400">*</span>
-                          </Label>
-                          <div className="relative">
-                            <Wallet className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                            <Input
-                              id="solanaWallet"
-                              {...driverForm.register('solanaWallet')}
-                              placeholder="Solana wallet address"
-                              className="h-14 pl-12 bg-surface-soft border-border text-foreground placeholder:text-slate-400 rounded-xl focus:border-primary focus:ring-primary/20 font-medium"
-                            />
-                          </div>
-                          {driverForm.formState.errors.solanaWallet && (
-                            <p className="text-sm text-red-400">
-                              {driverForm.formState.errors.solanaWallet.message}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* License Number */}
-                        <div className="space-y-3">
-                          <Label htmlFor="licenseNumber" className="text-muted-foreground text-sm font-bold">
-                            License Number <span className="text-red-400">*</span>
-                          </Label>
-                          <div className="relative">
-                            <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                            <Input
-                              id="licenseNumber"
-                              {...driverForm.register('licenseNumber')}
-                              placeholder="Your license number"
-                              className="h-14 pl-12 bg-surface-soft border-border text-foreground placeholder:text-slate-400 rounded-xl focus:border-primary focus:ring-primary/20 font-medium"
-                            />
-                          </div>
-                          {driverForm.formState.errors.licenseNumber && (
-                            <p className="text-sm text-red-400">
-                              {driverForm.formState.errors.licenseNumber.message}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* License images */}
-                      <div className="grid md:grid-cols-2 gap-6">
-                        <div className="space-y-3">
-                          <Label className="text-muted-foreground text-sm font-bold">License Front</Label>
-                          <div className="flex items-center gap-4">
-                            <div className="relative group">
-                              <div className="w-32 h-24 rounded-2xl bg-slate-100 border-2 border-border overflow-hidden shadow-xl">
-                                {licenseFrontPreview ? (
-                                  <img src={licenseFrontPreview} alt="License front" className="w-full h-full object-cover" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    <CreditCard className="w-9 h-9 text-muted-foreground" />
-                                  </div>
-                                )}
-                              </div>
-                              <label htmlFor="licenseFrontImage" className="absolute inset-0 flex items-center justify-center bg-card/60 opacity-0 group-hover:opacity-100 rounded-2xl cursor-pointer transition-opacity">
-                                <Camera className="w-6 h-6 text-white" />
-                              </label>
-                              <input
-                                id="licenseFrontImage"
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) => handleImageChange(e, 'licenseFrontImage')}
-                                className="hidden"
-                              />
-                            </div>
-                            <label htmlFor="licenseFrontImage" className="flex-1 block">
-                              <div className="px-4 py-4 bg-slate-100 border-2 border-dashed border-border hover:border-primary rounded-2xl cursor-pointer transition-all group">
-                                <div className="flex items-center gap-3">
-                                  <Upload className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                                  <div>
-                                    <p className="text-sm font-bold text-muted-foreground">Upload front side</p>
-                                    <p className="text-xs text-muted-foreground mt-1">Photo must be clear and readable</p>
-                                  </div>
-                                </div>
-                              </div>
-                            </label>
-                          </div>
-                        </div>
-
-                        <div className="space-y-3">
-                          <Label className="text-muted-foreground text-sm font-bold">License Back</Label>
-                          <div className="flex items-center gap-4">
-                            <div className="relative group">
-                              <div className="w-32 h-24 rounded-2xl bg-slate-100 border-2 border-border overflow-hidden shadow-xl">
-                                {licenseBackPreview ? (
-                                  <img src={licenseBackPreview} alt="License back" className="w-full h-full object-cover" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    <CreditCard className="w-9 h-9 text-muted-foreground" />
-                                  </div>
-                                )}
-                              </div>
-                              <label htmlFor="licenseBackImage" className="absolute inset-0 flex items-center justify-center bg-card/60 opacity-0 group-hover:opacity-100 rounded-2xl cursor-pointer transition-opacity">
-                                <Camera className="w-6 h-6 text-white" />
-                              </label>
-                              <input
-                                id="licenseBackImage"
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) => handleImageChange(e, 'licenseBackImage')}
-                                className="hidden"
-                              />
-                            </div>
-                            <label htmlFor="licenseBackImage" className="flex-1 block">
-                              <div className="px-4 py-4 bg-slate-100 border-2 border-dashed border-border hover:border-primary rounded-2xl cursor-pointer transition-all group">
-                                <div className="flex items-center gap-3">
-                                  <Upload className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                                  <div>
-                                    <p className="text-sm font-bold text-muted-foreground">Upload back side</p>
-                                    <p className="text-xs text-muted-foreground mt-1">Include renewal/authority details</p>
-                                  </div>
-                                </div>
-                              </div>
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Route */}
-                      <div className="space-y-3">
-                        <Label htmlFor="route" className="text-muted-foreground text-sm font-bold">
-                          Primary Route <span className="text-red-400">*</span>
-                        </Label>
-                        <div className="relative">
-                          <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                          <Input
-                            id="route"
-                            {...driverForm.register('route')}
-                            placeholder="e.g., Butwal Main Route"
-                            className="h-14 pl-12 bg-slate-100 border-border text-white placeholder:text-muted-foreground rounded-xl focus:border-primary focus:ring-primary/20"
-                          />
-                        </div>
-                        {driverForm.formState.errors.route && (
-                          <p className="text-sm text-red-400">
-                            {driverForm.formState.errors.route.message}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Driver verification */}
-                      <div className="space-y-4 rounded-3xl border border-accent/25 bg-accent-soft/50 p-6">
-                        <div className="flex items-start gap-4">
-                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-primary shadow-lg shadow-accent/20">
-                            <Lock className="w-6 h-6 text-white" />
-                          </div>
-                          <div className="space-y-1">
-                            <h3 className="text-xl font-bold text-foreground">Driver Security Verification</h3>
-                            <p className="text-sm text-slate-300">
-                              This step is required before your driver dashboard unlocks. Your license and birth year stay private while Yatra verifies a zero-knowledge proof and mints your badge.
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="grid md:grid-cols-2 gap-6">
-                          <div className="space-y-3">
-                            <Label htmlFor="birthYear" className="text-muted-foreground text-sm font-bold">
-                              Birth Year <span className="text-red-400">*</span>
-                            </Label>
-                            <div className="relative">
-                              <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                              <Input
-                                id="birthYear"
-                                type="number"
-                                min={1920}
-                                max={2005}
-                                {...driverForm.register('birthYear', { valueAsNumber: true })}
-                                placeholder="e.g., 1995"
-                                className="h-14 pl-12 bg-surface-soft border-border text-foreground placeholder:text-slate-400 rounded-xl focus:border-primary focus:ring-primary/20 font-medium"
-                              />
-                            </div>
-                            {driverForm.formState.errors.birthYear && (
-                              <p className="text-sm text-red-400">
-                                {driverForm.formState.errors.birthYear.message}
-                              </p>
-                            )}
-                          </div>
-
-                          <div className="rounded-2xl border border-border bg-card p-4">
-                            <div className="flex items-center gap-2 text-amber-600">
-                              <Sparkles className="w-4 h-4" />
-                              <span className="text-sm font-semibold">Verification checklist</span>
-                            </div>
-                            <ul className="mt-3 space-y-2 text-sm text-muted-foreground font-medium">
-                              <li className={`flex items-center gap-2 ${isValidLicense(driverForm.watch('licenseNumber') || '') ? 'text-emerald-600' : ''}`}>
-                                <span className="text-xs">{isValidLicense(driverForm.watch('licenseNumber') || '') ? '✓' : '•'}</span>
-                                Valid driver license
-                              </li>
-                              <li className={`flex items-center gap-2 ${isValidSolana(driverForm.watch('solanaWallet') || '') ? 'text-emerald-600' : ''}`}>
-                                <span className="text-xs">{isValidSolana(driverForm.watch('solanaWallet') || '') ? '✓' : '•'}</span>
-                                Valid Solana wallet
-                              </li>
-                              <li className={`flex items-center gap-2 ${(driverForm.watch('birthYear') || 0) <= 2005 ? 'text-emerald-600' : ''}`}>
-                                <span className="text-xs">{(driverForm.watch('birthYear') || 0) <= 2005 ? '✓' : '•'}</span>
-                                Age 21+ eligibility
-                              </li>
-                              <li className={`flex items-center gap-2 ${!!driverForm.watch('licenseFrontImage') && !!driverForm.watch('licenseBackImage') ? 'text-emerald-600' : ''}`}>
-                                <span className="text-xs">{!!driverForm.watch('licenseFrontImage') && !!driverForm.watch('licenseBackImage') ? '✓' : '•'}</span>
-                                License front and back uploaded
-                              </li>
-                              <li className="flex items-center gap-2 text-muted-foreground">
-                                <span className="text-xs">•</span>
-                                Proof is generated on this device before server verification
-                              </li>
-                            </ul>
-                          </div>
-                        </div>
-
-                        <div className="rounded-2xl border border-border bg-card p-4">
-                          <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-2 font-black">Verification status</p>
-                          {existingBadge ? (
-                            <div className="flex items-center gap-2 text-emerald-600">
-                              <CheckCircle2 className="w-4 h-4" />
-                              <span className="text-sm font-semibold">Verified</span>
-                              <span className="text-xs text-muted-foreground">Minted badge is active.</span>
-                            </div>
-                          ) : verificationState === 'verifying' ? (
-                            <div className="flex items-center gap-2 text-amber-600">
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              <span className="text-sm font-semibold">Verifying on-chain...</span>
-                            </div>
-                          ) : verificationState === 'generating' ? (
-                            <div className="flex items-center gap-2 text-amber-600">
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              <span className="text-sm font-semibold">Generating ZK proof...</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <Shield className="w-4 h-4 text-amber-600" />
-                              <span className="text-sm font-semibold">Awaiting verification</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {(verificationCommitment || existingBadge?.zkCommitment) && (
-                          <div className="rounded-2xl border border-accent/25 bg-card p-4">
-                            <p className="text-[10px] uppercase tracking-[0.2em] text-amber-600 mb-2 font-black">Latest ZK commitment</p>
-                            <p className="font-mono text-sm text-amber-700 break-all">
-                              {formatCommitment(existingBadge?.zkCommitment || verificationCommitment || '')}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Capacity */}
-                      <div className="space-y-3">
-                        <Label htmlFor="capacity" className="text-muted-foreground text-sm font-bold">
-                          Vehicle Capacity <span className="text-red-400">*</span>
-                        </Label>
-                        <div className="relative">
-                          <User2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                          <Input
-                            id="capacity"
-                            type="number"
-                            {...driverForm.register('capacity', { valueAsNumber: true })}
-                            min={1}
-                            max={100}
-                            className="h-14 pl-12 bg-surface-soft border-border text-foreground placeholder:text-slate-400 rounded-xl focus:border-primary focus:ring-primary/20 font-medium"
-                          />
-                        </div>
-                        {driverForm.formState.errors.capacity && (
-                          <p className="text-sm text-red-400">
-                            {driverForm.formState.errors.capacity.message}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Submit Button */}
-                    <div className="pt-6">
-                      <Button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="w-full h-16 min-h-14 text-lg font-bold rounded-2xl bg-gradient-to-r from-accent via-primary to-secondary hover:from-accent/90 hover:via-primary-hover hover:to-secondary/90 shadow-2xl shadow-primary/25 transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <Loader2 className="w-6 h-6 mr-3 animate-spin" />
-                            {verificationState === 'generating'
-                              ? 'Generating ZK Proof...'
-                              : verificationState === 'verifying'
-                                ? 'Verifying Driver Badge...'
-                                : 'Creating Your Profile...'}
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 className="w-6 h-6 mr-3" />
-                            Verify and Complete Driver Profile
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </form>
-                ) : (
-                  <form onSubmit={passengerForm.handleSubmit(handlePassengerSubmit)} className="space-y-8">
-                    <div className="space-y-6">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                          <User2 className="w-5 h-5 text-white" />
-                        </div>
-                        <h2 className="text-2xl font-bold text-foreground">Your Information</h2>
-                      </div>
-
-                      {/* Name */}
-                      <div className="space-y-3">
-                        <Label htmlFor="name" className="text-muted-foreground text-sm font-bold">
-                          Full Name <span className="text-red-400">*</span>
-                        </Label>
-                        <div className="relative">
-                          <User2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                          <Input
-                            id="name"
-                            {...passengerForm.register('name')}
-                            placeholder="Enter your full name"
-                            className="h-14 pl-12 bg-surface-soft border-border text-foreground placeholder:text-slate-400 rounded-xl focus:border-primary focus:ring-primary/20 font-medium"
-                          />
-                        </div>
-                        {passengerForm.formState.errors.name && (
-                          <p className="text-sm text-red-400 flex items-center gap-2">
-                            <span className="w-1 h-1 rounded-full bg-red-400"></span>
-                            {passengerForm.formState.errors.name.message}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Email */}
-                      <div className="space-y-3">
-                        <Label htmlFor="email" className="text-muted-foreground text-sm font-bold">
-                          Email Address <span className="text-muted-foreground text-xs">(Optional)</span>
-                        </Label>
-                        <div className="relative">
-                          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                          <Input
-                            id="email"
-                            type="email"
-                            {...passengerForm.register('email')}
-                            placeholder="your.email@example.com"
-                            className="h-14 pl-12 bg-surface-soft border-border text-foreground placeholder:text-slate-400 rounded-xl focus:border-primary focus:ring-primary/20 font-medium"
-                          />
-                        </div>
-                        {passengerForm.formState.errors.email && (
-                          <p className="text-sm text-red-400">
-                            {passengerForm.formState.errors.email.message}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Emergency Contact */}
-                      <div className="space-y-3">
-                        <Label htmlFor="emergencyContact" className="text-muted-foreground text-sm font-bold">
-                          Emergency Contact <span className="text-muted-foreground text-xs">(Optional)</span>
-                        </Label>
-                        <div className="relative">
-                          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                          <Input
-                            id="emergencyContact"
-                            {...passengerForm.register('emergencyContact')}
-                            placeholder="+977 98XXXXXXXX"
-                            className="h-14 pl-12 bg-surface-soft border-border text-foreground placeholder:text-slate-400 rounded-xl focus:border-primary focus:ring-primary/20 font-medium"
-                          />
-                        </div>
-                        {passengerForm.formState.errors.emergencyContact && (
-                          <p className="text-sm text-red-400">
-                            {passengerForm.formState.errors.emergencyContact.message}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Solana Wallet */}
-                      <div className="space-y-3">
-                        <Label htmlFor="solanaWallet" className="text-muted-foreground text-sm font-bold">
-                          Solana Wallet Address <span className="text-muted-foreground text-xs">(Optional, for Trip Tickets)</span>
-                        </Label>
-                        <div className="relative">
-                          <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                          <Input
-                            id="solanaWallet"
-                            {...passengerForm.register('solanaWallet')}
-                            placeholder="e.g., 9xQe... (Phantom Wallet)"
-                            className="h-14 pl-12 bg-surface-soft border-border text-foreground placeholder:text-slate-400 rounded-xl focus:border-primary focus:ring-primary/20 font-medium"
-                          />
-                        </div>
-                        {passengerForm.formState.errors.solanaWallet && (
-                          <p className="text-sm text-red-400">
-                            {passengerForm.formState.errors.solanaWallet.message}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Info Box */}
-                    <div className="p-6 rounded-2xl bg-primary-soft border border-primary/20">
-                      <div className="flex gap-4">
-                        <div className="flex-shrink-0">
-                          <div className="w-10 h-10 rounded-xl bg-accent-soft flex items-center justify-center">
-                            <Shield className="w-5 h-5 text-primary-hover" />
-                          </div>
-                        </div>
+                    <label htmlFor="profileImage" style={{ flex: 1, cursor: 'pointer' }}>
+                      <div style={{ padding: '12px 16px', borderRadius: 12, background: SURF, border: `1.5px dashed ${BORDER}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Upload style={{ width: 18, height: 18, color: C, flexShrink: 0 }} />
                         <div>
-                          <h3 className="text-foreground font-bold mb-2">Your Privacy Matters</h3>
-                          <p className="text-sm text-muted-foreground leading-relaxed">
-                            Your information is encrypted and secure. We only use it to provide you with the best service.
-                          </p>
+                          <p style={{ fontSize: '0.82rem', fontWeight: 700, color: INK }}>Upload your photo</p>
+                          <p style={{ fontSize: '0.72rem', color: MUTED, marginTop: 2 }}>Max 5MB · JPG, PNG</p>
                         </div>
                       </div>
-                    </div>
+                      <input id="profileImage" type="file" accept="image/*" onChange={(e) => handleImageChange(e, 'profileImage')} style={{ display: 'none' }} />
+                    </label>
+                  </div>
+                </div>
 
-                    {/* Submit Button */}
-                    <div className="pt-2">
-                      <Button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="w-full h-16 min-h-14 text-lg font-bold rounded-2xl bg-gradient-to-r from-primary to-secondary hover:from-primary-hover hover:to-secondary/90 shadow-2xl shadow-primary/25 transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <Loader2 className="w-6 h-6 mr-3 animate-spin" />
-                            Creating Your Profile...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 className="w-6 h-6 mr-3" />
-                            Complete Passenger Profile
-                          </>
-                        )}
-                      </Button>
+                {/* Name */}
+                <div>
+                  <label htmlFor="driverName" style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: MUTED, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Full Name <span style={{ color: '#EF4444' }}>*</span>
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <User2 style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', width: 18, height: 18, color: MUTED, pointerEvents: 'none' }} />
+                    <input id="driverName" {...driverForm.register('name')} placeholder="Enter your full name" style={baseInput} />
+                  </div>
+                  {fieldError(driverForm.formState.errors.name?.message)}
+                </div>
+              </div>
+
+              {/* Vehicle card */}
+              <div style={{ background: 'white', borderRadius: 20, padding: '24px 24px', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
+                {sectionHeader(<Bus style={{ width: 18, height: 18, color: 'white' }} />, 'Vehicle Information')}
+
+                {/* Vehicle type */}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: MUTED, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Vehicle Type <span style={{ color: '#EF4444' }}>*</span>
+                  </label>
+                  <Select value={driverForm.watch('vehicleType')} onValueChange={(v) => driverForm.setValue('vehicleType', v as VehicleTypeId)}>
+                    <SelectTrigger style={{ height: 52, borderRadius: 12, background: SURF, border: `1.5px solid ${BORDER}`, color: INK, fontSize: '0.9rem' }}>
+                      <SelectValue placeholder="Select vehicle type" />
+                    </SelectTrigger>
+                    <SelectContent style={{ background: 'white', border: `1px solid ${BORDER}`, borderRadius: 12 }}>
+                      {VEHICLE_TYPES.map((type) => (
+                        <SelectItem key={type.id} value={type.id} style={{ color: INK }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: '1.2rem' }}>{type.icon}</span>
+                            <span>{type.name}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Vehicle photo */}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: MUTED, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Vehicle Photo</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <div style={{ width: 96, height: 64, borderRadius: 12, background: SURF, border: `1.5px solid ${BORDER}`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {vehiclePreview
+                        ? <img src={vehiclePreview} alt="Vehicle" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : <Bus style={{ width: 28, height: 28, color: MUTED }} />}
                     </div>
-                  </form>
+                    <label htmlFor="vehicleImage" style={{ flex: 1, cursor: 'pointer' }}>
+                      <div style={{ padding: '12px 16px', borderRadius: 12, background: SURF, border: `1.5px dashed ${BORDER}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Upload style={{ width: 18, height: 18, color: C, flexShrink: 0 }} />
+                        <div>
+                          <p style={{ fontSize: '0.82rem', fontWeight: 700, color: INK }}>Upload vehicle photo</p>
+                          <p style={{ fontSize: '0.72rem', color: MUTED, marginTop: 2 }}>Clear exterior shot</p>
+                        </div>
+                      </div>
+                      <input id="vehicleImage" type="file" accept="image/*" onChange={(e) => handleImageChange(e, 'vehicleImage')} style={{ display: 'none' }} />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Vehicle number + Wallet */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                  <div>
+                    <label htmlFor="vehicleNumber" style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: MUTED, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      Plate No. <span style={{ color: '#EF4444' }}>*</span>
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <CreditCard style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: MUTED, pointerEvents: 'none' }} />
+                      <input id="vehicleNumber" {...driverForm.register('vehicleNumber')} placeholder="Lu 1 Pa 2345" style={baseInput} />
+                    </div>
+                    {fieldError(driverForm.formState.errors.vehicleNumber?.message)}
+                  </div>
+                  <div>
+                    <label htmlFor="driverCapacity" style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: MUTED, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      Capacity <span style={{ color: '#EF4444' }}>*</span>
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <User2 style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: MUTED, pointerEvents: 'none' }} />
+                      <input id="driverCapacity" type="number" {...driverForm.register('capacity', { valueAsNumber: true })} min={1} max={100} style={baseInput} />
+                    </div>
+                    {fieldError(driverForm.formState.errors.capacity?.message)}
+                  </div>
+                </div>
+
+                {/* Solana wallet */}
+                <div style={{ marginBottom: 16 }}>
+                  <label htmlFor="driverWallet" style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: MUTED, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Solana Wallet <span style={{ color: '#EF4444' }}>*</span>
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <Wallet style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: MUTED, pointerEvents: 'none' }} />
+                    <input id="driverWallet" {...driverForm.register('solanaWallet')} placeholder="Solana wallet address" style={baseInput} />
+                  </div>
+                  {fieldError(driverForm.formState.errors.solanaWallet?.message)}
+                </div>
+
+                {/* Route */}
+                <div>
+                  <label htmlFor="route" style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: MUTED, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Primary Route <span style={{ color: '#EF4444' }}>*</span>
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <MapPin style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: MUTED, pointerEvents: 'none' }} />
+                    <input id="route" {...driverForm.register('route')} placeholder="e.g., Butwal Main Route" style={baseInput} />
+                  </div>
+                  {fieldError(driverForm.formState.errors.route?.message)}
+                </div>
+              </div>
+
+              {/* License card */}
+              <div style={{ background: 'white', borderRadius: 20, padding: '24px 24px', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
+                {sectionHeader(<Shield style={{ width: 18, height: 18, color: 'white' }} />, 'License Documents')}
+
+                {/* License number */}
+                <div style={{ marginBottom: 16 }}>
+                  <label htmlFor="licenseNumber" style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: MUTED, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    License Number <span style={{ color: '#EF4444' }}>*</span>
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <Shield style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: MUTED, pointerEvents: 'none' }} />
+                    <input id="licenseNumber" {...driverForm.register('licenseNumber')} placeholder="Your license number" style={baseInput} />
+                  </div>
+                  {fieldError(driverForm.formState.errors.licenseNumber?.message)}
+                </div>
+
+                {/* License images */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  {([
+                    { id: 'licenseFrontImage', label: 'Front Side', preview: licenseFrontPreview } as const,
+                    { id: 'licenseBackImage', label: 'Back Side', preview: licenseBackPreview } as const,
+                  ] as const).map(({ id, label, preview }) => (
+                    <div key={id}>
+                      <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: MUTED, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</label>
+                      <label htmlFor={id} style={{ cursor: 'pointer', display: 'block' }}>
+                        <div style={{ height: 80, borderRadius: 12, background: SURF, border: `1.5px dashed ${BORDER}`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {preview
+                            ? <img src={preview} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            : <div style={{ textAlign: 'center' }}>
+                                <Camera style={{ width: 20, height: 20, color: C, margin: '0 auto 4px' }} />
+                                <p style={{ fontSize: '0.7rem', color: MUTED }}>Upload {label.toLowerCase()}</p>
+                              </div>}
+                        </div>
+                        <input id={id} type="file" accept="image/*" onChange={(e) => handleImageChange(e, id)} style={{ display: 'none' }} />
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ZK Security card */}
+              <div style={{ background: CL, borderRadius: 20, padding: '24px 24px', border: `1.5px solid ${C}40` }}>
+                {sectionHeader(<Lock style={{ width: 18, height: 18, color: 'white' }} />, 'ZK Security Verification')}
+                <p style={{ fontSize: '0.82rem', color: CD, marginBottom: 20, lineHeight: 1.6 }}>
+                  Your license and birth year stay private. Yatra generates a zero-knowledge proof on this device before any server verification.
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                  {/* Birth year */}
+                  <div>
+                    <label htmlFor="birthYear" style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: CD, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      Birth Year <span style={{ color: '#EF4444' }}>*</span>
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <Shield style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: CD, pointerEvents: 'none' }} />
+                      <input id="birthYear" type="number" min={1920} max={2005} {...driverForm.register('birthYear', { valueAsNumber: true })} placeholder="e.g., 1995" style={{ ...baseInput, background: 'white', borderColor: `${C}60` }} />
+                    </div>
+                    {fieldError(driverForm.formState.errors.birthYear?.message)}
+                  </div>
+
+                  {/* Checklist */}
+                  <div style={{ background: 'white', borderRadius: 12, padding: '12px 14px' }}>
+                    <p style={{ fontSize: '0.65rem', fontWeight: 800, color: MUTED, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>Checklist</p>
+                    {[
+                      [isValidLicense(driverForm.watch('licenseNumber') || ''), 'Valid license'],
+                      [isValidSolana(driverForm.watch('solanaWallet') || ''), 'Valid wallet'],
+                      [(driverForm.watch('birthYear') || 0) <= 2005, 'Age 21+'],
+                      [!!driverForm.watch('licenseFrontImage') && !!driverForm.watch('licenseBackImage'), 'License photos'],
+                    ].map(([ok, label]) => (
+                      <div key={String(label)} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <span style={{ fontSize: '0.75rem', color: ok ? C : BORDER, fontWeight: 800 }}>{ok ? '✓' : '○'}</span>
+                        <span style={{ fontSize: '0.78rem', color: ok ? CD : MUTED, fontWeight: ok ? 700 : 500 }}>{String(label)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Verification status */}
+                <div style={{ background: 'white', borderRadius: 12, padding: '12px 14px', marginBottom: existingBadge || verificationCommitment ? 12 : 0 }}>
+                  <p style={{ fontSize: '0.65rem', fontWeight: 800, color: MUTED, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Verification Status</p>
+                  {existingBadge ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: C }}>
+                      <CheckCircle2 style={{ width: 16, height: 16 }} />
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>Verified — badge active</span>
+                    </div>
+                  ) : verificationState === 'verifying' || verificationState === 'generating' ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#D97706' }}>
+                      <Loader2 style={{ width: 16, height: 16 }} className="animate-spin" />
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>
+                        {verificationState === 'generating' ? 'Generating ZK proof...' : 'Verifying on-chain...'}
+                      </span>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: MUTED }}>
+                      <Shield style={{ width: 16, height: 16, color: '#D97706' }} />
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Awaiting verification</span>
+                    </div>
+                  )}
+                </div>
+
+                {(verificationCommitment || existingBadge?.zkCommitment) && (
+                  <div style={{ background: 'white', borderRadius: 12, padding: '10px 14px' }}>
+                    <p style={{ fontSize: '0.65rem', fontWeight: 800, color: '#D97706', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>ZK Commitment</p>
+                    <p style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: '#92400E', wordBreak: 'break-all' }}>
+                      {formatCommitment(existingBadge?.zkCommitment || verificationCommitment || '')}
+                    </p>
+                  </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                style={{ width: '100%', height: 56, borderRadius: 14, background: isSubmitting ? MUTED : C, border: 'none', color: 'white', fontWeight: 800, fontSize: '1rem', cursor: isSubmitting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.15s' }}
+                className="active:scale-[0.98]"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 style={{ width: 20, height: 20 }} className="animate-spin" />
+                    {verificationState === 'generating' ? 'Generating ZK Proof...' : verificationState === 'verifying' ? 'Verifying Badge...' : 'Creating Profile...'}
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 style={{ width: 20, height: 20 }} />
+                    Verify &amp; Complete Driver Profile
+                  </>
+                )}
+              </button>
+            </form>
+          ) : (
+            /* Passenger form */
+            <form onSubmit={passengerForm.handleSubmit(handlePassengerSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+              {/* Main card with gradient header */}
+              <div style={{ background: 'white', borderRadius: 20, overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.07)' }}>
+                {/* Gradient header */}
+                <div style={{ background: `linear-gradient(135deg, ${C}, ${CD})`, padding: '22px 24px 20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <User2 style={{ width: 22, height: 22, color: 'white' }} />
+                    </div>
+                    <div>
+                      <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 2 }}>Step 2 of 3</p>
+                      <h2 style={{ color: 'white', fontWeight: 900, fontSize: '1.15rem', lineHeight: 1.2 }}>Rider Profile</h2>
+                    </div>
+                  </div>
+                  {/* Perks row */}
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {[['🗺️', 'Live Bus Tracking'], ['🎫', 'NFT Trip Tickets'], ['📍', 'Real-time Location']].map(([icon, label]) => (
+                      <div key={String(label)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 20, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.28)' }}>
+                        <span style={{ fontSize: '0.75rem' }}>{String(icon)}</span>
+                        <span style={{ fontSize: '0.68rem', color: 'white', fontWeight: 700, letterSpacing: '0.02em' }}>{String(label)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Fields */}
+                <div style={{ padding: '24px' }}>
+                  {/* Name */}
+                  <div style={{ marginBottom: 16 }}>
+                    <label htmlFor="passName" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: MUTED, marginBottom: 7, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                      Full Name <span style={{ color: '#EF4444' }}>*</span>
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <User2 style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: MUTED, pointerEvents: 'none' }} />
+                      <input id="passName" {...passengerForm.register('name')} placeholder="Your full name" style={baseInput} />
+                    </div>
+                    {fieldError(passengerForm.formState.errors.name?.message)}
+                  </div>
+
+                  {/* Email */}
+                  <div style={{ marginBottom: 16 }}>
+                    <label htmlFor="passEmail" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: MUTED, marginBottom: 7, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                      Email <span style={{ fontSize: '0.7rem', fontWeight: 500, textTransform: 'none', color: MUTED }}>— optional</span>
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <Mail style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: MUTED, pointerEvents: 'none' }} />
+                      <input id="passEmail" type="email" {...passengerForm.register('email')} placeholder="your@email.com" style={baseInput} />
+                    </div>
+                    {fieldError(passengerForm.formState.errors.email?.message)}
+                  </div>
+
+                  {/* Emergency contact */}
+                  <div style={{ marginBottom: 16 }}>
+                    <label htmlFor="emergencyContact" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: MUTED, marginBottom: 7, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                      Emergency Contact <span style={{ fontSize: '0.7rem', fontWeight: 500, textTransform: 'none', color: MUTED }}>— optional</span>
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <Phone style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: MUTED, pointerEvents: 'none' }} />
+                      <input id="emergencyContact" {...passengerForm.register('emergencyContact')} placeholder="+977 98XXXXXXXX" style={baseInput} />
+                    </div>
+                    {fieldError(passengerForm.formState.errors.emergencyContact?.message)}
+                  </div>
+
+                  {/* Solana wallet */}
+                  <div style={{ marginBottom: 0 }}>
+                    <label htmlFor="passWallet" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: MUTED, marginBottom: 7, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                      Solana Wallet <span style={{ fontSize: '0.7rem', fontWeight: 500, textTransform: 'none', color: MUTED }}>— optional, for NFT tickets</span>
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <CreditCard style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: MUTED, pointerEvents: 'none' }} />
+                      <input id="passWallet" {...passengerForm.register('solanaWallet')} placeholder="9xQe... (Phantom / Solflare)" style={baseInput} />
+                    </div>
+                    {fieldError(passengerForm.formState.errors.solanaWallet?.message)}
+                    <p style={{ fontSize: '0.72rem', color: MUTED, marginTop: 5, paddingLeft: 4 }}>
+                      Connect a Solana wallet to receive on-chain trip receipts and NFT badges.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* What happens next */}
+              <div style={{ background: 'white', borderRadius: 16, padding: '18px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                <p style={{ fontSize: '0.7rem', fontWeight: 800, color: MUTED, letterSpacing: '0.09em', textTransform: 'uppercase', marginBottom: 14 }}>What happens next</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {[
+                    { icon: <MapPin style={{ width: 14, height: 14, color: 'white' }} />, title: 'Find nearby buses', desc: 'See live bus locations on your map' },
+                    { icon: <Bus style={{ width: 14, height: 14, color: 'white' }} />, title: 'Hail a ride', desc: 'Tap to signal the bus from your stop' },
+                    { icon: <Wallet style={{ width: 14, height: 14, color: 'white' }} />, title: 'Instant settlement', desc: 'ZK-verified trip receipt in 0.4 seconds' },
+                  ].map(({ icon, title, desc }) => (
+                    <div key={title} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 30, height: 30, borderRadius: 8, background: C, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {icon}
+                      </div>
+                      <div>
+                        <p style={{ fontSize: '0.85rem', fontWeight: 700, color: INK }}>{title}</p>
+                        <p style={{ fontSize: '0.75rem', color: MUTED, marginTop: 1 }}>{desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Privacy note */}
+              <div style={{ background: CL, borderRadius: 14, padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: 10, border: `1px solid ${C}35` }}>
+                <Shield style={{ width: 16, height: 16, color: CD, flexShrink: 0, marginTop: 2 }} />
+                <p style={{ fontSize: '0.78rem', color: CD, lineHeight: 1.6 }}>
+                  <strong style={{ color: INK }}>Your data stays yours.</strong> Encrypted end-to-end. ZK-proofs verify your trips without exposing personal details.
+                </p>
+              </div>
+
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                style={{ width: '100%', height: 56, borderRadius: 14, background: isSubmitting ? MUTED : `linear-gradient(135deg, ${C}, ${CD})`, border: 'none', color: 'white', fontWeight: 800, fontSize: '1rem', cursor: isSubmitting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.15s', boxShadow: isSubmitting ? 'none' : `0 4px 16px ${C}50` }}
+                className="active:scale-[0.98]"
+              >
+                {isSubmitting ? (
+                  <><Loader2 style={{ width: 20, height: 20 }} className="animate-spin" />Creating your profile...</>
+                ) : (
+                  <><CheckCircle2 style={{ width: 20, height: 20 }} />Start Riding with Yatra</>
+                )}
+              </button>
+            </form>
           )}
         </div>
       </div>
@@ -1120,14 +909,12 @@ function ProfilePageContent() {
 export default function ProfilePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-background via-section/40 to-background flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
+      <div style={{ minHeight: '100vh', background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Loader2 style={{ width: 40, height: 40, color: '#00D4AA' }} className="animate-spin" />
       </div>
     }>
       <ProfilePageContent />
     </Suspense>
   );
 }
+

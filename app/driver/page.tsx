@@ -1021,15 +1021,15 @@ export default function DriverDashboard() {
 
   if (loading || !currentUser || (role && role !== 'driver')) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-section/40 to-background flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F8FAFC' }}>
         <div className="text-center">
           <div className="relative w-20 h-20 mx-auto mb-6">
-            <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping"></div>
-            <div className="relative bg-gradient-to-br from-primary to-secondary rounded-2xl w-full h-full flex items-center justify-center shadow-2xl shadow-primary/25">
+            <div className="absolute inset-0 rounded-full animate-ping" style={{ background: '#00D4AA22' }} />
+            <div className="relative rounded-2xl w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #00D4AA, #009E7F)' }}>
               <BusIcon className="w-10 h-10 text-white animate-pulse" />
             </div>
           </div>
-          <p className="text-muted-foreground text-lg font-medium">Initializing Command Center...</p>
+          <p className="text-lg font-semibold" style={{ color: '#64748B' }}>Initializing Dashboard...</p>
         </div>
       </div>
     );
@@ -1042,19 +1042,28 @@ export default function DriverDashboard() {
     return sum + fare;
   }, 0);
 
+  const C = '#00D4AA';
+  const CD = '#009E7F';
+  const CL = '#E6FBF5';
+  const INK = '#0F172A';
+  const MUTED = '#64748B';
+  const BORDER = '#E2E8F0';
+  const SURF = '#F8FAFC';
+
   return (
-    <div className="min-h-screen flex flex-col overflow-y-auto bg-background" style={{ WebkitOverflowScrolling: 'touch' }}>
+    <div className="min-h-screen flex flex-col overflow-y-auto" style={{ background: SURF, WebkitOverflowScrolling: 'touch' }}>
 
       {/* Passenger Reached full-screen alert */}
       {showPassengerReachedAlert && (
-        <div className="fixed inset-0 z-1400 flex flex-col items-center justify-center text-white px-6 text-center" style={{ background: 'rgba(6,182,212,0.97)' }}>
-          <div className="w-16 h-16 rounded-full bg-card/25 flex items-center justify-center mb-6">
-            <MapPin className="w-8 h-8 text-white" />
+        <div className="fixed inset-0 z-[1400] flex flex-col items-center justify-center px-6 text-center" style={{ background: C }}>
+          <div className="w-20 h-20 rounded-full mb-6 flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.2)' }}>
+            <MapPin className="w-10 h-10 text-white" />
           </div>
-          <p className="text-3xl font-black tracking-tight">Passenger Nearby</p>
-          <p className="mt-2 text-sm opacity-80">You are within 10 metres of the pickup point.</p>
-          <Button
-            className="mt-8 bg-card text-primary hover:bg-card/90 font-bold px-8 h-12 min-h-12 rounded-2xl"
+          <p className="text-4xl font-black tracking-tight text-white">Passenger Nearby</p>
+          <p className="mt-3 text-base" style={{ color: 'rgba(255,255,255,0.85)' }}>You are within 10 metres of the pickup point.</p>
+          <button
+            className="mt-10 font-black px-10 py-4 rounded-2xl text-base transition-all active:scale-95"
+            style={{ background: 'white', color: CD }}
             onClick={async () => {
               setShowPassengerReachedAlert(false);
               if (activeTripRequest?.id) {
@@ -1064,54 +1073,56 @@ export default function DriverDashboard() {
             }}
           >
             Confirm Arrival
-          </Button>
+          </button>
         </div>
       )}
 
-      {/* ── Header ── */}
-      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-xl">
+      {/* Header */}
+      <header className="sticky top-0 z-50" style={{ background: 'white', borderBottom: `1px solid ${BORDER}` }}>
         <div className="px-4 py-3 flex items-center justify-between">
 
-          {/* Brand */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-slate-100 border border-border/60 flex items-center justify-center shrink-0">
-              <svg viewBox="0 0 24 24" className="w-4 h-4 text-primary" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: `linear-gradient(135deg, ${C}, ${CD})` }}>
+              <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2L20 6V12C20 17 16.5 21 12 22C7.5 21 4 17 4 12V6L12 2Z" />
                 <path d="M9 12L11 14L15 10" />
               </svg>
             </div>
             <div>
-              <h1 className="text-xl font-black leading-none text-foreground" style={{ fontFamily: 'var(--font-mukta), sans-serif' }}>
+              <h1 className="text-xl font-black leading-none" style={{ fontFamily: 'var(--font-mukta), sans-serif', color: INK }}>
                 चालक
               </h1>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
-                <span className={`text-[10px] font-black tracking-widest ${isOnline ? 'text-emerald-700' : 'text-muted-foreground'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'animate-pulse' : ''}`} style={{ background: isOnline ? '#10B981' : '#CBD5E1' }} />
+                <span className="text-[10px] font-black tracking-widest" style={{ color: isOnline ? '#059669' : '#94A3B8' }}>
                   {isOnline ? 'ONLINE' : 'OFFLINE'}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Right: GPS pill + Avatar */}
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => handleLocationToggle(!locationEnabled)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-black border transition-all active:scale-95 ${ locationEnabled ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-slate-100 border-border text-slate-400 hover:border-slate-400' }`}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full text-[11px] font-black transition-all active:scale-95"
+              style={{
+                background: locationEnabled ? CL : '#F1F5F9',
+                border: `1.5px solid ${locationEnabled ? C : '#CBD5E1'}`,
+                color: locationEnabled ? CD : '#94A3B8',
+              }}
             >
-              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${locationEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${locationEnabled ? 'animate-pulse' : ''}`} style={{ background: locationEnabled ? '#10B981' : '#CBD5E1' }} />
               {locationEnabled ? 'LIVE' : 'GO LIVE'}
             </button>
 
             <button
               type="button"
               onClick={() => setShowProfileDialog(true)}
-              className="w-10 h-10 rounded-full bg-surface-soft border border-border text-foreground hover:bg-slate-100 shadow-sm flex items-center justify-center transition-colors"
+              className="w-10 h-10 rounded-full font-black text-sm flex items-center justify-center transition-all active:scale-95"
+              style={{ background: CL, color: CD, border: '1.5px solid #A7F3D0' }}
             >
-              <span className="text-sm font-black">
-                {userData?.role === 'driver' ? (userData.name?.charAt(0).toUpperCase() || 'D') : 'D'}
-              </span>
+              {userData?.role === 'driver' ? (userData.name?.charAt(0).toUpperCase() || 'D') : 'D'}
             </button>
 
             <DriverProfileDrawer open={showProfileDialog} onOpenChange={setShowProfileDialog} />
@@ -1119,10 +1130,10 @@ export default function DriverDashboard() {
         </div>
       </header>
 
-      {/* ── Map ── */}
+      {/* Map */}
       <div
-        className="relative w-full shrink-0 border-b border-border transition-all duration-500"
-        style={{ height: activeTripRequest ? '65vh' : '50vh', touchAction: 'pan-y' }}
+        className="relative w-full shrink-0 transition-all duration-500"
+        style={{ height: activeTripRequest ? '65vh' : '50vh', borderBottom: `1px solid ${BORDER}`, touchAction: 'pan-y' }}
       >
         <MapWrapper
           role="driver"
@@ -1147,31 +1158,31 @@ export default function DriverDashboard() {
         />
       </div>
 
-      {/* ── Cockpit ── */}
-      <div className="p-4 space-y-3 pb-40 bg-surface-soft">
+      {/* Cockpit */}
+      <div className="p-4 space-y-3 pb-40">
 
-        {/* Active trip: navigation strip */}
+        {/* Active trip navigation strip */}
         {activeTripRequest && (
-          <section className="rounded-2xl border border-primary/20 bg-card shadow-md shadow-primary/10">
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
+          <section className="rounded-2xl overflow-hidden" style={{ background: 'white', border: `1.5px solid ${C}`, boxShadow: `0 4px 20px ${C}18` }}>
+            <div className="flex items-center justify-between px-4 py-3" style={{ background: CL, borderBottom: '1px solid #C8F2E6' }}>
               <div className="flex items-center gap-2">
-                <Navigation className="w-3.5 h-3.5 text-cyan-600" />
-                <span className="text-[11px] font-black tracking-widest text-cyan-700 uppercase">
+                <Navigation className="w-3.5 h-3.5" style={{ color: CD }} />
+                <span className="text-[11px] font-black tracking-widest uppercase" style={{ color: CD }}>
                   {activeTripRequest.status === 'active' ? 'Trip in Progress' : activeTripRequest.status === 'arrived' ? 'At Pickup' : 'Navigate to Pickup'}
                 </span>
               </div>
               {driverEta !== null && (
-                <span className="text-xs font-black text-foreground bg-slate-100 px-2.5 py-0.5 rounded-full">{driverEta} min</span>
+                <span className="text-xs font-black px-2.5 py-1 rounded-full text-white" style={{ background: C }}>{driverEta} min</span>
               )}
             </div>
             <div className="p-4 space-y-3">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-slate-100 border border-border flex items-center justify-center text-sm font-black text-foreground shrink-0">
+                <div className="w-10 h-10 rounded-full font-black text-sm flex items-center justify-center shrink-0" style={{ background: CL, color: CD, border: '1.5px solid #A7F3D0' }}>
                   {activeTripRequest.passengerName?.[0]?.toUpperCase() ?? 'P'}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-foreground font-bold text-sm">{activeTripRequest.passengerName}</p>
-                  <p className="text-muted-foreground text-xs">
+                  <p className="font-bold text-sm" style={{ color: INK }}>{activeTripRequest.passengerName}</p>
+                  <p className="text-xs" style={{ color: MUTED }}>
                     {activeTripRequest.status === 'requested' && 'Waiting for response'}
                     {activeTripRequest.status === 'accepted' && 'On the way'}
                     {activeTripRequest.status === 'arrived' && 'At pickup point'}
@@ -1184,13 +1195,13 @@ export default function DriverDashboard() {
                   const dLng = (activeTripRequest.pickupLocation.lng - userLocation.lng) * Math.PI / 180;
                   const a = Math.sin(dLat / 2) ** 2 + Math.cos(userLocation.lat * Math.PI / 180) * Math.cos(activeTripRequest.pickupLocation.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
                   const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                  return <span className="text-sm font-black text-cyan-700 shrink-0">{dist < 1000 ? `${Math.round(dist)}m` : `${(dist / 1000).toFixed(1)}km`}</span>;
+                  return <span className="text-sm font-black shrink-0" style={{ color: CD }}>{dist < 1000 ? `${Math.round(dist)}m` : `${(dist / 1000).toFixed(1)}km`}</span>;
                 })()}
               </div>
               {activeTripRequest.pickupLocation && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-soft border border-border">
-                  <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <p className="text-muted-foreground text-xs font-medium truncate">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: SURF, border: `1px solid ${BORDER}` }}>
+                  <MapPin className="w-3.5 h-3.5 shrink-0" style={{ color: '#10B981' }} />
+                  <p className="text-xs font-medium truncate" style={{ color: MUTED }}>
                     {activeTripRequest.pickupLocation.address ?? `${activeTripRequest.pickupLocation.lat.toFixed(4)}, ${activeTripRequest.pickupLocation.lng.toFixed(4)}`}
                   </p>
                 </div>
@@ -1202,14 +1213,14 @@ export default function DriverDashboard() {
         {activeTab === 'dashboard' && (
           <>
             {/* Vehicle Status */}
-            <section className="rounded-2xl border border-border overflow-hidden bg-card shadow-sm">
-              <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-surface-soft">
+            <section className="rounded-2xl overflow-hidden" style={{ background: 'white', border: `1px solid ${BORDER}`, boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
+              <div className="flex items-center justify-between px-4 py-3" style={{ background: SURF, borderBottom: `1px solid ${BORDER}` }}>
                 <div className="flex items-center gap-2">
-                  <BusIcon className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="text-[11px] font-black tracking-widest text-muted-foreground uppercase">Vehicle Status</span>
+                  <BusIcon className="w-4 h-4" style={{ color: MUTED }} />
+                  <span className="text-[11px] font-black tracking-widest uppercase" style={{ color: MUTED }}>Vehicle Status</span>
                 </div>
                 {process.env.NODE_ENV === 'development' && (
-                  <Button variant="ghost" size="sm" className="h-5 text-[10px] text-foreground/90 hover:text-red-500 px-2" onClick={triggerManualTest}>Test Crash</Button>
+                  <Button variant="ghost" size="sm" className="h-5 text-[10px] px-2 hover:text-red-500" onClick={triggerManualTest}>Test Crash</Button>
                 )}
               </div>
               <div className="p-4">
@@ -1222,23 +1233,23 @@ export default function DriverDashboard() {
                     onRemoveOfflinePassenger={handleRemoveOfflinePassenger}
                   />
                 ) : (
-                  <div className="py-8 text-center space-y-2">
-                    <BusIcon className="w-7 h-7 text-slate-300 mx-auto" />
-                    <p className="text-foreground font-bold text-sm">No vehicle assigned</p>
-                    <p className="text-muted-foreground text-xs">Complete your driver profile to link a vehicle.</p>
+                  <div className="py-10 text-center space-y-2">
+                    <BusIcon className="w-8 h-8 mx-auto" style={{ color: '#CBD5E1' }} />
+                    <p className="font-bold text-sm" style={{ color: INK }}>No vehicle assigned</p>
+                    <p className="text-xs" style={{ color: MUTED }}>Complete your driver profile to link a vehicle.</p>
                   </div>
                 )}
               </div>
             </section>
 
             {/* Passengers */}
-            <section className="rounded-2xl border border-border overflow-hidden bg-card shadow-sm">
-              <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-surface-soft">
+            <section className="rounded-2xl overflow-hidden" style={{ background: 'white', border: `1px solid ${BORDER}`, boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
+              <div className="flex items-center justify-between px-4 py-3" style={{ background: SURF, borderBottom: `1px solid ${BORDER}` }}>
                 <div className="flex items-center gap-2">
-                  <Users className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="text-[11px] font-black tracking-widest text-muted-foreground uppercase">Passengers</span>
+                  <Users className="w-4 h-4" style={{ color: MUTED }} />
+                  <span className="text-[11px] font-black tracking-widest uppercase" style={{ color: MUTED }}>Passengers</span>
                 </div>
-                <span className="text-[11px] font-bold text-muted-foreground bg-slate-100 border border-border/50 rounded-full px-2.5 py-0.5">{passengers.length}</span>
+                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full" style={{ background: SURF, border: `1px solid ${BORDER}`, color: MUTED }}>{passengers.length}</span>
               </div>
               <div className="p-4">
                 <PassengerList
@@ -1253,16 +1264,16 @@ export default function DriverDashboard() {
         )}
 
         {activeTab === 'trips' && (
-          <section className="rounded-2xl border border-border bg-card shadow-sm p-4 space-y-3">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground font-black">Trip Overview</p>
+          <section className="rounded-2xl p-4 space-y-3" style={{ background: 'white', border: `1px solid ${BORDER}`, boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
+            <p className="text-xs uppercase tracking-widest font-black" style={{ color: MUTED }}>Trip Overview</p>
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl border border-primary/20 bg-primary-soft/50 p-3">
-                <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wide">Active</p>
-                <p className="text-2xl font-black text-primary">{activeTripsCount}</p>
+              <div className="rounded-xl p-3" style={{ background: CL, border: '1px solid #A7F3D0' }}>
+                <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: MUTED }}>Active</p>
+                <p className="text-2xl font-black" style={{ color: CD }}>{activeTripsCount}</p>
               </div>
-              <div className="rounded-xl border border-secondary/20 bg-secondary-soft/40 p-3">
-                <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wide">Completed</p>
-                <p className="text-2xl font-black text-secondary">{completedTrips}</p>
+              <div className="rounded-xl p-3" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+                <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: MUTED }}>Completed</p>
+                <p className="text-2xl font-black" style={{ color: '#15803D' }}>{completedTrips}</p>
               </div>
             </div>
             <PassengerList
@@ -1275,37 +1286,38 @@ export default function DriverDashboard() {
         )}
 
         {activeTab === 'earnings' && (
-          <section className="rounded-2xl border border-border bg-card shadow-sm p-4 space-y-3">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground font-black">Earnings</p>
-            <div className="rounded-2xl border border-accent/30 bg-accent-soft/40 p-4">
-              <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-bold">Estimated Today</p>
-              <p className="mt-1 text-3xl font-black text-accent-foreground">NPR {estimatedEarnings.toLocaleString()}</p>
+          <section className="rounded-2xl p-4 space-y-3" style={{ background: 'white', border: `1px solid ${BORDER}`, boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
+            <p className="text-xs uppercase tracking-widest font-black" style={{ color: MUTED }}>Earnings</p>
+            <div className="rounded-2xl p-5" style={{ background: `linear-gradient(135deg, ${CL}, #C8F2E6)`, border: '1px solid #A7F3D0' }}>
+              <p className="text-[11px] uppercase tracking-widest font-bold" style={{ color: MUTED }}>Estimated Today</p>
+              <p className="mt-1 text-3xl font-black" style={{ color: INK }}>NPR {estimatedEarnings.toLocaleString()}</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl border border-border bg-surface-soft p-3">
-                <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wide">Trips</p>
-                <p className="text-xl font-black text-foreground">{completedTrips}</p>
+              <div className="rounded-xl p-3" style={{ background: SURF, border: `1px solid ${BORDER}` }}>
+                <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: MUTED }}>Trips</p>
+                <p className="text-xl font-black" style={{ color: INK }}>{completedTrips}</p>
               </div>
-              <div className="rounded-xl border border-border bg-surface-soft p-3">
-                <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wide">Passengers</p>
-                <p className="text-xl font-black text-foreground">{passengers.length}</p>
+              <div className="rounded-xl p-3" style={{ background: SURF, border: `1px solid ${BORDER}` }}>
+                <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: MUTED }}>Passengers</p>
+                <p className="text-xl font-black" style={{ color: INK }}>{passengers.length}</p>
               </div>
             </div>
           </section>
         )}
 
         {activeTab === 'profile' && (
-          <section className="rounded-2xl border border-border bg-card shadow-sm p-4 space-y-3">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground font-black">Driver Profile</p>
-            <p className="text-lg font-black text-foreground">{userData?.name || 'Driver'}</p>
-            <p className="text-sm text-muted-foreground">{userData?.email || currentUser?.email || 'No email on file'}</p>
-            <Button
-              className="h-11 min-h-11 bg-accent hover:bg-amber-600 text-white font-bold"
+          <section className="rounded-2xl p-4 space-y-3" style={{ background: 'white', border: `1px solid ${BORDER}`, boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
+            <p className="text-xs uppercase tracking-widest font-black" style={{ color: MUTED }}>Driver Profile</p>
+            <p className="text-lg font-black" style={{ color: INK }}>{userData?.name || 'Driver'}</p>
+            <p className="text-sm" style={{ color: MUTED }}>{userData?.email || currentUser?.email || 'No email on file'}</p>
+            <button
+              className="w-full h-12 rounded-xl font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+              style={{ background: C, color: 'white' }}
               onClick={() => setShowProfileDialog(true)}
             >
-              <UserRound className="w-4 h-4 mr-2" />
+              <UserRound className="w-4 h-4" />
               Open Driver Profile
-            </Button>
+            </button>
           </section>
         )}
 
@@ -1339,84 +1351,91 @@ export default function DriverDashboard() {
       />
 
       {/* Accident Alert */}
-      <div className="fixed inset-x-0 bottom-14 z-1100 flex justify-center pointer-events-none">
+      <div className="fixed inset-x-0 bottom-14 z-[1100] flex justify-center pointer-events-none">
         <div className="pointer-events-auto">
           <AccidentAlert isOpen={isAccidentDetected} onConfirm={handleAccidentConfirm} onCancel={handleAccidentCancel} />
         </div>
       </div>
 
-      {/* Floating status + SOS */}
-      <div className="fixed inset-x-3 bottom-16 z-1200 border border-border rounded-2xl bg-background/95 backdrop-blur-xl px-4 py-2.5 flex items-center justify-between shadow-lg">
+      {/* Floating status bar + SOS */}
+      <div className="fixed inset-x-3 bottom-16 z-[1200] px-4 py-2.5 rounded-2xl flex items-center justify-between" style={{ background: 'white', border: `1px solid ${BORDER}`, boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
         <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
-          <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">{isOnline ? 'Live tracking active' : 'Offline'}</span>
+          <span className={`w-2 h-2 rounded-full ${isOnline ? 'animate-pulse' : ''}`} style={{ background: isOnline ? '#10B981' : '#CBD5E1' }} />
+          <span className="text-[11px] font-black uppercase tracking-widest" style={{ color: isOnline ? '#059669' : '#94A3B8' }}>
+            {isOnline ? 'Live tracking active' : 'Offline'}
+          </span>
         </div>
         <Dialog>
           <DialogTrigger asChild>
-            <Button variant="destructive" size="sm" className="h-11 min-h-11 px-4 font-black text-xs rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 shadow-sm transition-all active:scale-95">
+            <button className="h-10 px-5 rounded-xl font-black text-xs transition-all active:scale-95" style={{ background: '#FEF2F2', color: '#DC2626', border: '1.5px solid #FECACA' }}>
               SOS
-            </Button>
+            </button>
           </DialogTrigger>
-          <DialogContent className="bg-surface-soft border-border text-white sm:max-w-md rounded-2xl">
+          <DialogContent className="sm:max-w-md rounded-2xl" style={{ background: 'white', border: `1px solid ${BORDER}` }}>
             <DialogHeader>
-              <DialogTitle className="text-red-400 flex items-center gap-2"><AlertTriangle className="w-5 h-5" /> Emergency Report</DialogTitle>
-              <DialogDescription className="text-muted-foreground">This will immediately alert the admin team. Use only in emergencies.</DialogDescription>
+              <DialogTitle className="flex items-center gap-2" style={{ color: '#DC2626' }}>
+                <AlertTriangle className="w-5 h-5" /> Emergency Report
+              </DialogTitle>
+              <DialogDescription style={{ color: MUTED }}>
+                This will immediately alert the admin team. Use only in emergencies.
+              </DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-2 gap-4 py-4">
-              <Button variant="outline" className="h-24 min-h-[5.5rem] flex flex-col gap-2 border-border bg-card hover:bg-red-50 hover:border-red-300 hover:text-red-700 rounded-xl transition-all font-bold" onClick={() => handleReportEmergency('accident')}>
+              <Button
+                variant="outline"
+                className="h-24 min-h-[5.5rem] flex flex-col gap-2 rounded-xl font-bold transition-all hover:bg-red-50 hover:border-red-300 hover:text-red-700"
+                style={{ border: `1px solid ${BORDER}` }}
+                onClick={() => handleReportEmergency('accident')}
+              >
                 <Car className="w-8 h-8" /> Accident
               </Button>
-              <Button variant="outline" className="h-24 min-h-[5.5rem] flex flex-col gap-2 border-border bg-card hover:bg-primary-soft hover:border-primary/40 hover:text-primary-hover rounded-xl transition-all font-bold" onClick={() => handleReportEmergency('breakdown')}>
+              <Button
+                variant="outline"
+                className="h-24 min-h-[5.5rem] flex flex-col gap-2 rounded-xl font-bold transition-all"
+                style={{ border: `1px solid ${BORDER}` }}
+                onClick={() => handleReportEmergency('breakdown')}
+              >
                 <Wrench className="w-8 h-8" /> Breakdown
               </Button>
             </div>
             <DialogFooter>
-              <DialogClose asChild><Button variant="ghost" className="text-muted-foreground">Cancel</Button></DialogClose>
+              <DialogClose asChild>
+                <Button variant="ghost" style={{ color: MUTED }}>Cancel</Button>
+              </DialogClose>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
 
+      {/* Bottom nav */}
       <nav
         aria-label="Driver tabs"
-        className="fixed inset-x-0 bottom-0 z-[1300] border-t border-border bg-background/95 backdrop-blur-xl px-3 py-2"
+        className="fixed inset-x-0 bottom-0 z-[1300] px-3 py-2"
+        style={{ background: 'white', borderTop: `1px solid ${BORDER}` }}
       >
-        <div className="mx-auto grid max-w-md grid-cols-4 gap-2">
-          <Button
-            variant="ghost"
-            className={`min-h-11 flex-col gap-1 rounded-xl ${activeTab === 'dashboard' ? 'bg-primary-soft text-primary' : 'text-muted-foreground'}`}
-            onClick={() => setActiveTab('dashboard')}
-          >
-            <LayoutDashboard className="h-4 w-4" />
-            <span className="text-[10px] font-black tracking-wide">Dashboard</span>
-          </Button>
-          <Button
-            variant="ghost"
-            className={`min-h-11 flex-col gap-1 rounded-xl ${activeTab === 'trips' ? 'bg-primary-soft text-primary' : 'text-muted-foreground'}`}
-            onClick={() => setActiveTab('trips')}
-          >
-            <Route className="h-4 w-4" />
-            <span className="text-[10px] font-black tracking-wide">Trips</span>
-          </Button>
-          <Button
-            variant="ghost"
-            className={`min-h-11 flex-col gap-1 rounded-xl ${activeTab === 'earnings' ? 'bg-primary-soft text-primary' : 'text-muted-foreground'}`}
-            onClick={() => setActiveTab('earnings')}
-          >
-            <CircleDollarSign className="h-4 w-4" />
-            <span className="text-[10px] font-black tracking-wide">Earnings</span>
-          </Button>
-          <Button
-            variant="ghost"
-            className={`min-h-11 flex-col gap-1 rounded-xl ${activeTab === 'profile' ? 'bg-primary-soft text-primary' : 'text-muted-foreground'}`}
-            onClick={() => {
-              setActiveTab('profile');
-              setShowProfileDialog(true);
-            }}
-          >
-            <UserRound className="h-4 w-4" />
-            <span className="text-[10px] font-black tracking-wide">Profile</span>
-          </Button>
+        <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
+          {([
+            { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+            { id: 'trips', icon: Route, label: 'Trips' },
+            { id: 'earnings', icon: CircleDollarSign, label: 'Earnings' },
+            { id: 'profile', icon: UserRound, label: 'Profile' },
+          ] as const).map(({ id, icon: Icon, label }) => (
+            <button
+              key={id}
+              className="min-h-[44px] flex flex-col items-center justify-center gap-1 rounded-xl transition-all active:scale-95"
+              style={{
+                background: activeTab === id ? CL : 'transparent',
+                color: activeTab === id ? CD : MUTED,
+              }}
+              onClick={() => {
+                setActiveTab(id);
+                if (id === 'profile') setShowProfileDialog(true);
+              }}
+            >
+              <Icon className="h-4 w-4" />
+              <span className="text-[10px] font-black tracking-wide">{label}</span>
+            </button>
+          ))}
         </div>
       </nav>
     </div>

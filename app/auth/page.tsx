@@ -5,43 +5,43 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { FirebaseError } from 'firebase/app';
 import Image from 'next/image';
-import { User2, Bus, Mail, Lock, Eye, EyeOff, Loader2, ShieldCheck, ArrowLeft, ChevronLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { User2, Bus, Mail, Lock, Eye, EyeOff, Loader2, ShieldCheck, MapPin, Zap } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import {
   signInWithEmail,
   createUserWithEmail,
-  sendPasswordReset,
   signInWithGoogle,
 } from '@/lib/firebase';
 import { getUserProfile } from '@/lib/firebaseDb';
 import { checkProfileCompletion } from '@/lib/types';
+
+// ─── Light-mode design tokens ─────────────────────────────────────────────────
+const CYAN       = '#00D4AA';
+const CYAN_DARK  = '#009E7F';
+const CYAN_LIGHT = '#E6FBF5';
+const INK        = '#0F172A';
+const MUTED      = '#64748B';
+const BORDER     = '#E2E8F0';
+const SURFACE    = '#F8FAFC';
+const MONO       = 'var(--font-jetbrains-mono)';
+const PLAYFAIR   = 'var(--font-playfair)';
 
 type Role = 'driver' | 'passenger';
 
 const mapFirebaseError = (err: unknown): string => {
   if (err instanceof FirebaseError) {
     switch (err.code) {
-      case 'auth/email-already-in-use':
-        return 'This email is already registered. Please sign in instead.';
-      case 'auth/invalid-email':
-        return 'Invalid email address format.';
-      case 'auth/user-not-found':
-        return 'No account found with this email. Please sign up first.';
-      case 'auth/wrong-password':
-        return 'Incorrect password. Please try again.';
-      case 'auth/weak-password':
-        return 'Password should be at least 6 characters.';
-      case 'auth/invalid-credential':
-        return 'Invalid email or password. Please check your credentials.';
-      case 'auth/popup-closed-by-user':
-        return 'Sign-in was cancelled.';
-      case 'auth/popup-blocked':
-        return 'Popup was blocked. Please allow popups and try again.';
-      default:
-        return err.message;
+      case 'auth/email-already-in-use':   return 'This email is already registered. Please sign in instead.';
+      case 'auth/invalid-email':          return 'Invalid email address format.';
+      case 'auth/user-not-found':         return 'No account found with this email. Please sign up first.';
+      case 'auth/wrong-password':         return 'Incorrect password. Please try again.';
+      case 'auth/weak-password':          return 'Password should be at least 6 characters.';
+      case 'auth/invalid-credential':     return 'Invalid email or password. Please check your credentials.';
+      case 'auth/popup-closed-by-user':   return 'Sign-in was cancelled.';
+      case 'auth/popup-blocked':          return 'Popup was blocked. Please allow popups and try again.';
+      default:                            return err.message;
     }
   }
   return 'Something went wrong. Please try again.';
@@ -56,9 +56,7 @@ async function resolvePostLoginRedirect(
   isSignIn: boolean = false
 ): Promise<'dashboard' | 'profile'> {
   let userData: Record<string, unknown> | null = null;
-  try {
-    userData = await getUserProfile(uid);
-  } catch { }
+  try { userData = await getUserProfile(uid); } catch { }
 
   const hasProfile = userData != null && checkProfileCompletion(userData);
   const role = hasProfile ? (userData!.role as Role) : selectedRole;
@@ -86,26 +84,24 @@ async function resolvePostLoginRedirect(
 }
 
 function AuthContent() {
-  const router = useRouter();
-  const pathname = usePathname();
+  const router       = useRouter();
+  const pathname     = usePathname();
   const searchParams = useSearchParams();
   const { setRole, currentUser, loading: authLoading, userData, role } = useAuth();
-  const { toast } = useToast();
+  const { toast }    = useToast();
 
   const [selectedRole, setSelectedRole] = useState<Role>('passenger');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email,        setEmail]        = useState('');
+  const [password,     setPassword]     = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(searchParams.get('isSignUp') === 'true');
-  const [loading, setLoading] = useState<'idle' | 'google' | 'email'>('idle');
+  const [isSignUp,     setIsSignUp]     = useState(searchParams.get('isSignUp') === 'true');
+  const [loading,      setLoading]      = useState<'idle' | 'google' | 'email'>('idle');
   const isSigningInRef = useRef(false);
 
   const roleInUrl = searchParams.get('role') as Role | null;
 
   useEffect(() => {
-    if (roleInUrl === 'driver' || roleInUrl === 'passenger') {
-      setSelectedRole(roleInUrl);
-    }
+    if (roleInUrl === 'driver' || roleInUrl === 'passenger') setSelectedRole(roleInUrl);
   }, [roleInUrl]);
 
   useEffect(() => {
@@ -114,8 +110,7 @@ function AuthContent() {
     if (userData === undefined) return;
 
     if (userData === null) {
-      const dest = role || selectedRole;
-      router.replace(`/auth/profile?role=${dest}`);
+      router.replace(`/auth/profile?role=${role || selectedRole}`);
       return;
     }
 
@@ -123,8 +118,7 @@ function AuthContent() {
       const targetRole = userData.role || role || selectedRole;
       router.replace(targetRole === 'driver' ? '/driver' : '/passenger');
     } else {
-      const dest = userData.role || role || selectedRole;
-      router.replace(`/auth/profile?role=${dest}`);
+      router.replace(`/auth/profile?role=${userData.role || role || selectedRole}`);
     }
   }, [authLoading, currentUser, userData, role, selectedRole, router, pathname]);
 
@@ -133,9 +127,9 @@ function AuthContent() {
     isSigningInRef.current = true;
     setLoading('google');
     try {
-      const cred = await signInWithGoogle();
-      const user = cred.user;
-      const idToken = await user.getIdToken(true);
+      const cred      = await signInWithGoogle();
+      const user      = cred.user;
+      const idToken   = await user.getIdToken(true);
       const isNewUser = user.metadata.creationTime === user.metadata.lastSignInTime;
       await resolvePostLoginRedirect(user.uid, selectedRole, idToken, setRole, router, !isNewUser);
       toast({ title: 'Welcome to Yatra' });
@@ -156,15 +150,14 @@ function AuthContent() {
     isSigningInRef.current = true;
     setLoading('email');
     try {
-      let userCredential;
       if (isSignUp) {
-        userCredential = await createUserWithEmail(email, password);
-        const idToken = await userCredential.user.getIdToken();
-        await resolvePostLoginRedirect(userCredential.user.uid, selectedRole, idToken, setRole, router, false);
+        const cred    = await createUserWithEmail(email, password);
+        const idToken = await cred.user.getIdToken();
+        await resolvePostLoginRedirect(cred.user.uid, selectedRole, idToken, setRole, router, false);
       } else {
-        userCredential = await signInWithEmail(email, password);
-        const idToken = await userCredential.user.getIdToken();
-        await resolvePostLoginRedirect(userCredential.user.uid, selectedRole, idToken, setRole, router, true);
+        const cred    = await signInWithEmail(email, password);
+        const idToken = await cred.user.getIdToken();
+        await resolvePostLoginRedirect(cred.user.uid, selectedRole, idToken, setRole, router, true);
       }
     } catch (err: unknown) {
       isSigningInRef.current = false;
@@ -177,164 +170,212 @@ function AuthContent() {
   const isBusy = loading !== 'idle';
 
   return (
-    <div className="min-h-screen bg-background flex flex-col md:flex-row">
-      
-      {/* Left side: Visuals (Desktop only) */}
-      <div className="hidden md:flex md:w-1/2 bg-surface-soft items-center justify-center p-12 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[80px]" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/5 rounded-full blur-[100px]" />
-        
-        <div className="relative z-10 max-w-lg">
-          <Link href="/" className="inline-flex items-center gap-2 mb-12">
-            <Image src="/yatra-logo.png" alt="Yatra" width={44} height={44} className="rounded-xl" priority />
-            <span className="text-2xl font-black tracking-tight text-foreground">Yatra</span>
-          </Link>
-          
-          <h2 className="text-5xl font-black text-foreground leading-tight mb-6">
-            The future of <br />
-            <span className="text-primary">Nepal's transit.</span>
-          </h2>
-          <p className="text-xl text-muted-foreground font-medium leading-relaxed mb-12">
-            Join thousands of passengers and drivers moving smarter every day. 
-            Real-time tracking, secure payments, and verified identity.
-          </p>
-          
-          <div className="space-y-6">
-            {[
-              { icon: <ShieldCheck className="w-6 h-6 text-primary" />, text: "ZK-Verified Secure Identity" },
-              { icon: <Bus className="w-6 h-6 text-primary" />, text: "Real-time Live GPS Tracking" },
-              { icon: <Loader2 className="w-6 h-6 text-primary" />, text: "Instant Paperless Booking" }
-            ].map((item, i) => (
-              <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-card border border-border shadow-md">
-                {item.icon}
-                <span className="font-bold text-foreground/90">{item.text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg, #E6FBF5 0%, #F8FAFC 55%, #EFF6FF 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', position: 'relative', overflow: 'hidden' }}>
 
-      {/* Right side: Auth Form */}
-      <div className="w-full md:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-card">
-        <div className="w-full max-w-md">
-          <div className="md:hidden mb-12 flex justify-between items-center">
-            <Link href="/" className="inline-flex items-center gap-2">
-              <Image src="/yatra-logo.png" alt="Yatra" width={36} height={36} className="rounded-lg" />
-              <span className="text-xl font-black tracking-tight text-foreground">Yatra</span>
+      {/* Background decoration */}
+      <div style={{ position: 'fixed', top: -120, right: -120, width: 480, height: 480, borderRadius: '50%', background: `${CYAN}0C`, pointerEvents: 'none' }} />
+      <div style={{ position: 'fixed', bottom: -80, left: -80, width: 360, height: 360, borderRadius: '50%', background: `${CYAN}08`, pointerEvents: 'none' }} />
+      <div style={{ position: 'fixed', top: '55%', left: '5%', width: 120, height: 120, borderRadius: '50%', background: `${CYAN}06`, pointerEvents: 'none' }} />
+
+      {/* Card */}
+      <div style={{ width: '100%', maxWidth: 460, borderRadius: 24, overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.10), 0 4px 16px rgba(0,212,170,0.08)', position: 'relative', zIndex: 1 }}>
+
+        {/* ── Card header: CYAN gradient brand strip ── */}
+        <div style={{ background: `linear-gradient(135deg, ${CYAN} 0%, ${CYAN_DARK} 100%)`, padding: '36px 36px 32px', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: -50, right: -50, width: 200, height: 200, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
+          <div style={{ position: 'absolute', bottom: -40, left: -30, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+          <div style={{ position: 'absolute', top: '30%', right: '15%', width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,255,255,0.10)' }} />
+
+          {/* Nav row */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, position: 'relative', zIndex: 1 }}>
+            <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+              <Image src="/yatra-logo.png" alt="Yatra" width={32} height={32} style={{ borderRadius: 8 }} priority />
+              <span style={{ fontFamily: MONO, fontSize: '10px', color: 'rgba(255,255,255,0.92)', letterSpacing: '0.22em', fontWeight: 700 }}>YATRA</span>
             </Link>
-            <Link href="/">
-              <Button variant="ghost" size="sm" className="font-bold text-muted-foreground">
-                <ChevronLeft className="w-4 h-4 mr-1" /> Back
-              </Button>
+            <Link href="/" style={{ fontFamily: MONO, fontSize: '9px', color: 'rgba(255,255,255,0.65)', letterSpacing: '0.14em', textDecoration: 'none', transition: 'color 0.2s' }}>
+              ← BACK
             </Link>
           </div>
 
-          <div className="mb-10">
-            <h1 className="text-3xl font-black text-foreground mb-2">
-              {isSignUp ? 'Create an account' : 'Welcome back'}
+          {/* Headline */}
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ fontFamily: MONO, fontSize: '8px', color: 'rgba(255,255,255,0.65)', letterSpacing: '0.28em', marginBottom: 12, fontWeight: 600 }}>
+              YATRA PROTOCOL · NEPAL
+            </div>
+            <h1 style={{
+              fontFamily: PLAYFAIR, fontWeight: 700, color: 'white',
+              fontSize: 'clamp(2.2rem, 6vw, 3rem)',
+              lineHeight: 0.92, letterSpacing: '-0.02em', marginBottom: 14,
+              whiteSpace: 'pre-line',
+            }}>
+              {isSignUp ? 'Join\nYatra.' : 'Welcome\nback.'}
             </h1>
-            <p className="text-muted-foreground font-medium">
-              {isSignUp 
-                ? 'Join Yatra and start your journey today.' 
-                : 'Enter your credentials to access your portal.'}
+            <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.78)', lineHeight: 1.65, maxWidth: 320 }}>
+              {isSignUp ? 'Create your account to start your journey across Nepal.' : 'Sign in to access your real-time dashboard.'}
             </p>
           </div>
+        </div>
 
-          {/* Role Selector */}
-          <div className="flex p-1 rounded-2xl bg-muted/60 mb-8">
-            <button
-              type="button"
-              onClick={() => setSelectedRole('passenger')}
-              className={`flex-1 flex items-center justify-center gap-2 min-h-11 py-3 rounded-xl text-sm font-bold transition-all ${selectedRole === 'passenger' ? 'bg-card text-foreground shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground/90'}`}
-            >
-              <User2 className="w-4 h-4" /> Passenger
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedRole('driver')}
-              className={`flex-1 flex items-center justify-center gap-2 min-h-11 py-3 rounded-xl text-sm font-bold transition-all ${selectedRole === 'driver' ? 'bg-card text-foreground shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground/90'}`}
-            >
-              <Bus className="w-4 h-4" /> Driver
-            </button>
+        {/* ── Card body: white form ── */}
+        <div style={{ background: '#FFFFFF', padding: '28px 36px 36px' }}>
+
+          {/* Mode badge */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 22, padding: '5px 12px', borderRadius: 20, background: CYAN_LIGHT }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: CYAN }} />
+            <span style={{ fontFamily: MONO, fontSize: '9px', color: CYAN_DARK, letterSpacing: '0.2em', fontWeight: 700 }}>
+              {isSignUp ? 'NEW ACCOUNT' : 'SIGN IN'}
+            </span>
           </div>
 
-          <div className="space-y-6">
-            <Button
+          {/* Role selector */}
+          <div style={{ display: 'flex', gap: 3, background: SURFACE, borderRadius: 12, padding: 4, marginBottom: 24, border: `1px solid ${BORDER}` }}>
+            {(['passenger', 'driver'] as Role[]).map(r => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setSelectedRole(r)}
+                style={{
+                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  padding: '12px 0', borderRadius: 9, border: 'none', cursor: 'pointer',
+                  fontFamily: MONO, fontSize: '10px', letterSpacing: '0.14em', fontWeight: 700,
+                  transition: 'all 0.2s',
+                  background: selectedRole === r ? '#FFFFFF' : 'transparent',
+                  color:      selectedRole === r ? CYAN_DARK : MUTED,
+                  boxShadow:  selectedRole === r ? `0 2px 8px rgba(0,0,0,0.08), 0 0 0 1px ${BORDER}` : 'none',
+                }}
+              >
+                {r === 'passenger' ? <User2 size={13} /> : <Bus size={13} />}
+                {r.toUpperCase()}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+            {/* Google */}
+            <button
               onClick={handleGoogleSignIn}
               disabled={isBusy}
-              className="w-full h-14 min-h-12 rounded-2xl bg-card hover:bg-surface-soft text-foreground font-bold border-2 border-border shadow-md flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
+              style={{
+                width: '100%', height: 52,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+                background: '#FFFFFF', border: `1.5px solid ${BORDER}`,
+                borderRadius: 12, cursor: isBusy ? 'not-allowed' : 'pointer',
+                fontSize: '0.875rem', fontWeight: 600, color: INK,
+                transition: 'all 0.2s',
+                opacity: isBusy ? 0.6 : 1,
+                boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+              }}
+              onMouseEnter={e => { if (!isBusy) { e.currentTarget.style.borderColor = CYAN; e.currentTarget.style.boxShadow = `0 0 0 3px ${CYAN}1A`; } }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)'; }}
             >
-              {loading === 'google' ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                </svg>
-              )}
+              {loading === 'google'
+                ? <Loader2 size={16} className="animate-spin" style={{ color: CYAN }} />
+                : (
+                  <svg width="18" height="18" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  </svg>
+                )
+              }
               Continue with Google
-            </Button>
+            </button>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
-              <div className="relative flex justify-center text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground">
-                <span className="bg-card px-4">OR USE EMAIL</span>
-              </div>
+            {/* Divider */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '2px 0' }}>
+              <div style={{ flex: 1, height: 1, background: BORDER }} />
+              <span style={{ fontSize: '0.72rem', color: MUTED, letterSpacing: '0.1em' }}>or use email</span>
+              <div style={{ flex: 1, height: 1, background: BORDER }} />
             </div>
 
-            <div className="space-y-4">
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  type="email"
-                  placeholder="Email Address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="h-14 pl-12 rounded-2xl bg-surface-soft border-transparent focus:bg-card focus:border-primary/50 focus:ring-primary/15 transition-all font-medium"
-                />
-              </div>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="h-14 pl-12 pr-12 rounded-2xl bg-surface-soft border-transparent focus:bg-card focus:border-primary/50 focus:ring-primary/15 transition-all font-medium"
-                />
-                <button 
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 touch-target text-muted-foreground hover:text-primary transition-colors"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
+            {/* Email */}
+            <div style={{ position: 'relative' }}>
+              <Mail size={15} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: MUTED, pointerEvents: 'none', zIndex: 1 }} />
+              <Input
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                style={{ height: 52, paddingLeft: 46, borderRadius: 12, background: SURFACE, border: `1.5px solid ${BORDER}`, color: INK, fontSize: '0.9rem' }}
+                className="placeholder:text-slate-400 focus-visible:ring-0 focus-visible:border-[#00D4AA] transition-colors"
+              />
             </div>
 
-            <Button
+            {/* Password */}
+            <div style={{ position: 'relative' }}>
+              <Lock size={15} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: MUTED, pointerEvents: 'none', zIndex: 1 }} />
+              <Input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                style={{ height: 52, paddingLeft: 46, paddingRight: 48, borderRadius: 12, background: SURFACE, border: `1.5px solid ${BORDER}`, color: INK, fontSize: '0.9rem' }}
+                className="placeholder:text-slate-400 focus-visible:ring-0 focus-visible:border-[#00D4AA] transition-colors"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: MUTED, display: 'flex', padding: 4 }}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+
+            {/* Submit */}
+            <button
               onClick={handleEmailAuth}
               disabled={isBusy || !email || !password}
-              className="w-full h-14 rounded-2xl bg-primary hover:bg-primary-hover text-white font-black text-lg shadow-xl shadow-primary/20 transition-all active:scale-[0.98]"
+              style={{
+                width: '100%', height: 52, marginTop: 4,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                background: (!email || !password || isBusy) ? `${CYAN}55` : CYAN,
+                border: 'none', borderRadius: 12,
+                cursor: (isBusy || !email || !password) ? 'not-allowed' : 'pointer',
+                fontSize: '0.9rem', fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.02em',
+                boxShadow: (!email || !password || isBusy) ? 'none' : `0 6px 20px ${CYAN}40`,
+                transition: 'all 0.2s',
+              }}
             >
-              {loading === 'email' ? <Loader2 className="w-6 h-6 animate-spin" /> : (isSignUp ? 'Create Account' : 'Sign In')}
-            </Button>
+              {loading === 'email'
+                ? <Loader2 size={16} className="animate-spin" />
+                : (isSignUp ? 'Create Account' : 'Sign In')}
+            </button>
 
-            <div className="text-center pt-4">
+            {/* Toggle sign-up/sign-in */}
+            <div style={{ textAlign: 'center', paddingTop: 4 }}>
               <button
                 onClick={() => setIsSignUp(!isSignUp)}
-                className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', color: MUTED, transition: 'color 0.2s' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = CYAN_DARK; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = MUTED; }}
               >
-                {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+                {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
+                <span style={{ color: CYAN_DARK, fontWeight: 700 }}>
+                  {isSignUp ? 'Sign In' : 'Sign Up'}
+                </span>
               </button>
             </div>
           </div>
-          
-          <div className="mt-12 text-center">
-            <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.25em]">
-              Secured by Groth16 & ZK-Proofs
+
+          {/* Footer */}
+          <div style={{ marginTop: 28, paddingTop: 20, borderTop: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <p style={{ fontFamily: MONO, fontSize: '8px', color: `${MUTED}60`, letterSpacing: '0.2em' }}>
+              GROTH16 · ZK-PROOFS
             </p>
+            <div style={{ display: 'flex', gap: 16 }}>
+              {[
+                { v: '847+', l: 'buses' },
+                { v: '0.4s', l: 'settlement' },
+              ].map(s => (
+                <div key={s.l} style={{ textAlign: 'right' }}>
+                  <div style={{ fontFamily: MONO, fontSize: '0.75rem', fontWeight: 700, color: CYAN_DARK }}>{s.v}</div>
+                  <div style={{ fontSize: '0.65rem', color: `${MUTED}80` }}>{s.l}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -344,7 +385,11 @@ function AuthContent() {
 
 export default function AuthPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>}>
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', background: '#F0FDF9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Loader2 size={28} className="animate-spin" style={{ color: '#00D4AA' }} />
+      </div>
+    }>
       <AuthContent />
     </Suspense>
   );

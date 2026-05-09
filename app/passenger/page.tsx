@@ -946,35 +946,28 @@ export default function PassengerDashboard() {
 
   if (loading || !currentUser || (role && role !== 'passenger')) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-white via-slate-50 to-white flex flex-col">
-        {/* Skeleton Header */}
-        <div className="h-16 border-b border-border bg-background/80 p-4 flex items-center justify-between">
+      <div className="min-h-screen flex flex-col" style={{ background: '#F8FAFC' }}>
+        <div className="h-16 px-4 flex items-center justify-between" style={{ background: 'white', borderBottom: '1px solid #E2E8F0' }}>
           <div className="flex items-center gap-3">
-            <Skeleton className="w-8 h-8 rounded-full" />
+            <Skeleton className="w-10 h-10 rounded-xl" />
             <div className="space-y-1">
               <Skeleton className="w-24 h-4" />
               <Skeleton className="w-16 h-3" />
             </div>
           </div>
-          <Skeleton className="w-9 h-9 rounded-full" />
+          <Skeleton className="w-10 h-10 rounded-full" />
         </div>
-
-        {/* Skeleton Map */}
-        <div className="w-full h-[65vh] relative bg-surface-soft">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-              <div className="relative w-20 h-20 mx-auto mb-6">
-                <div className="absolute inset-0 bg-cyan-500/20 rounded-full animate-ping"></div>
-                <div className="relative bg-linear-to-br from-cyan-500 to-blue-600 rounded-2xl w-full h-full flex items-center justify-center shadow-2xl shadow-cyan-500/50">
-                  <Navigation className="w-10 h-10 text-white animate-pulse" />
-                </div>
+        <div className="w-full h-[65vh] relative flex items-center justify-center" style={{ background: '#E8F5F3' }}>
+          <div className="text-center">
+            <div className="relative w-20 h-20 mx-auto mb-6">
+              <div className="absolute inset-0 rounded-full animate-ping" style={{ background: '#00D4AA22' }} />
+              <div className="relative rounded-2xl w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #00D4AA, #009E7F)' }}>
+                <Navigation className="w-10 h-10 text-white animate-pulse" />
               </div>
-              <p className="text-muted-foreground text-lg font-medium">Locating nearby buses...</p>
             </div>
+            <p className="text-lg font-semibold" style={{ color: '#64748B' }}>Locating nearby drivers...</p>
           </div>
         </div>
-
-        {/* Skeleton Content */}
         <div className="flex-1 p-4 space-y-4">
           <Skeleton className="w-32 h-6" />
           <Skeleton className="w-full h-32 rounded-xl" />
@@ -983,134 +976,103 @@ export default function PassengerDashboard() {
     );
   }
 
-  // --- UI Render ---
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen flex flex-col" style={{ background: '#F8FAFC' }}>
+
+      {/* Ride Here full-screen alert */}
       {showRideHereAlert && (
-        <div className="fixed inset-0 z-1200 bg-emerald-600/95 flex flex-col items-center justify-center text-white px-6 text-center">
-          <p className="text-4xl font-extrabold tracking-wide">YOUR RIDE IS HERE</p>
-          <p className="mt-3 text-sm opacity-90">Your driver is within 10 meters.</p>
-          <Button
-            className="mt-8 bg-card text-primary hover:bg-card/90 font-bold min-h-12"
+        <div className="fixed inset-0 z-[1200] flex flex-col items-center justify-center px-6 text-center" style={{ background: '#00D4AA' }}>
+          <div className="w-20 h-20 rounded-full mb-6 flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.2)' }}>
+            <Navigation className="w-10 h-10 text-white" />
+          </div>
+          <p className="text-4xl font-black tracking-tight text-white">YOUR RIDE IS HERE</p>
+          <p className="mt-3 text-base" style={{ color: 'rgba(255,255,255,0.85)' }}>Your driver is within 10 meters.</p>
+          <button
+            className="mt-10 font-black px-10 py-4 rounded-2xl text-base transition-all active:scale-95"
+            style={{ background: 'white', color: '#009E7F' }}
             onClick={() => setShowRideHereAlert(false)}
           >
             Dismiss
-          </Button>
+          </button>
         </div>
       )}
 
-      {/* 1. Header (Sticky Top) */}
-      <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border px-4 pt-4 pb-3">
+      {/* Header (Sticky) */}
+      <div className="sticky top-0 z-50 px-4 pt-4 pb-3" style={{ background: 'white', borderBottom: '1px solid #E2E8F0' }}>
         <div className="flex items-center justify-between gap-4">
-          {/* Left: Animated Brand */}
+
+          {/* Brand */}
           <div className="flex items-center gap-3">
-            {/* Animated Bus SVG Logo */}
             <div className="relative w-10 h-10 flex items-center justify-center">
-              <svg
-                viewBox="0 0 40 40"
-                className="w-10 h-10"
-                xmlns="http://www.w3.org/2000/svg"
-                style={{ overflow: 'visible' }}
-              >
-                {/* Pulsing glow ring */}
-                <circle cx="20" cy="20" r="19" fill="none" stroke="rgba(15,118,110,0.18)" strokeWidth="1.5">
+              <svg viewBox="0 0 40 40" className="w-10 h-10" xmlns="http://www.w3.org/2000/svg" style={{ overflow: 'visible' }}>
+                <circle cx="20" cy="20" r="19" fill="none" stroke="rgba(0,212,170,0.2)" strokeWidth="1.5">
                   <animate attributeName="r" values="17;20;17" dur="2.5s" repeatCount="indefinite" />
                   <animate attributeName="opacity" values="0.6;0.15;0.6" dur="2.5s" repeatCount="indefinite" />
                 </circle>
-                {/* Bus body */}
                 <g>
-                  {/* Animated forward motion */}
                   <animateTransform attributeName="transform" attributeType="XML" type="translate"
                     values="0,0;2,0;0,0" dur="1.8s" repeatCount="indefinite" />
-                  {/* Bus body rect */}
-                  <rect x="6" y="14" width="26" height="14" rx="3" fill="#0F766E" />
-                  {/* Roof accent */}
-                  <rect x="8" y="12" width="22" height="4" rx="2" fill="#115E59" />
-                  {/* Windows */}
+                  <rect x="6" y="14" width="26" height="14" rx="3" fill="#00D4AA" />
+                  <rect x="8" y="12" width="22" height="4" rx="2" fill="#009E7F" />
                   <rect x="9" y="16" width="5" height="5" rx="1" fill="#E2E8F0" opacity="0.9" />
                   <rect x="16" y="16" width="5" height="5" rx="1" fill="#E2E8F0" opacity="0.9" />
                   <rect x="23" y="16" width="5" height="5" rx="1" fill="#E2E8F0" opacity="0.9" />
-                  {/* Front headlight */}
                   <rect x="30" y="18" width="3" height="3" rx="1" fill="#F59E0B" opacity="0.9">
                     <animate attributeName="opacity" values="0.9;0.4;0.9" dur="1.4s" repeatCount="indefinite" />
                   </rect>
-                  {/* Wheels */}
-                  <circle cx="13" cy="29" r="3.5" fill="#1E293B" stroke="#4F46E5" strokeWidth="1.5" />
-                  <circle cx="25" cy="29" r="3.5" fill="#1E293B" stroke="#4F46E5" strokeWidth="1.5" />
-                  {/* Wheel spin dots */}
-                  <circle cx="13" cy="27" r="1" fill="#4F46E5">
+                  <circle cx="13" cy="29" r="3.5" fill="#0F172A" stroke="#00D4AA" strokeWidth="1.5" />
+                  <circle cx="25" cy="29" r="3.5" fill="#0F172A" stroke="#00D4AA" strokeWidth="1.5" />
+                  <circle cx="13" cy="27" r="1" fill="#00D4AA">
                     <animateTransform attributeName="transform" type="rotate" from="0 13 29" to="360 13 29" dur="0.6s" repeatCount="indefinite" />
                   </circle>
-                  <circle cx="25" cy="27" r="1" fill="#4F46E5">
+                  <circle cx="25" cy="27" r="1" fill="#00D4AA">
                     <animateTransform attributeName="transform" type="rotate" from="0 25 29" to="360 25 29" dur="0.6s" repeatCount="indefinite" />
                   </circle>
-                  {/* Road dashes */}
-                  <rect x="4" y="33" width="6" height="1.5" rx="0.75" fill="#64748B" />
-                  <rect x="14" y="33" width="6" height="1.5" rx="0.75" fill="#64748B" />
-                  <rect x="24" y="33" width="6" height="1.5" rx="0.75" fill="#64748B" />
+                  <rect x="4" y="33" width="6" height="1.5" rx="0.75" fill="#CBD5E1" />
+                  <rect x="14" y="33" width="6" height="1.5" rx="0.75" fill="#CBD5E1" />
+                  <rect x="24" y="33" width="6" height="1.5" rx="0.75" fill="#CBD5E1" />
                 </g>
               </svg>
             </div>
 
-            {/* App Name + Status */}
             <div>
               <h1
                 className="text-[22px] font-extrabold leading-none tracking-wide"
-                style={{
-                  fontFamily: 'var(--font-mukta), sans-serif',
-                  background: 'linear-gradient(135deg, #0F766E 30%, #4F46E5 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  filter: 'drop-shadow(0 0 8px rgba(15,118,110,0.35))',
-                }}
+                style={{ fontFamily: 'var(--font-mukta), sans-serif', color: '#0F172A' }}
               >
                 यात्री
-
               </h1>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-                <span className="text-[10px] text-primary-hover font-bold tracking-wide">
+                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#10B981' }} />
+                <span className="text-[10px] font-bold tracking-wide" style={{ color: '#009E7F' }}>
                   {buses.filter(b => b.isActive).length} Active
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Right section - Actions */}
-          <div className="flex items-center gap-3 relative z-100 pointer-events-auto">
+          {/* Right: booking modal + avatar */}
+          <div className="flex items-center gap-2 relative z-[100] pointer-events-auto">
             <DetailedBookingModal />
-
-            {/* STABLE AVATAR LOGIC */}
-              <Button
-                variant="outline"
-                size="icon"
-                className="w-11 h-11 min-w-11 min-h-11 rounded-full bg-card border-2 border-primary/50 shadow-md"
+            <button
+              className="w-11 h-11 rounded-full font-black text-sm flex items-center justify-center transition-all active:scale-95"
+              style={{ background: '#E6FBF5', color: '#009E7F', border: '1.5px solid #A7F3D0' }}
               onClick={() => setIsDrawerOpen(true)}
             >
-              {/* Check if userData and the initial exist.
-       If it's still loading, show a loading spinner or the 'Y' anyway
-       instead of jumping to the logout door.
-    */}
               {userData?.name ? (
-                <span className="text-sm font-black text-primary">
-                  {userData.name[0].toUpperCase()}
-                </span>
+                <span>{userData.name[0].toUpperCase()}</span>
               ) : (
-                <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: '#009E7F', borderTopColor: 'transparent' }} />
               )}
-            </Button>
-
-            <YatraProfileDrawer
-              open={isDrawerOpen}
-              onOpenChange={setIsDrawerOpen}
-            />
+            </button>
+            <YatraProfileDrawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen} />
           </div>
         </div>
 
-        {/* Search Bar with magnifying glass */}
+        {/* Search bar */}
         <div className="mt-3 px-1 relative">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8" />
               <path d="m21 21-4.35-4.35" />
             </svg>
@@ -1123,47 +1085,47 @@ export default function PassengerDashboard() {
           </div>
         </div>
 
-
-        {/* Filters Row */}
+        {/* Vehicle filter chips */}
         <div className="mt-4 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-          <Button
-            size="sm"
-            variant={vehicleFilter === 'all' ? 'default' : 'secondary'}
-            className={`min-h-11 px-3 rounded-full text-[11px] font-black uppercase tracking-wider border inline-flex items-center justify-center ${vehicleFilter === 'all' ? 'bg-primary border-primary-hover text-primary-foreground shadow-sm' : 'bg-card text-muted-foreground border-border hover:bg-surface-soft'}`}
+          <button
+            className="min-h-[40px] px-4 rounded-full text-[11px] font-black uppercase tracking-wider transition-all active:scale-95 whitespace-nowrap"
+            style={{
+              background: vehicleFilter === 'all' ? '#00D4AA' : 'white',
+              border: `1.5px solid ${vehicleFilter === 'all' ? '#00D4AA' : '#E2E8F0'}`,
+              color: vehicleFilter === 'all' ? 'white' : '#64748B',
+            }}
             onClick={() => setVehicleFilter('all')}
           >
             All
-          </Button>
+          </button>
           {VEHICLE_TYPES.map(type => (
-            <Button
+            <button
               key={type.id}
-              size="sm"
-              variant={vehicleFilter === type.id ? 'default' : 'secondary'}
-              className={`min-h-11 px-3 rounded-full text-[11px] font-black uppercase tracking-wider border flex items-center gap-1.5 ${vehicleFilter === type.id ? 'bg-primary border-primary-hover text-primary-foreground shadow-sm' : 'bg-card text-muted-foreground border-border hover:bg-surface-soft'}`}
+              className="min-h-[40px] px-4 rounded-full text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 whitespace-nowrap"
+              style={{
+                background: vehicleFilter === type.id ? '#00D4AA' : 'white',
+                border: `1.5px solid ${vehicleFilter === type.id ? '#00D4AA' : '#E2E8F0'}`,
+                color: vehicleFilter === type.id ? 'white' : '#64748B',
+              }}
               onClick={() => setVehicleFilter(type.id)}
             >
               <span>{type.icon}</span>
               <span>{type.name}</span>
-            </Button>
+            </button>
           ))}
         </div>
       </div>
 
-      {/* Visually-hidden live region — announces trip status to screen readers */}
-      <div
-        role="status"
-        aria-live="assertive"
-        aria-atomic="true"
-        className="sr-only"
-      >
+      {/* Screen reader live region */}
+      <div role="status" aria-live="assertive" aria-atomic="true" className="sr-only">
         {requestStatus === 'requesting' && 'Waiting for driver to accept your request.'}
         {requestStatus === 'accepted' && 'Driver accepted. Your driver is on the way.'}
         {requestStatus === 'on-trip' && 'Trip in progress. Navigating to your destination.'}
         {requestStatus === 'idle' && activeTripPickup === null && ''}
       </div>
 
-      {/* 2. Map Section (Priority View) */}
-      <div className="relative w-full h-[65vh] shrink-0 border-b border-border">
+      {/* Map Section */}
+      <div className="relative w-full h-[65vh] shrink-0" style={{ borderBottom: '1px solid #E2E8F0' }}>
         <MapWrapper
           role="passenger"
           buses={filteredBuses}
@@ -1184,14 +1146,14 @@ export default function PassengerDashboard() {
           routePhase={etaToDestination !== null ? 'trip' : etaToPickup !== null ? 'pickup' : null}
         />
 
-        {/* ETA overlay card */}
+        {/* ETA overlay */}
         {(etaToPickup !== null || etaToDestination !== null) && ['accepted', 'on-trip'].includes(requestStatus) && (
           <div
             role="status"
             aria-live="polite"
             aria-atomic="true"
-            className="absolute top-4 left-1/2 -translate-x-1/2 z-400 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg"
-            style={{ background: etaToDestination !== null ? '#1e40af' : '#047857' }}
+            className="absolute top-4 left-1/2 -translate-x-1/2 z-[400] flex items-center gap-2 px-4 py-2 rounded-full shadow-lg"
+            style={{ background: etaToDestination !== null ? '#1e40af' : '#00D4AA' }}
           >
             <span className="text-lg" aria-hidden="true">{etaToDestination !== null ? '🏁' : '🚗'}</span>
             <span className="text-white text-sm font-bold">
@@ -1202,12 +1164,14 @@ export default function PassengerDashboard() {
           </div>
         )}
 
-        {/* Pickup guide — shown when a driver is selected but no pickup set */}
+        {/* Pickup selection guide */}
         {selectedBus && isSelectingPickup && requestStatus === 'idle' && (
-          <div className="absolute bottom-4 left-4 right-4 z-400 bg-card border border-border rounded-xl p-4 flex items-center gap-3 text-sm shadow-xl animate-in slide-in-from-bottom-4 fade-in duration-300">
-            <MapPin className="w-5 h-5 text-emerald-600 shrink-0" />
-            <span className="text-foreground font-bold flex-1">Tap the map to set your pickup point, or use your current location</span>
-            <Button size="sm" variant="outline" className="text-xs shrink-0"
+          <div className="absolute bottom-4 left-4 right-4 z-[400] rounded-xl p-4 flex items-center gap-3 text-sm shadow-xl animate-in slide-in-from-bottom-4 fade-in duration-300" style={{ background: 'white', border: '1px solid #E2E8F0' }}>
+            <MapPin className="w-5 h-5 shrink-0" style={{ color: '#10B981' }} />
+            <span className="font-bold flex-1" style={{ color: '#0F172A' }}>Tap the map to set your pickup point, or use your current location</span>
+            <button
+              className="text-xs font-bold px-3 py-1.5 rounded-lg shrink-0 transition-all active:scale-95"
+              style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#64748B' }}
               onClick={() => {
                 if (userLocation) {
                   const currentPickup = { lat: userLocation.lat, lng: userLocation.lng, address: 'Current Location' };
@@ -1216,39 +1180,38 @@ export default function PassengerDashboard() {
                 } else {
                   toast({ title: 'Waiting for location...' });
                 }
-              }}>
+              }}
+            >
               Use my location
-            </Button>
+            </button>
           </div>
         )}
 
+        {/* Selected bus card */}
         {selectedBus && requestStatus === 'idle' && (
           <div className="absolute bottom-4 left-4 right-4 z-[500] pointer-events-auto animate-in slide-in-from-bottom-4 fade-in duration-300">
-            <div className="relative rounded-2xl border border-border bg-card shadow-2xl p-4 flex items-center gap-4">
+            <div className="relative rounded-2xl p-4 flex items-center gap-4" style={{ background: 'white', border: '1px solid #E2E8F0', boxShadow: '0 8px 32px rgba(0,0,0,0.10)' }}>
               <button
-                className="absolute -top-3 left-1/2 -translate-x-1/2 w-10 h-1 bg-slate-400 rounded-full"
-                onClick={() => {
-                  setSelectedBus(null);
-                  setIsSelectingPickup(false);
-                }}
+                className="absolute -top-3 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full"
+                style={{ background: '#CBD5E1' }}
+                onClick={() => { setSelectedBus(null); setIsSelectingPickup(false); }}
                 aria-label="Dismiss"
               />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-lg">{selectedBus.emoji || '🚌'}</span>
-                  <span className="font-bold text-sm truncate text-foreground">
+                  <span className="font-bold text-sm truncate" style={{ color: '#0F172A' }}>
                     {selectedBus.busNumber || 'Driver'}
                   </span>
-                  <span className="text-xs text-emerald-500 font-medium">● Online</span>
+                  <span className="text-xs font-medium" style={{ color: '#10B981' }}>● Online</span>
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">
+                <div className="text-xs mt-1" style={{ color: '#64748B' }}>
                   {selectedBus.vehicleType || 'Micro Bus'} · {selectedBus.route || 'Local'}
                 </div>
               </div>
-
-              <Button
-                size="sm"
-                className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-5 h-10 font-semibold text-sm flex items-center gap-2 flex-shrink-0"
+              <button
+                className="rounded-full px-5 h-10 font-semibold text-sm flex items-center gap-2 flex-shrink-0 transition-all active:scale-95"
+                style={{ background: hailLoading ? '#A7F3D0' : '#00D4AA', color: 'white' }}
                 disabled={hailLoading}
                 onClick={() => handleBusSelect(selectedBus)}
               >
@@ -1260,24 +1223,23 @@ export default function PassengerDashboard() {
                     {pickupLocation ? 'Hail' : 'Set Pickup & Hail'}
                   </>
                 )}
-              </Button>
+              </button>
             </div>
           </div>
         )}
 
-        {/* Waiting banner — shown while request is pending, with cancel button */}
+        {/* Waiting banner */}
         {requestStatus === 'requesting' && (
-          <div className="absolute bottom-4 left-4 right-4 z-400 bg-card border border-accent/30 rounded-xl px-4 py-3 flex items-center gap-3 shadow-xl animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="absolute bottom-4 left-4 right-4 z-[400] rounded-xl px-4 py-3 flex items-center gap-3 shadow-xl animate-in slide-in-from-bottom-4 fade-in duration-300" style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}>
             <div className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin shrink-0" />
-            <span className="text-amber-700 text-sm font-bold flex-1">Waiting for driver to accept…</span>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 shrink-0 px-2"
+            <span className="text-sm font-bold flex-1" style={{ color: '#92400E' }}>Waiting for driver to accept…</span>
+            <button
+              className="text-xs px-2 py-1 rounded-lg transition-all"
+              style={{ color: '#DC2626' }}
               onClick={handleCancelRequest}
             >
               Cancel
-            </Button>
+            </button>
           </div>
         )}
       </div>
@@ -1287,79 +1249,83 @@ export default function PassengerDashboard() {
         role="passenger"
         targetName={ratingDriverName}
         onSubmit={async (stars, comment) => {
-          if (ratingTripId) {
-            await submitTripRating(ratingTripId, 'passenger', stars, comment);
-          }
+          if (ratingTripId) await submitTripRating(ratingTripId, 'passenger', stars, comment);
           setShowRatingModal(false);
           setRatingTripId(null);
         }}
-        onSkip={() => {
-          setShowRatingModal(false);
-          setRatingTripId(null);
-        }}
+        onSkip={() => { setShowRatingModal(false); setRatingTripId(null); }}
       />
 
-      {/* 3. Scrollable Content (Below Map) */}
-      <div className="flex-1 bg-background p-4 space-y-6">
+      {/* Scrollable content below map */}
+      <div className="flex-1 p-4 space-y-6">
 
-        {/* Active Trip Card — replaces all other content during an active trip */}
         {requestStatus !== 'idle' ? (
           <div className="space-y-3">
-            {/* Status header */}
-            <div className={`rounded-2xl border p-4 space-y-3 ${ requestStatus === 'requesting' ? 'bg-amber-50 border-amber-200 shadow-sm' : requestStatus === 'accepted' ? 'bg-emerald-50 border-emerald-200 shadow-sm' : 'bg-blue-50 border-blue-200 shadow-sm' }`}>
+            {/* Active trip status card */}
+            <div
+              className="rounded-2xl p-4 space-y-3"
+              style={{
+                background: requestStatus === 'requesting' ? '#FFFBEB' : requestStatus === 'accepted' ? '#F0FDF4' : '#EFF6FF',
+                border: `1px solid ${requestStatus === 'requesting' ? '#FDE68A' : requestStatus === 'accepted' ? '#BBF7D0' : '#BFDBFE'}`,
+              }}
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full animate-pulse ${ requestStatus === 'requesting' ? 'bg-amber-400' : requestStatus === 'accepted' ? 'bg-emerald-400' : 'bg-blue-400' }`} />
-                  <span className={`text-sm font-black ${ requestStatus === 'requesting' ? 'text-amber-700' : requestStatus === 'accepted' ? 'text-emerald-700' : 'text-blue-700' }`}>
+                  <span
+                    className="w-2 h-2 rounded-full animate-pulse"
+                    style={{ background: requestStatus === 'requesting' ? '#F59E0B' : requestStatus === 'accepted' ? '#10B981' : '#3B82F6' }}
+                  />
+                  <span
+                    className="text-sm font-black"
+                    style={{ color: requestStatus === 'requesting' ? '#92400E' : requestStatus === 'accepted' ? '#065F46' : '#1E40AF' }}
+                  >
                     {requestStatus === 'requesting' && 'Waiting for driver…'}
                     {requestStatus === 'accepted' && 'Driver on the way'}
                     {requestStatus === 'on-trip' && 'Trip in progress'}
                   </span>
                 </div>
                 {(etaToPickup !== null || etaToDestination !== null) && ['accepted', 'on-trip'].includes(requestStatus) && (
-                  <span className="text-xs font-bold text-foreground bg-slate-100 px-2.5 py-1 rounded-full border border-border">
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ background: 'white', border: '1px solid #E2E8F0', color: '#0F172A' }}>
                     {etaToPickup !== null ? `${etaToPickup} min` : `${etaToDestination} min`}
                   </span>
                 )}
               </div>
 
               {selectedBus && (
-                <div className="flex items-center gap-3 pt-1 border-t border-border">
-                  <div className="w-9 h-9 rounded-full bg-slate-100 border border-border flex items-center justify-center text-base">
+                <div className="flex items-center gap-3 pt-1" style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-base" style={{ background: 'white', border: '1px solid #E2E8F0' }}>
                     {selectedBus.emoji}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-foreground truncate">{selectedBus.driverName}</p>
-                    <p className="text-xs text-muted-foreground">{selectedBus.busNumber} · {selectedBus.vehicleType}</p>
+                    <p className="text-sm font-bold truncate" style={{ color: '#0F172A' }}>{selectedBus.driverName}</p>
+                    <p className="text-xs" style={{ color: '#64748B' }}>{selectedBus.busNumber} · {selectedBus.vehicleType}</p>
                   </div>
                   {requestStatus === 'requesting' && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 shrink-0"
+                    <button
+                      className="text-xs px-3 py-1.5 rounded-lg font-bold transition-all"
+                      style={{ color: '#DC2626' }}
                       onClick={handleCancelRequest}
                     >
                       Cancel
-                    </Button>
+                    </button>
                   )}
                 </div>
               )}
 
               {pickupLocation && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <div className="flex items-center gap-2 text-xs" style={{ color: '#64748B' }}>
+                  <MapPin className="w-3.5 h-3.5 shrink-0" style={{ color: '#10B981' }} />
                   <span className="truncate">{pickupLocation.address ?? `${pickupLocation.lat.toFixed(4)}, ${pickupLocation.lng.toFixed(4)}`}</span>
                 </div>
               )}
               {dropoffLocation && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Navigation className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                <div className="flex items-center gap-2 text-xs" style={{ color: '#64748B' }}>
+                  <Navigation className="w-3.5 h-3.5 shrink-0" style={{ color: '#3B82F6' }} />
                   <span className="truncate">{dropoffLocation.address ?? `${dropoffLocation.lat.toFixed(4)}, ${dropoffLocation.lng.toFixed(4)}`}</span>
                 </div>
               )}
             </div>
 
-            {/* Trip history still accessible during trip */}
             <div id="trip-history">
               <TripHistory onReclaim={handleReclaimEscrow} />
             </div>
@@ -1368,19 +1334,16 @@ export default function PassengerDashboard() {
           <>
             {(activeTab === 'map' || activeTab === 'book') && (
               <>
-                {/* Location / nearby driver status */}
                 {locationPending ? (
-                  <div className="flex flex-col items-center justify-center h-16 gap-2 text-muted-foreground">
-                    <MapPin className="w-5 h-5 animate-pulse text-muted-foreground" />
-                    <p className="text-xs text-center text-muted-foreground">Grant location permission to see nearby drivers</p>
+                  <div className="flex flex-col items-center justify-center h-16 gap-2">
+                    <MapPin className="w-5 h-5 animate-pulse" style={{ color: '#94A3B8' }} />
+                    <p className="text-xs text-center" style={{ color: '#94A3B8' }}>Grant location permission to see nearby drivers</p>
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs" style={{ color: '#94A3B8' }}>
                     {filteredBuses.length} driver{filteredBuses.length !== 1 ? 's' : ''} within {NEARBY_DRIVER_RADIUS_KM}km
                   </p>
                 )}
-
-                {/* Wallet Settings */}
                 <WalletSettings />
               </>
             )}
@@ -1388,8 +1351,8 @@ export default function PassengerDashboard() {
             {activeTab === 'book' && (
               <>
                 <div className="space-y-2">
-                  <h2 className="text-lg font-black text-foreground flex items-center gap-2">
-                    <Ticket className="w-5 h-5 text-secondary" />
+                  <h2 className="text-lg font-black flex items-center gap-2" style={{ color: '#0F172A' }}>
+                    <Ticket className="w-5 h-5" style={{ color: '#00D4AA' }} />
                     Ride Details
                   </h2>
                   <BookingPanel
@@ -1404,24 +1367,18 @@ export default function PassengerDashboard() {
 
                 {!selectedBus && (
                   <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-surface-soft border border-border p-3 rounded-xl flex flex-col items-center text-center gap-2 shadow-sm">
-                      <div className="w-8 h-8 rounded-full bg-primary-soft flex items-center justify-center border border-primary/20">
-                        <MapPin className="w-4 h-4 text-primary" />
+                    {([
+                      { icon: MapPin, label: '1. Tap Bus' },
+                      { icon: Navigation, label: '2. Hail' },
+                      { icon: Clock, label: '3. Ride' },
+                    ] as const).map(({ icon: Icon, label }) => (
+                      <div key={label} className="p-3 rounded-xl flex flex-col items-center text-center gap-2" style={{ background: 'white', border: '1px solid #E2E8F0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: '#E6FBF5', border: '1px solid #A7F3D0' }}>
+                          <Icon className="w-4 h-4" style={{ color: '#00D4AA' }} />
+                        </div>
+                        <span className="text-xs font-black" style={{ color: '#64748B' }}>{label}</span>
                       </div>
-                      <span className="text-xs font-black text-muted-foreground">1. Tap Bus</span>
-                    </div>
-                    <div className="bg-surface-soft border border-border p-3 rounded-xl flex flex-col items-center text-center gap-2 shadow-sm">
-                      <div className="w-8 h-8 rounded-full bg-primary-soft flex items-center justify-center border border-primary/20">
-                        <Navigation className="w-4 h-4 text-primary" />
-                      </div>
-                      <span className="text-xs font-black text-muted-foreground">2. Hail</span>
-                    </div>
-                    <div className="bg-surface-soft border border-border p-3 rounded-xl flex flex-col items-center text-center gap-2 shadow-sm">
-                      <div className="w-8 h-8 rounded-full bg-secondary-soft/60 flex items-center justify-center border border-secondary/20">
-                        <Clock className="w-4 h-4 text-secondary" />
-                      </div>
-                      <span className="text-xs font-black text-muted-foreground">3. Ride</span>
-                    </div>
+                    ))}
                   </div>
                 )}
               </>
@@ -1435,68 +1392,57 @@ export default function PassengerDashboard() {
 
             {activeTab === 'profile' && (
               <div className="space-y-4">
-                <div className="card-elevated p-5">
-                  <p className="text-xs uppercase tracking-widest text-muted-foreground font-black">Passenger Profile</p>
-                  <p className="mt-2 text-lg font-black text-foreground">{userData?.name || 'Yatra User'}</p>
-                  <p className="text-sm text-muted-foreground">{userData?.email || currentUser?.email || 'No email on file'}</p>
-                  <Button
-                    className="mt-4 h-11 min-h-11 bg-accent hover:bg-amber-600 text-white font-bold"
+                <div className="rounded-2xl p-5" style={{ background: 'white', border: '1px solid #E2E8F0', boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
+                  <p className="text-xs uppercase tracking-widest font-black" style={{ color: '#64748B' }}>Passenger Profile</p>
+                  <p className="mt-2 text-lg font-black" style={{ color: '#0F172A' }}>{userData?.name || 'Yatra User'}</p>
+                  <p className="text-sm" style={{ color: '#64748B' }}>{userData?.email || currentUser?.email || 'No email on file'}</p>
+                  <button
+                    className="mt-4 w-full h-11 rounded-xl font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                    style={{ background: '#00D4AA', color: 'white' }}
                     onClick={() => setIsDrawerOpen(true)}
                   >
-                    <UserRound className="w-4 h-4 mr-2" />
+                    <UserRound className="w-4 h-4" />
                     Open Profile & Settings
-                  </Button>
+                  </button>
                 </div>
                 <WalletSettings />
               </div>
             )}
 
-            {/* Bottom Padding for tab bar */}
             <div className="h-24" />
           </>
         )}
       </div>
 
+      {/* Bottom nav */}
       <nav
         aria-label="Passenger tabs"
-        className="fixed inset-x-0 bottom-0 z-[1300] border-t border-border bg-background/95 backdrop-blur-xl px-3 py-2"
+        className="fixed inset-x-0 bottom-0 z-[1300] px-3 py-2"
+        style={{ background: 'white', borderTop: '1px solid #E2E8F0' }}
       >
-        <div className="mx-auto grid max-w-md grid-cols-4 gap-2">
-          <Button
-            variant="ghost"
-            className={`min-h-11 flex-col gap-1 rounded-xl ${activeTab === 'map' ? 'bg-primary-soft text-primary' : 'text-muted-foreground'}`}
-            onClick={() => setActiveTab('map')}
-          >
-            <Map className="h-4 w-4" />
-            <span className="text-[10px] font-black tracking-wide">Map</span>
-          </Button>
-          <Button
-            variant="ghost"
-            className={`min-h-11 flex-col gap-1 rounded-xl ${activeTab === 'book' ? 'bg-primary-soft text-primary' : 'text-muted-foreground'}`}
-            onClick={() => setActiveTab('book')}
-          >
-            <BookOpen className="h-4 w-4" />
-            <span className="text-[10px] font-black tracking-wide">Book Ride</span>
-          </Button>
-          <Button
-            variant="ghost"
-            className={`min-h-11 flex-col gap-1 rounded-xl ${activeTab === 'history' ? 'bg-primary-soft text-primary' : 'text-muted-foreground'}`}
-            onClick={() => setActiveTab('history')}
-          >
-            <History className="h-4 w-4" />
-            <span className="text-[10px] font-black tracking-wide">History</span>
-          </Button>
-          <Button
-            variant="ghost"
-            className={`min-h-11 flex-col gap-1 rounded-xl ${activeTab === 'profile' ? 'bg-primary-soft text-primary' : 'text-muted-foreground'}`}
-            onClick={() => {
-              setActiveTab('profile');
-              setIsDrawerOpen(true);
-            }}
-          >
-            <UserRound className="h-4 w-4" />
-            <span className="text-[10px] font-black tracking-wide">Profile</span>
-          </Button>
+        <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
+          {([
+            { id: 'map', icon: Map, label: 'Map' },
+            { id: 'book', icon: BookOpen, label: 'Book Ride' },
+            { id: 'history', icon: History, label: 'History' },
+            { id: 'profile', icon: UserRound, label: 'Profile' },
+          ] as const).map(({ id, icon: Icon, label }) => (
+            <button
+              key={id}
+              className="min-h-[44px] flex flex-col items-center justify-center gap-1 rounded-xl transition-all active:scale-95"
+              style={{
+                background: activeTab === id ? '#E6FBF5' : 'transparent',
+                color: activeTab === id ? '#009E7F' : '#64748B',
+              }}
+              onClick={() => {
+                setActiveTab(id);
+                if (id === 'profile') setIsDrawerOpen(true);
+              }}
+            >
+              <Icon className="h-4 w-4" />
+              <span className="text-[10px] font-black tracking-wide">{label}</span>
+            </button>
+          ))}
         </div>
       </nav>
     </div>
