@@ -46,11 +46,8 @@ export const metadata: Metadata = {
     title: "Yatra",
   },
   icons: {
-    icon: [
-      { url: "/icons/pwa-192.svg", type: "image/svg+xml" },
-      { url: "/icons/pwa-512.svg", type: "image/svg+xml" },
-    ],
-    apple: [{ url: "/icons/pwa-192.svg", type: "image/svg+xml" }],
+    icon: [{ url: "/yatra-logo.png", type: "image/png" }],
+    apple: [{ url: "/yatra-logo.png", type: "image/png" }],
   },
 };
 
