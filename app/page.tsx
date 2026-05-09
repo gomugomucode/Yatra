@@ -193,6 +193,33 @@ const FRAME_COUNT = 121;
 const frameSrc = (i: number) =>
   `/frames/frame_${String(i + 1).padStart(3, '0')}.jpg`;
 
+// Loads frames in small idle-time chunks instead of 121 simultaneous requests.
+// First frame loads immediately so the first paint is instant.
+function preloadChunked(count: number, src: (i: number) => string, target: HTMLImageElement[]) {
+  const first = new window.Image();
+  first.src = src(0);
+  target[0] = first;
+  let i = 1;
+  const next = () => {
+    const end = Math.min(i + 8, count);
+    for (; i < end; i++) {
+      const img = new window.Image();
+      img.src = src(i);
+      target[i] = img;
+    }
+    if (i < count) {
+      'requestIdleCallback' in window
+        ? (window as Window & { requestIdleCallback: (cb: () => void, o?: object) => void })
+            .requestIdleCallback(next, { timeout: 400 })
+        : setTimeout(next, 32);
+    }
+  };
+  'requestIdleCallback' in window
+    ? (window as Window & { requestIdleCallback: (cb: () => void, o?: object) => void })
+        .requestIdleCallback(next, { timeout: 200 })
+    : setTimeout(next, 32);
+}
+
 // ─── Bus SVG removed — replaced by scroll-linked frame sequence ──────────────
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function TransformBus({ progress }: { progress: MotionValue<number> }) {
@@ -693,7 +720,15 @@ function TransformSection() {
   const frameRef       = useRef(-1);
   const phaseRef       = useRef<PhaseKey>('FOLK');
 
-  const [phase, setPhase] = useState<PhaseKey>('FOLK');
+  const [phase, setPhase]       = useState<PhaseKey>('FOLK');
+  const [sectionH, setSectionH] = useState('400vh');
+
+  useEffect(() => {
+    const update = () => setSectionH(window.innerWidth < 768 ? '250vh' : '400vh');
+    update();
+    window.addEventListener('resize', update, { passive: true });
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
   const scrollProgress = useMotionValue(0);
   const bgColor = useTransform(
@@ -707,40 +742,44 @@ function TransformSection() {
     const panel   = panelRef.current;
     if (!section || !panel) return;
 
-    // Lazy-preload frames only when section is ~1 viewport away
+    // Lazy-preload in idle-time chunks when section approaches
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && preloadRef.current.length === 0) {
-          preloadRef.current = Array.from({ length: FRAME_COUNT }, (_, i) => {
-            const img = document.createElement('img') as HTMLImageElement;
-            img.src = frameSrc(i);
-            return img;
-          });
-        }
+        if (entry.isIntersecting && preloadRef.current.length === 0)
+          preloadChunked(FRAME_COUNT, frameSrc, preloadRef.current);
       },
       { rootMargin: '100% 0px' }
     );
     observer.observe(section);
 
-    // Auto-play state — lives in closure, no React state needed
-    let autoV      = 0;   // auto-play progress 0→1
-    let displayV   = 0;   // smooth displayed progress (lerped)
-    let prevScrollV = 0;  // to detect backward scroll
-    let lastTime   = 0;
+    // Cache geometry — reading offsetTop in every RAF tick forces layout reflow
+    let sectionTop    = section.offsetTop;
+    let sectionHeight = section.offsetHeight;
+    const updateGeometry = () => {
+      sectionTop    = section.offsetTop;
+      sectionHeight = section.offsetHeight;
+    };
+    window.addEventListener('resize', updateGeometry, { passive: true });
 
-    // ~4 s to complete auto-play on its own; user scroll can race ahead
-    const AUTO_SPEED = 1 / (4 * 1000);
+    // Cache scrollY via scroll event — mobile compositor updates async
+    let cachedScrollY = window.scrollY;
+    const onScroll = () => { cachedScrollY = window.scrollY; };
+    window.addEventListener('scroll', onScroll, { passive: true });
 
-    let rafId: number;
+    let displayV    = 0;
+    let prevScrollV = 0;
+    let lastTime    = 0;
+    const AUTO_SPEED = 1 / (5 * 1000);
+
+    let rafId: number | null = null;
+    let active = false;
 
     const tick = (time: number) => {
       const dt = lastTime > 0 ? Math.min(time - lastTime, 50) : 16;
       lastTime = time;
 
-      const scrollY       = window.scrollY;
-      const sectionTop    = section.offsetTop;
-      const sectionHeight = section.offsetHeight;
-      const vh            = window.innerHeight;
+      const scrollY = cachedScrollY;
+      const vh      = window.innerHeight;
       const maxScroll     = sectionHeight - vh;
 
       // JS-based sticky pin
@@ -749,7 +788,7 @@ function TransformSection() {
         panel.style.top      = '0';
         panel.style.bottom   = '';
         // Reset when above section so auto restarts on re-entry
-        autoV = 0; displayV = 0; prevScrollV = 0;
+        displayV = 0; prevScrollV = 0;
       } else if (scrollY >= sectionTop + maxScroll) {
         panel.style.position = 'absolute';
         panel.style.top      = '';
@@ -764,20 +803,15 @@ function TransformSection() {
         ? Math.max(0, Math.min(1, (scrollY - sectionTop) / maxScroll))
         : 0;
 
-      const inRange   = scrollY > sectionTop && scrollY < sectionTop + maxScroll;
-      // Detect active scrolling — threshold ignores float noise
-      const isScrolling = Math.abs(scrollV - prevScrollV) > 0.0003;
+      const inRange     = scrollY > sectionTop && scrollY < sectionTop + maxScroll;
+      const isScrolling = Math.abs(scrollV - prevScrollV) > 0.0002;
 
       if (isScrolling) {
-        // Lenis already smoothed the scroll — snap directly, no inner lerp
-        autoV    = scrollV;
+        // Snap directly to scroll — Lenis already smoothed it
         displayV = scrollV;
       } else if (inRange) {
-        // No scroll → auto-play advances at its own pace with gentle lerp
-        autoV   = Math.min(1, autoV + AUTO_SPEED * dt);
-        displayV += (autoV - displayV) * 0.04;
-      } else {
-        displayV += (autoV - displayV) * 0.04;
+        // Auto-play: constant linear speed, no lerp so it never lags
+        displayV = Math.min(1, displayV + AUTO_SPEED * dt);
       }
 
       prevScrollV = scrollV;
@@ -805,11 +839,27 @@ function TransformSection() {
         setPhase(newPhase);
       }
 
-      rafId = requestAnimationFrame(tick);
+      if (active) rafId = requestAnimationFrame(tick);
     };
 
-    rafId = requestAnimationFrame(tick);
-    return () => { cancelAnimationFrame(rafId); observer.disconnect(); };
+    // Only run RAF when section is near the viewport
+    const visObs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) { active = true; rafId = requestAnimationFrame(tick); }
+        else { active = false; if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; } }
+      },
+      { rootMargin: '200px 0px' }
+    );
+    visObs.observe(section);
+
+    return () => {
+      active = false;
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      observer.disconnect();
+      visObs.disconnect();
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', updateGeometry);
+    };
   }, [scrollProgress]);
 
   const data = PHASES[phase];
@@ -818,7 +868,7 @@ function TransformSection() {
     <section
       id="transform"
       ref={sectionRef}
-      style={{ height: '400vh', position: 'relative' }}
+      style={{ height: sectionH, position: 'relative' }}
     >
       {/* Panel starts absolute, becomes position:fixed while pinned, absolute again at end */}
       <motion.div
@@ -940,6 +990,638 @@ function TransformSection() {
                 style={{ display: 'block' }}
               />
             </div>
+          </div>
+        </div>
+      </motion.div>
+    </section>
+  );
+}
+
+// ─── Taxi section ─────────────────────────────────────────────────────────────
+const TAXI_FRAME_COUNT = 121;
+const taxiFrameSrc = (i: number) =>
+  `/frames-taxi/frame_${String(i + 1).padStart(3, '0')}.jpg`;
+
+type TaxiPhaseKey = 'STREET' | 'CONNECT' | 'VERIFY' | 'MESH';
+
+const TAXI_PHASES: Record<TaxiPhaseKey, { badge: string; title: string; body: string; isTech: boolean }> = {
+  STREET: {
+    badge: '01 · STREET ECONOMY',
+    title: 'Hailed by hand.\nPaid in cash.\nNo record.',
+    body: 'Kathmandu\'s taxis run on trust and muscle memory. No meter standards. No ride history. Fares negotiated at the window, disputes settled by argument.',
+    isTech: false,
+  },
+  CONNECT: {
+    badge: '02 · GOING DIGITAL',
+    title: 'Every ride\nbecomes a\ndatapoint.',
+    body: 'GPS-linked pickups, digital fare confirmation, passenger check-ins — each trip feeds the protocol. The taxi doesn\'t change. Its data does.',
+    isTech: false,
+  },
+  VERIFY: {
+    badge: '03 · ZERO-KNOWLEDGE',
+    title: 'Identity\nproven.\nNever exposed.',
+    body: 'DRIVER_ID: ZK_VERIFIED ✓\nLICENSE: ON-CHAIN\nFARE_SETTLED: 0.4s\n\nDrivers prove their credentials without revealing personal data. Passengers travel with verified certainty.',
+    isTech: true,
+  },
+  MESH: {
+    badge: '04 · RIDE NETWORK',
+    title: "Nepal's taxis,\none protocol.",
+    body: 'From Thamel to Patan, every cab a node. Reputation portable. Fares immutable. No dispatcher. No middleman. Just the city and the chain.',
+    isTech: false,
+  },
+};
+
+function TaxiSection() {
+  const sectionRef     = useRef<HTMLElement>(null);
+  const panelRef       = useRef<HTMLDivElement>(null);
+  const frameImgRef    = useRef<HTMLImageElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const preloadRef     = useRef<HTMLImageElement[]>([]);
+  const frameRef       = useRef(-1);
+  const phaseRef       = useRef<TaxiPhaseKey>('STREET');
+
+  const [phase, setPhase]       = useState<TaxiPhaseKey>('STREET');
+  const [sectionH, setSectionH] = useState('400vh');
+
+  useEffect(() => {
+    const update = () => setSectionH(window.innerWidth < 768 ? '250vh' : '400vh');
+    update();
+    window.addEventListener('resize', update, { passive: true });
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+  const scrollProgress = useMotionValue(0);
+  const bgColor = useTransform(
+    scrollProgress,
+    [0, 0.40, 0.65, 0.85, 1],
+    [WHITE, WHITE, '#F0F5F4', '#F5F0EC', WHITE],
+  );
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    const panel   = panelRef.current;
+    if (!section || !panel) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && preloadRef.current.length === 0)
+          preloadChunked(TAXI_FRAME_COUNT, taxiFrameSrc, preloadRef.current);
+      },
+      { rootMargin: '100% 0px' }
+    );
+    observer.observe(section);
+
+    let sectionTop    = section.offsetTop;
+    let sectionHeight = section.offsetHeight;
+    const updateGeometry = () => {
+      sectionTop    = section.offsetTop;
+      sectionHeight = section.offsetHeight;
+    };
+    window.addEventListener('resize', updateGeometry, { passive: true });
+
+    let cachedScrollY = window.scrollY;
+    const onScroll = () => { cachedScrollY = window.scrollY; };
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    let displayV    = 0;
+    let prevScrollV = 0;
+    let lastTime    = 0;
+    const AUTO_SPEED = 1 / (5 * 1000);
+
+    let rafId: number | null = null;
+    let active = false;
+
+    const tick = (time: number) => {
+      const dt = lastTime > 0 ? Math.min(time - lastTime, 50) : 16;
+      lastTime = time;
+
+      const scrollY  = cachedScrollY;
+      const vh       = window.innerHeight;
+      const maxScroll = sectionHeight - vh;
+
+      if (scrollY <= sectionTop) {
+        panel.style.position = 'absolute';
+        panel.style.top      = '0';
+        panel.style.bottom   = '';
+        displayV = 0; prevScrollV = 0;
+      } else if (scrollY >= sectionTop + maxScroll) {
+        panel.style.position = 'absolute';
+        panel.style.top      = '';
+        panel.style.bottom   = '0';
+      } else {
+        panel.style.position = 'fixed';
+        panel.style.top      = '0';
+        panel.style.bottom   = '';
+      }
+
+      const scrollV = maxScroll > 0
+        ? Math.max(0, Math.min(1, (scrollY - sectionTop) / maxScroll))
+        : 0;
+
+      const inRange     = scrollY > sectionTop && scrollY < sectionTop + maxScroll;
+      const isScrolling = Math.abs(scrollV - prevScrollV) > 0.0002;
+
+      if (isScrolling) {
+        displayV = scrollV;
+      } else if (inRange) {
+        displayV = Math.min(1, displayV + AUTO_SPEED * dt);
+      }
+
+      prevScrollV = scrollV;
+
+      const v = displayV;
+      const c = Math.max(0, Math.min(TAXI_FRAME_COUNT - 1, Math.round(v * (TAXI_FRAME_COUNT - 1))));
+
+      if (c !== frameRef.current) {
+        frameRef.current = c;
+        if (frameImgRef.current)
+          frameImgRef.current.src = preloadRef.current[c]?.src ?? taxiFrameSrc(c);
+      }
+      if (progressBarRef.current)
+        progressBarRef.current.style.height = `${v * 100}%`;
+
+      scrollProgress.set(v);
+
+      const newPhase: TaxiPhaseKey =
+        c < Math.round(TAXI_FRAME_COUNT * 0.25) ? 'STREET'  :
+        c < Math.round(TAXI_FRAME_COUNT * 0.50) ? 'CONNECT' :
+        c < Math.round(TAXI_FRAME_COUNT * 0.75) ? 'VERIFY'  : 'MESH';
+
+      if (newPhase !== phaseRef.current) {
+        phaseRef.current = newPhase;
+        setPhase(newPhase);
+      }
+
+      if (active) rafId = requestAnimationFrame(tick);
+    };
+
+    const visObs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) { active = true; rafId = requestAnimationFrame(tick); }
+        else { active = false; if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; } }
+      },
+      { rootMargin: '200px 0px' }
+    );
+    visObs.observe(section);
+
+    return () => {
+      active = false;
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      observer.disconnect();
+      visObs.disconnect();
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', updateGeometry);
+    };
+  }, [scrollProgress]);
+
+  const data = TAXI_PHASES[phase];
+
+  return (
+    <section
+      id="taxi-transform"
+      ref={sectionRef}
+      style={{ height: sectionH, position: 'relative' }}
+    >
+      <motion.div
+        ref={panelRef}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100vh',
+          overflow: 'hidden',
+          backgroundColor: bgColor,
+        }}
+      >
+        {/* Progress rail */}
+        <div
+          className="absolute left-6 top-1/2 -translate-y-1/2 w-px hidden md:block"
+          style={{ height: '140px', background: `${CHARCOAL}12`, zIndex: 10 }}
+        >
+          <div
+            ref={progressBarRef}
+            className="w-full"
+            style={{ height: '0%', background: CHARCOAL }}
+          />
+          {(['STREET', 'CONNECT', 'VERIFY', 'MESH'] as TaxiPhaseKey[]).map((p, i) => (
+            <div
+              key={p}
+              className="absolute -left-1.5 w-3 h-3 rounded-full"
+              style={{
+                top: `${i * 33.3}%`,
+                background: p === phase ? CHARCOAL : `${CHARCOAL}20`,
+                border: `1.5px solid ${p === phase ? CHARCOAL : `${CHARCOAL}20`}`,
+                transition: 'background 0.3s',
+              }}
+            />
+          ))}
+        </div>
+
+        <div className="h-full max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-8 md:gap-14 py-20">
+          {/* ── LEFT: Frame sequence ── */}
+          <div className="w-full md:w-5/12 relative flex items-center justify-center">
+            <div className="relative w-full flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                ref={frameImgRef}
+                src={taxiFrameSrc(0)}
+                alt="taxi transformation"
+                width={1172}
+                height={1764}
+                className="h-full w-auto max-h-[80vh]"
+                style={{ display: 'block' }}
+              />
+            </div>
+          </div>
+
+          {/* ── RIGHT: Phase text ── */}
+          <div className="w-full md:w-7/12 flex flex-col justify-center">
+            <div
+              className="mb-8 inline-block"
+              style={{ fontFamily: MONO, fontSize: '10px', letterSpacing: '0.22em', color: data.isTech ? CYAN : DARK_GREEN }}
+            >
+              {data.badge}
+            </div>
+
+            <AnimatePresence mode="wait">
+              <motion.h2
+                key={phase + '-title'}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                style={{
+                  fontFamily: data.isTech ? MONO : PLAYFAIR,
+                  fontSize: data.isTech ? 'clamp(1.6rem, 3vw, 2.6rem)' : 'clamp(2rem, 4vw, 3.4rem)',
+                  fontWeight: 700,
+                  lineHeight: data.isTech ? 1.15 : 0.95,
+                  color: CHARCOAL,
+                  letterSpacing: data.isTech ? '0.02em' : '-0.02em',
+                  whiteSpace: 'pre-line',
+                  marginBottom: '1.25rem',
+                }}
+              >
+                {data.title}
+              </motion.h2>
+            </AnimatePresence>
+
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={phase + '-body'}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.4, delay: 0.1 }}
+                style={{
+                  fontFamily: data.isTech ? MONO : 'inherit',
+                  fontSize: data.isTech ? '0.82rem' : '1rem',
+                  lineHeight: 1.75,
+                  color: data.isTech ? CYAN : `${CHARCOAL}65`,
+                  whiteSpace: 'pre-line',
+                  letterSpacing: data.isTech ? '0.04em' : 'inherit',
+                  maxWidth: '480px',
+                }}
+              >
+                {data.body}
+              </motion.p>
+            </AnimatePresence>
+
+            <div className="mt-12 flex gap-3">
+              {(['STREET', 'CONNECT', 'VERIFY', 'MESH'] as TaxiPhaseKey[]).map((p) => (
+                <div
+                  key={p}
+                  style={{
+                    width: p === phase ? '28px' : '8px',
+                    height: '2px',
+                    borderRadius: '2px',
+                    background: p === phase ? (data.isTech ? CYAN : CHARCOAL) : `${CHARCOAL}20`,
+                    transition: 'width 0.4s ease, background 0.4s ease',
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </section>
+  );
+}
+
+// ─── Bike + Auto section (three-column) ──────────────────────────────────────
+const BIKE_FRAME_COUNT = 121;
+const AUTO_FRAME_COUNT = 121;
+const bikeFrameSrc = (i: number) => `/frames-bike/frame_${String(i + 1).padStart(3, '0')}.jpg`;
+const autoFrameSrc = (i: number) => `/frames-auto/frame_${String(i + 1).padStart(3, '0')}.jpg`;
+
+type FleetPhaseKey = 'ORIGINS' | 'SIGNAL' | 'PROVEN' | 'FLEET';
+
+const FLEET_PHASES: Record<FleetPhaseKey, { badge: string; title: string; body: string; isTech: boolean }> = {
+  ORIGINS: {
+    badge: '01 · STREET ORIGINS',
+    title: 'Two wheels.\nThree wheels.\nOne city.',
+    body: 'The bike weaves through Kathmandu traffic. The auto fills the gaps no bus can reach. Neither has a record. Neither has a score.',
+    isTech: false,
+  },
+  SIGNAL: {
+    badge: '02 · GOING ON-CHAIN',
+    title: 'Every trip\nis now a\ntransaction.',
+    body: 'GPS check-ins, fare confirmations, route completions — every movement becomes a verifiable data point. The city starts to have memory.',
+    isTech: false,
+  },
+  PROVEN: {
+    badge: '03 · PROTOCOL LAYER',
+    title: 'Identity\nproven.\nReputation\nearned.',
+    body: 'BIKE_NODE: ZK_VERIFIED ✓\nAUTO_NODE: ZK_VERIFIED ✓\nCOMBINED_ROUTES: 3,841\n\nTwo vehicle classes. One trust layer. Immutable on Solana.',
+    isTech: true,
+  },
+  FLEET: {
+    badge: '04 · THE NETWORK',
+    title: "Nepal's full\nfleet.\nProtocolized.",
+    body: 'Bus. Taxi. Bike. Auto. Every vehicle class a node. Every driver a verified participant. No gatekeepers. No paper. Just the open road and the chain.',
+    isTech: false,
+  },
+};
+
+function BikeAutoSection() {
+  const sectionRef    = useRef<HTMLElement>(null);
+  const panelRef      = useRef<HTMLDivElement>(null);
+  const bikeImgRef    = useRef<HTMLImageElement>(null);
+  const autoImgRef    = useRef<HTMLImageElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const bikePreload   = useRef<HTMLImageElement[]>([]);
+  const autoPreload   = useRef<HTMLImageElement[]>([]);
+  const bikeFrameRef  = useRef(-1);
+  const autoFrameRef  = useRef(-1);
+  const phaseRef      = useRef<FleetPhaseKey>('ORIGINS');
+
+  const [phase, setPhase]       = useState<FleetPhaseKey>('ORIGINS');
+  const [sectionH, setSectionH] = useState('400vh');
+
+  useEffect(() => {
+    const update = () => setSectionH(window.innerWidth < 768 ? '250vh' : '400vh');
+    update();
+    window.addEventListener('resize', update, { passive: true });
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+  const scrollProgress = useMotionValue(0);
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    const panel   = panelRef.current;
+    if (!section || !panel) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && bikePreload.current.length === 0) {
+          preloadChunked(BIKE_FRAME_COUNT, bikeFrameSrc, bikePreload.current);
+          preloadChunked(AUTO_FRAME_COUNT, autoFrameSrc, autoPreload.current);
+        }
+      },
+      { rootMargin: '100% 0px' }
+    );
+    observer.observe(section);
+
+    let sectionTop    = section.offsetTop;
+    let sectionHeight = section.offsetHeight;
+    const updateGeometry = () => {
+      sectionTop    = section.offsetTop;
+      sectionHeight = section.offsetHeight;
+    };
+    window.addEventListener('resize', updateGeometry, { passive: true });
+
+    let cachedScrollY = window.scrollY;
+    const onScroll = () => { cachedScrollY = window.scrollY; };
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    let displayV    = 0;
+    let prevScrollV = 0;
+    let lastTime    = 0;
+    const AUTO_SPEED = 1 / (5 * 1000);
+
+    let rafId: number | null = null;
+    let active = false;
+
+    const tick = (time: number) => {
+      const dt = lastTime > 0 ? Math.min(time - lastTime, 50) : 16;
+      lastTime = time;
+
+      const scrollY   = cachedScrollY;
+      const vh        = window.innerHeight;
+      const maxScroll = sectionHeight - vh;
+
+      if (scrollY <= sectionTop) {
+        panel.style.position = 'absolute';
+        panel.style.top      = '0';
+        panel.style.bottom   = '';
+        displayV = 0; prevScrollV = 0;
+      } else if (scrollY >= sectionTop + maxScroll) {
+        panel.style.position = 'absolute';
+        panel.style.top      = '';
+        panel.style.bottom   = '0';
+      } else {
+        panel.style.position = 'fixed';
+        panel.style.top      = '0';
+        panel.style.bottom   = '';
+      }
+
+      const scrollV     = maxScroll > 0 ? Math.max(0, Math.min(1, (scrollY - sectionTop) / maxScroll)) : 0;
+      const inRange     = scrollY > sectionTop && scrollY < sectionTop + maxScroll;
+      const isScrolling = Math.abs(scrollV - prevScrollV) > 0.0002;
+
+      if (isScrolling) {
+        displayV = scrollV;
+      } else if (inRange) {
+        displayV = Math.min(1, displayV + AUTO_SPEED * dt);
+      }
+
+      prevScrollV = scrollV;
+      const v = displayV;
+
+      // Both sequences driven by the same v — one RAF loop, zero extra cost
+      const bc = Math.max(0, Math.min(BIKE_FRAME_COUNT - 1, Math.round(v * (BIKE_FRAME_COUNT - 1))));
+      const ac = Math.max(0, Math.min(AUTO_FRAME_COUNT - 1, Math.round(v * (AUTO_FRAME_COUNT - 1))));
+
+      if (bc !== bikeFrameRef.current) {
+        bikeFrameRef.current = bc;
+        if (bikeImgRef.current)
+          bikeImgRef.current.src = bikePreload.current[bc]?.src ?? bikeFrameSrc(bc);
+      }
+      if (ac !== autoFrameRef.current) {
+        autoFrameRef.current = ac;
+        if (autoImgRef.current)
+          autoImgRef.current.src = autoPreload.current[ac]?.src ?? autoFrameSrc(ac);
+      }
+      if (progressBarRef.current)
+        progressBarRef.current.style.height = `${v * 100}%`;
+
+      scrollProgress.set(v);
+
+      const newPhase: FleetPhaseKey =
+        bc < Math.round(BIKE_FRAME_COUNT * 0.25) ? 'ORIGINS' :
+        bc < Math.round(BIKE_FRAME_COUNT * 0.50) ? 'SIGNAL'  :
+        bc < Math.round(BIKE_FRAME_COUNT * 0.75) ? 'PROVEN'  : 'FLEET';
+
+      if (newPhase !== phaseRef.current) {
+        phaseRef.current = newPhase;
+        setPhase(newPhase);
+      }
+
+      if (active) rafId = requestAnimationFrame(tick);
+    };
+
+    const visObs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) { active = true; rafId = requestAnimationFrame(tick); }
+        else { active = false; if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; } }
+      },
+      { rootMargin: '200px 0px' }
+    );
+    visObs.observe(section);
+
+    return () => {
+      active = false;
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      observer.disconnect();
+      visObs.disconnect();
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', updateGeometry);
+    };
+  }, [scrollProgress]);
+
+  const data = FLEET_PHASES[phase];
+
+  return (
+    <section
+      id="fleet-transform"
+      ref={sectionRef}
+      style={{ height: sectionH, position: 'relative' }}
+    >
+      <motion.div
+        ref={panelRef}
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100vh', overflow: 'hidden', background: WHITE }}
+      >
+        <div className="h-full max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-4 md:gap-8 py-16">
+
+          {/* ── LEFT: Bike ── */}
+          <div className="w-full md:w-[38%] flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              ref={bikeImgRef}
+              src={bikeFrameSrc(0)}
+              alt="bike transformation"
+              width={1080}
+              height={1920}
+              className="h-auto w-auto max-h-[82vh]"
+              style={{ display: 'block' }}
+            />
+          </div>
+
+          {/* ── CENTRE: Circle text ── */}
+          <div className="w-full md:w-[24%] flex flex-col items-center justify-center gap-6">
+            {/* Phase dot rail */}
+            <div className="flex gap-2">
+              {(['ORIGINS', 'SIGNAL', 'PROVEN', 'FLEET'] as FleetPhaseKey[]).map((p) => (
+                <div
+                  key={p}
+                  style={{
+                    width: p === phase ? '24px' : '6px',
+                    height: '2px',
+                    borderRadius: '2px',
+                    background: p === phase ? (data.isTech ? CYAN : CHARCOAL) : `${CHARCOAL}20`,
+                    transition: 'width 0.4s ease, background 0.4s ease',
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Circle */}
+            <div
+              style={{
+                width: 'clamp(200px, 22vw, 280px)',
+                height: 'clamp(200px, 22vw, 280px)',
+                borderRadius: '50%',
+                border: `1.5px solid ${data.isTech ? CYAN : CHARCOAL}30`,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '20px',
+                textAlign: 'center',
+                background: data.isTech ? `${CYAN}06` : 'transparent',
+                transition: 'border-color 0.4s, background 0.4s',
+              }}
+            >
+              <div style={{ fontFamily: MONO, fontSize: '10px', color: data.isTech ? CYAN : `${CHARCOAL}50`, letterSpacing: '0.18em', marginBottom: '12px' }}>
+                {data.badge}
+              </div>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={phase}
+                  initial={{ opacity: 0, scale: 0.92 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.92 }}
+                  transition={{ duration: 0.35 }}
+                  style={{
+                    fontFamily: data.isTech ? MONO : PLAYFAIR,
+                    fontSize: data.isTech ? 'clamp(0.9rem, 1.8vw, 1.15rem)' : 'clamp(1.15rem, 2.2vw, 1.5rem)',
+                    fontWeight: 700,
+                    color: data.isTech ? CYAN : CHARCOAL,
+                    lineHeight: 1.2,
+                    letterSpacing: data.isTech ? '0.04em' : '-0.01em',
+                    whiteSpace: 'pre-line',
+                  }}
+                >
+                  {data.title}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            {/* Body text below circle */}
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={phase + '-body'}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.35, delay: 0.1 }}
+                style={{
+                  fontFamily: data.isTech ? MONO : 'inherit',
+                  fontSize: data.isTech ? '0.78rem' : '0.88rem',
+                  lineHeight: 1.75,
+                  color: data.isTech ? CYAN : `${CHARCOAL}70`,
+                  textAlign: 'center',
+                  letterSpacing: data.isTech ? '0.04em' : 'inherit',
+                  whiteSpace: 'pre-line',
+                  maxWidth: '220px',
+                }}
+              >
+                {data.body}
+              </motion.p>
+            </AnimatePresence>
+
+            {/* Progress rail */}
+            <div
+              className="hidden md:block"
+              style={{ width: '1px', height: '80px', background: `${CHARCOAL}12`, position: 'relative', marginTop: '8px' }}
+            >
+              <div ref={progressBarRef} style={{ width: '100%', height: '0%', background: CHARCOAL }} />
+            </div>
+          </div>
+
+          {/* ── RIGHT: Auto ── */}
+          <div className="w-full md:w-[38%] flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              ref={autoImgRef}
+              src={autoFrameSrc(0)}
+              alt="auto transformation"
+              width={1080}
+              height={1916}
+              className="h-auto w-auto max-h-[82vh]"
+              style={{ display: 'block' }}
+            />
           </div>
         </div>
       </motion.div>
@@ -1408,6 +2090,8 @@ export default function Home() {
       <Navbar onlineBuses={onlineBuses} />
       <HeroSection onlineBuses={onlineBuses} />
       <TransformSection />
+      <TaxiSection />
+      <BikeAutoSection />
       <DePINSection />
       <ReputationSection />
       <CTASection onlineBuses={onlineBuses} />
