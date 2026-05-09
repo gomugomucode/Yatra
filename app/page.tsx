@@ -189,7 +189,7 @@ function NepalMap({
 }
 
 // ─── Scroll-linked image sequence ────────────────────────────────────────────
-const FRAME_COUNT = 102;
+const FRAME_COUNT = 121;
 const frameSrc = (i: number) =>
   `/frames/frame_${String(i + 1).padStart(3, '0')}.jpg`;
 
@@ -685,63 +685,134 @@ function HeroSection({ onlineBuses }: { onlineBuses: number | null }) {
 
 // ─── Transformation section ───────────────────────────────────────────────────
 function TransformSection() {
-  const sectionRef  = useRef<HTMLElement>(null);
-  const frameImgRef = useRef<HTMLImageElement>(null);
-  const preloadRef  = useRef<HTMLImageElement[]>([]);
-  const frameRef    = useRef(-1);
+  const sectionRef     = useRef<HTMLElement>(null);
+  const panelRef       = useRef<HTMLDivElement>(null);
+  const frameImgRef    = useRef<HTMLImageElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const preloadRef     = useRef<HTMLImageElement[]>([]);
+  const frameRef       = useRef(-1);
+  const phaseRef       = useRef<PhaseKey>('FOLK');
 
-  const [frameIndex, setFrameIndex] = useState(0);
+  const [phase, setPhase] = useState<PhaseKey>('FOLK');
 
-  const phase: PhaseKey =
-    frameIndex < Math.round(FRAME_COUNT * 0.25) ? 'FOLK'     :
-    frameIndex < Math.round(FRAME_COUNT * 0.50) ? 'SHIFT'    :
-    frameIndex < Math.round(FRAME_COUNT * 0.75) ? 'CODE'     : 'PROTOCOL';
-
-  const progress    = FRAME_COUNT > 1 ? frameIndex / (FRAME_COUNT - 1) : 0;
-  const progressPct = `${progress * 100}%`;
-  const bgColor     =
-    progress < 0.40 ? WHITE     :
-    progress < 0.65 ? '#F5F0EC' :
-    progress < 0.85 ? '#F0F5F4' : WHITE;
-
-  const data = PHASES[phase];
+  const scrollProgress = useMotionValue(0);
+  const bgColor = useTransform(
+    scrollProgress,
+    [0, 0.40, 0.65, 0.85, 1],
+    [WHITE, WHITE, '#F5F0EC', '#F0F5F4', WHITE],
+  );
 
   useEffect(() => {
-    preloadRef.current = Array.from({ length: FRAME_COUNT }, (_, i) => {
-      const img = document.createElement('img') as HTMLImageElement;
-      img.src = frameSrc(i);
-      return img;
-    });
-
     const section = sectionRef.current;
-    if (!section) return;
+    const panel   = panelRef.current;
+    if (!section || !panel) return;
 
-    const renderFrame = (idx: number) => {
-      const c = Math.max(0, Math.min(FRAME_COUNT - 1, idx));
-      if (c === frameRef.current) return;
-      frameRef.current = c;
-      if (frameImgRef.current)
-        frameImgRef.current.src = preloadRef.current[c]?.src ?? frameSrc(c);
-      setFrameIndex(c);
-    };
+    // Lazy-preload frames only when section is ~1 viewport away
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && preloadRef.current.length === 0) {
+          preloadRef.current = Array.from({ length: FRAME_COUNT }, (_, i) => {
+            const img = document.createElement('img') as HTMLImageElement;
+            img.src = frameSrc(i);
+            return img;
+          });
+        }
+      },
+      { rootMargin: '100% 0px' }
+    );
+    observer.observe(section);
+
+    // Auto-play state — lives in closure, no React state needed
+    let autoV      = 0;   // auto-play progress 0→1
+    let displayV   = 0;   // smooth displayed progress (lerped)
+    let prevScrollV = 0;  // to detect backward scroll
+    let lastTime   = 0;
+
+    // ~4 s to complete auto-play on its own; user scroll can race ahead
+    const AUTO_SPEED = 1 / (4 * 1000);
 
     let rafId: number;
-    const tick = () => {
-      const rect      = section.getBoundingClientRect();
-      const inView    = rect.top < window.innerHeight && rect.bottom > 0;
 
-      if (inView) {
-        const maxScroll = section.offsetHeight - window.innerHeight;
-        const scrollPct = maxScroll > 0 ? Math.max(0, Math.min(1, -rect.top / maxScroll)) : 0;
-        renderFrame(Math.round(scrollPct * (FRAME_COUNT - 1)));
+    const tick = (time: number) => {
+      const dt = lastTime > 0 ? Math.min(time - lastTime, 50) : 16;
+      lastTime = time;
+
+      const scrollY       = window.scrollY;
+      const sectionTop    = section.offsetTop;
+      const sectionHeight = section.offsetHeight;
+      const vh            = window.innerHeight;
+      const maxScroll     = sectionHeight - vh;
+
+      // JS-based sticky pin
+      if (scrollY <= sectionTop) {
+        panel.style.position = 'absolute';
+        panel.style.top      = '0';
+        panel.style.bottom   = '';
+        // Reset when above section so auto restarts on re-entry
+        autoV = 0; displayV = 0; prevScrollV = 0;
+      } else if (scrollY >= sectionTop + maxScroll) {
+        panel.style.position = 'absolute';
+        panel.style.top      = '';
+        panel.style.bottom   = '0';
+      } else {
+        panel.style.position = 'fixed';
+        panel.style.top      = '0';
+        panel.style.bottom   = '';
+      }
+
+      const scrollV = maxScroll > 0
+        ? Math.max(0, Math.min(1, (scrollY - sectionTop) / maxScroll))
+        : 0;
+
+      const inRange   = scrollY > sectionTop && scrollY < sectionTop + maxScroll;
+      // Detect active scrolling — threshold ignores float noise
+      const isScrolling = Math.abs(scrollV - prevScrollV) > 0.0003;
+
+      if (isScrolling) {
+        // Lenis already smoothed the scroll — snap directly, no inner lerp
+        autoV    = scrollV;
+        displayV = scrollV;
+      } else if (inRange) {
+        // No scroll → auto-play advances at its own pace with gentle lerp
+        autoV   = Math.min(1, autoV + AUTO_SPEED * dt);
+        displayV += (autoV - displayV) * 0.04;
+      } else {
+        displayV += (autoV - displayV) * 0.04;
+      }
+
+      prevScrollV = scrollV;
+
+      const v = displayV;
+      const c = Math.max(0, Math.min(FRAME_COUNT - 1, Math.round(v * (FRAME_COUNT - 1))));
+
+      if (c !== frameRef.current) {
+        frameRef.current = c;
+        if (frameImgRef.current)
+          frameImgRef.current.src = preloadRef.current[c]?.src ?? frameSrc(c);
+      }
+      if (progressBarRef.current)
+        progressBarRef.current.style.height = `${v * 100}%`;
+
+      scrollProgress.set(v);
+
+      const newPhase: PhaseKey =
+        c < Math.round(FRAME_COUNT * 0.25) ? 'FOLK'  :
+        c < Math.round(FRAME_COUNT * 0.50) ? 'SHIFT' :
+        c < Math.round(FRAME_COUNT * 0.75) ? 'CODE'  : 'PROTOCOL';
+
+      if (newPhase !== phaseRef.current) {
+        phaseRef.current = newPhase;
+        setPhase(newPhase);
       }
 
       rafId = requestAnimationFrame(tick);
     };
 
     rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
-  }, []);
+    return () => { cancelAnimationFrame(rafId); observer.disconnect(); };
+  }, [scrollProgress]);
+
+  const data = PHASES[phase];
 
   return (
     <section
@@ -749,9 +820,18 @@ function TransformSection() {
       ref={sectionRef}
       style={{ height: '400vh', position: 'relative' }}
     >
-      <div
-        className="sticky top-0 h-screen overflow-hidden"
-        style={{ background: bgColor, transition: 'background 0.6s ease' }}
+      {/* Panel starts absolute, becomes position:fixed while pinned, absolute again at end */}
+      <motion.div
+        ref={panelRef}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100vh',
+          overflow: 'hidden',
+          backgroundColor: bgColor,
+        }}
       >
         {/* Progress rail */}
         <div
@@ -759,8 +839,9 @@ function TransformSection() {
           style={{ height: '140px', background: `${CHARCOAL}12`, zIndex: 10 }}
         >
           <div
+            ref={progressBarRef}
             className="w-full"
-            style={{ height: progressPct, background: CHARCOAL, transition: 'height 0.1s' }}
+            style={{ height: '0%', background: CHARCOAL }}
           />
           {(['FOLK', 'SHIFT', 'CODE', 'PROTOCOL'] as PhaseKey[]).map((p, i) => (
             <div
@@ -776,10 +857,9 @@ function TransformSection() {
           ))}
         </div>
 
-        <div className="h-full max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-8 md:gap-16 py-20">
+        <div className="h-full max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-8 md:gap-14 py-20">
           {/* ── LEFT: Phase text ── */}
-          <div className="w-full md:w-5/12 flex flex-col justify-center">
-            {/* Phase badge */}
+          <div className="w-full md:w-7/12 flex flex-col justify-center">
             <div
               className="mb-8 inline-block"
               style={{ fontFamily: MONO, fontSize: '10px', letterSpacing: '0.22em', color: data.isTech ? CYAN : DARK_GREEN }}
@@ -787,7 +867,6 @@ function TransformSection() {
               {data.badge}
             </div>
 
-            {/* Headline — morphs between Playfair and Mono */}
             <AnimatePresence mode="wait">
               <motion.h2
                 key={phase + '-title'}
@@ -797,20 +876,19 @@ function TransformSection() {
                 transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                 style={{
                   fontFamily: data.isTech ? MONO : PLAYFAIR,
-                  fontSize: data.isTech ? 'clamp(1.6rem, 4vw, 3rem)' : 'clamp(2rem, 5vw, 3.8rem)',
-                  fontWeight: data.isTech ? 700 : 700,
+                  fontSize: data.isTech ? 'clamp(1.6rem, 3vw, 2.6rem)' : 'clamp(2rem, 4vw, 3.4rem)',
+                  fontWeight: 700,
                   lineHeight: data.isTech ? 1.15 : 0.95,
                   color: CHARCOAL,
                   letterSpacing: data.isTech ? '0.02em' : '-0.02em',
                   whiteSpace: 'pre-line',
-                  marginBottom: '1.5rem',
+                  marginBottom: '1.25rem',
                 }}
               >
                 {data.title}
               </motion.h2>
             </AnimatePresence>
 
-            {/* Body text */}
             <AnimatePresence mode="wait">
               <motion.p
                 key={phase + '-body'}
@@ -820,19 +898,18 @@ function TransformSection() {
                 transition={{ duration: 0.4, delay: 0.1 }}
                 style={{
                   fontFamily: data.isTech ? MONO : 'inherit',
-                  fontSize: data.isTech ? '0.78rem' : '1rem',
+                  fontSize: data.isTech ? '0.82rem' : '1rem',
                   lineHeight: 1.75,
                   color: data.isTech ? CYAN : `${CHARCOAL}65`,
                   whiteSpace: 'pre-line',
                   letterSpacing: data.isTech ? '0.04em' : 'inherit',
-                  maxWidth: '380px',
+                  maxWidth: '480px',
                 }}
               >
                 {data.body}
               </motion.p>
             </AnimatePresence>
 
-            {/* Phase progress indicator */}
             <div className="mt-12 flex gap-3">
               {(['FOLK', 'SHIFT', 'CODE', 'PROTOCOL'] as PhaseKey[]).map((p) => (
                 <div
@@ -849,25 +926,23 @@ function TransformSection() {
             </div>
           </div>
 
-          {/* ── RIGHT: Visual ── */}
-          <div className="w-full md:w-7/12 relative flex items-center justify-center">
-            {/* Frame sequence */}
-            <div className="relative w-full max-w-lg flex items-center justify-center">
+          {/* ── RIGHT: Frame sequence ── */}
+          <div className="w-full md:w-5/12 relative flex items-center justify-center">
+            <div className="relative w-full flex items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 ref={frameImgRef}
                 src={frameSrc(0)}
-                alt="transformation"
-                width={640}
-                height={511}
+                alt="bus transformation"
+                width={1176}
+                height={780}
                 className="w-full h-auto"
                 style={{ display: 'block' }}
               />
-
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }
