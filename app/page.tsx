@@ -188,48 +188,86 @@ function NepalMap({
   );
 }
 
-// ─── Scroll-linked image sequence ────────────────────────────────────────────
+// ─── Scroll-linked video sequence ────────────────────────────────────────────
 const FRAME_COUNT = 121;
-const frameSrc = (i: number) =>
-  `/frames/frame_${String(i + 1).padStart(3, '0')}.jpg`;
 
-type RICWindow = Window & { requestIdleCallback: (cb: () => void, o?: object) => void };
-const ric = (cb: () => void, timeout: number) =>
-  'requestIdleCallback' in window
-    ? (window as RICWindow).requestIdleCallback(cb, { timeout })
-    : setTimeout(cb, 16);
+const FPS = 25;
+const VIDEO_DURATION = (121 - 1) / 25; // 4.8 s
 
-// Phase 1: load 5 keyframes immediately so any scroll position has a nearby frame.
-// Phase 2: fill all remaining frames in chunks of 16 during idle time.
-// If bitmaps[] is supplied, each loaded img is also decoded into an ImageBitmap
-// (off-main-thread via createImageBitmap) for zero-cost canvas drawing.
-function preloadChunked(
-  count: number,
-  src: (i: number) => string,
-  target: HTMLImageElement[],
-  bitmaps?: Array<ImageBitmap | null>
-) {
-  const loadOne = (k: number) => {
-    if (target[k]) return;
-    const img = new window.Image();
-    img.src = src(k);
-    target[k] = img;
-    if (bitmaps) {
-      img.onload = () =>
-        createImageBitmap(img)
-          .then(bm => { bitmaps[k] = bm; })
-          .catch(() => { bitmaps[k] = null; });
-    }
-  };
-  const keyframes = [0, Math.round(count * 0.25), Math.round(count * 0.5), Math.round(count * 0.75), count - 1];
-  keyframes.forEach(loadOne);
-  let i = 0;
-  const next = () => {
-    const end = Math.min(i + 16, count);
-    for (; i < end; i++) loadOne(i);
-    if (i < count) ric(next, 150);
-  };
-  ric(next, 80);
+function Preloader({ onReady }: { onReady: () => void }) {
+  const [pct, setPct] = useState(0);
+  const [gone, setGone] = useState(false);
+
+  useEffect(() => {
+    const srcs = ['/videos/bus.mp4', '/videos/taxi.mp4', '/videos/bike.mp4', '/videos/auto.mp4'];
+    const readyFlags = [false, false, false, false];
+
+    const finish = () => {
+      setPct(100);
+      setTimeout(() => { setGone(true); onReady(); }, 500);
+    };
+
+    const els = srcs.map((src, i) => {
+      const v = document.createElement('video');
+      v.src = src;
+      v.muted = true;
+      v.playsInline = true;
+      v.preload = 'auto';
+      v.oncanplaythrough = () => {
+        if (!readyFlags[i]) {
+          readyFlags[i] = true;
+          const done = readyFlags.filter(Boolean).length;
+          setPct(Math.round((done / srcs.length) * 100));
+          if (done === srcs.length) finish();
+        }
+      };
+      v.onprogress = () => {
+        const total = readyFlags.filter(Boolean).length;
+        let extra = 0;
+        srcs.forEach((_, j) => {
+          if (!readyFlags[j] && els[j]?.buffered.length) {
+            try { extra += els[j].buffered.end(0) / (VIDEO_DURATION || 4.8); } catch { /* */ }
+          }
+        });
+        setPct(Math.min(99, Math.round(((total + extra) / srcs.length) * 100)));
+      };
+      return v;
+    });
+
+    // Fallback: never block longer than 8s
+    const timer = setTimeout(finish, 8000);
+    return () => { clearTimeout(timer); els.forEach(v => { v.src = ''; }); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (gone) return null;
+  return (
+    <motion.div
+      initial={{ opacity: 1 }}
+      animate={{ opacity: gone ? 0 : 1 }}
+      transition={{ duration: 0.5 }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: '#0F1117',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: '32px',
+      }}
+    >
+      <div style={{ fontFamily: 'var(--font-playfair)', fontSize: 'clamp(2rem, 6vw, 3.5rem)', fontWeight: 700, color: '#FAFAFA', letterSpacing: '-0.02em' }}>
+        YATRA
+      </div>
+      <div style={{ width: '160px', height: '1px', background: 'rgba(250,250,250,0.12)', position: 'relative', overflow: 'hidden' }}>
+        <motion.div
+          style={{ position: 'absolute', inset: 0, background: '#00D4AA', transformOrigin: 'left center' }}
+          animate={{ scaleX: pct / 100 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+        />
+      </div>
+      <div style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: '10px', color: 'rgba(250,250,250,0.35)', letterSpacing: '0.2em' }}>
+        {pct < 100 ? `${pct}%` : 'READY'}
+      </div>
+    </motion.div>
+  );
 }
 
 // ─── Bus SVG removed — replaced by scroll-linked frame sequence ──────────────
@@ -726,10 +764,8 @@ function HeroSection({ onlineBuses }: { onlineBuses: number | null }) {
 function TransformSection() {
   const sectionRef     = useRef<HTMLElement>(null);
   const panelRef       = useRef<HTMLDivElement>(null);
-  const frameImgRef    = useRef<HTMLImageElement>(null);
+  const videoRef       = useRef<HTMLVideoElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
-  const preloadRef     = useRef<HTMLImageElement[]>([]);
-  const frameRef       = useRef(-1);
   const phaseRef       = useRef<PhaseKey>('FOLK');
 
   const [phase, setPhase]       = useState<PhaseKey>('FOLK');
@@ -754,16 +790,6 @@ function TransformSection() {
     const panel   = panelRef.current;
     if (!section || !panel) return;
 
-    // Lazy-preload in idle-time chunks when section approaches
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && preloadRef.current.length === 0)
-          preloadChunked(FRAME_COUNT, frameSrc, preloadRef.current);
-      },
-      { rootMargin: '350% 0px' }
-    );
-    observer.observe(section);
-
     // Cache geometry — reading offsetTop in every RAF tick forces layout reflow
     let sectionTop    = section.offsetTop;
     let sectionHeight = section.offsetHeight;
@@ -778,10 +804,11 @@ function TransformSection() {
     const onScroll = () => { cachedScrollY = window.scrollY; };
     window.addEventListener('scroll', onScroll, { passive: true });
 
-    let displayV    = 0;
-    let prevScrollV = 0;
-    let lastTime    = 0;
-    const AUTO_SPEED = 1 / (5 * 1000);
+    let displayV      = 0;
+    let prevScrollV   = 0;
+    let lastTime      = 0;
+    let vidAutoPlaying = false;
+    const AUTO_SPEED  = 1 / (5 * 1000);
 
     let rafId: number | null = null;
     let active = false;
@@ -790,9 +817,9 @@ function TransformSection() {
       const dt = lastTime > 0 ? Math.min(time - lastTime, 50) : 16;
       lastTime = time;
 
-      const scrollY = cachedScrollY;
-      const vh      = window.innerHeight;
-      const maxScroll     = sectionHeight - vh;
+      const scrollY   = cachedScrollY;
+      const vh        = window.innerHeight;
+      const maxScroll = sectionHeight - vh;
 
       // JS-based sticky pin
       if (scrollY <= sectionTop) {
@@ -801,6 +828,7 @@ function TransformSection() {
         panel.style.bottom   = '';
         // Reset when above section so auto restarts on re-entry
         displayV = 0; prevScrollV = 0;
+        if (vidAutoPlaying) { videoRef.current?.pause(); vidAutoPlaying = false; }
       } else if (scrollY >= sectionTop + maxScroll) {
         panel.style.position = 'absolute';
         panel.style.top      = '';
@@ -811,40 +839,60 @@ function TransformSection() {
         panel.style.bottom   = '';
       }
 
-      const scrollV = maxScroll > 0
-        ? Math.max(0, Math.min(1, (scrollY - sectionTop) / maxScroll))
-        : 0;
-
+      const scrollV     = maxScroll > 0 ? Math.max(0, Math.min(1, (scrollY - sectionTop) / maxScroll)) : 0;
       const inRange     = scrollY > sectionTop && scrollY < sectionTop + maxScroll;
       const isScrolling = Math.abs(scrollV - prevScrollV) > 0.0002;
 
       if (isScrolling) {
-        // Snap directly to scroll — Lenis already smoothed it
         displayV = scrollV;
       } else if (inRange) {
-        // Auto-play: constant linear speed, no lerp so it never lags
         displayV = Math.min(1, displayV + AUTO_SPEED * dt);
       }
 
       prevScrollV = scrollV;
 
-      const v = displayV;
-      const c = Math.max(0, Math.min(FRAME_COUNT - 1, Math.round(v * (FRAME_COUNT - 1))));
+      const vid = videoRef.current;
+      // Reset stale flag if video ended or paused externally
+      if (vidAutoPlaying && vid && (vid.paused || vid.ended)) vidAutoPlaying = false;
 
-      if (c !== frameRef.current) {
-        frameRef.current = c;
-        const qf = preloadRef.current[c];
-        if (frameImgRef.current && qf?.src) frameImgRef.current.src = qf.src;
+      if (isScrolling) {
+        // Scroll: pause native playback, seek precisely
+        if (vidAutoPlaying) { vid?.pause(); vidAutoPlaying = false; }
+        if (vid && vid.readyState >= 2) {
+          const tf = Math.round(displayV * VIDEO_DURATION * FPS);
+          const cf = Math.round(vid.currentTime * FPS);
+          if (tf !== cf) vid.currentTime = tf / FPS;
+        }
+      } else if (inRange && displayV < 0.999) {
+        if (!vidAutoPlaying && vid) {
+          if (vid.readyState >= 3) {
+            // Enough data buffered — native playback gives 60fps smooth rendering
+            vid.playbackRate = 0.96;
+            vid.currentTime  = displayV * VIDEO_DURATION;
+            vid.play().catch(() => { vidAutoPlaying = false; });
+            vidAutoPlaying = true;
+          } else if (vid.readyState >= 2) {
+            // Not enough future data yet — scrub frame-by-frame until buffered
+            const tf = Math.round(displayV * VIDEO_DURATION * FPS);
+            const cf = Math.round(vid.currentTime * FPS);
+            if (tf !== cf) vid.currentTime = tf / FPS;
+          }
+        }
+      } else {
+        if (vidAutoPlaying) { vid?.pause(); vidAutoPlaying = false; }
       }
+
+      const v = displayV;
+
       if (progressBarRef.current)
         progressBarRef.current.style.height = `${v * 100}%`;
 
       scrollProgress.set(v);
 
       const newPhase: PhaseKey =
-        c < Math.round(FRAME_COUNT * 0.25) ? 'FOLK'  :
-        c < Math.round(FRAME_COUNT * 0.50) ? 'SHIFT' :
-        c < Math.round(FRAME_COUNT * 0.75) ? 'CODE'  : 'PROTOCOL';
+        v < 0.25 ? 'FOLK'  :
+        v < 0.50 ? 'SHIFT' :
+        v < 0.75 ? 'CODE'  : 'PROTOCOL';
 
       if (newPhase !== phaseRef.current) {
         phaseRef.current = newPhase;
@@ -858,7 +906,10 @@ function TransformSection() {
     const visObs = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) { active = true; rafId = requestAnimationFrame(tick); }
-        else { active = false; if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; } }
+        else {
+          active = false; if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+          if (vidAutoPlaying) { videoRef.current?.pause(); vidAutoPlaying = false; }
+        }
       },
       { rootMargin: '200px 0px' }
     );
@@ -867,7 +918,6 @@ function TransformSection() {
     return () => {
       active = false;
       if (rafId !== null) cancelAnimationFrame(rafId);
-      observer.disconnect();
       visObs.disconnect();
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', updateGeometry);
@@ -991,15 +1041,13 @@ function TransformSection() {
           {/* ── RIGHT: Frame sequence ── */}
           <div className="w-full md:w-5/12 relative flex items-center justify-center">
             <div className="relative w-full flex items-center justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                ref={frameImgRef}
-                src={frameSrc(0)}
-                alt="bus transformation"
-                width={1176}
-                height={780}
-                className="w-full h-auto"
-                style={{ display: 'block' }}
+              <video
+                ref={videoRef}
+                src="/videos/bus.mp4"
+                muted
+                playsInline
+                preload="auto"
+                style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain' }}
               />
             </div>
           </div>
@@ -1010,9 +1058,6 @@ function TransformSection() {
 }
 
 // ─── Taxi section ─────────────────────────────────────────────────────────────
-const TAXI_FRAME_COUNT = 121;
-const taxiFrameSrc = (i: number) =>
-  `/frames-taxi/frame_${String(i + 1).padStart(3, '0')}.jpg`;
 
 type TaxiPhaseKey = 'STREET' | 'CONNECT' | 'VERIFY' | 'MESH';
 
@@ -1046,10 +1091,8 @@ const TAXI_PHASES: Record<TaxiPhaseKey, { badge: string; title: string; body: st
 function TaxiSection() {
   const sectionRef     = useRef<HTMLElement>(null);
   const panelRef       = useRef<HTMLDivElement>(null);
-  const frameImgRef    = useRef<HTMLImageElement>(null);
+  const videoRef       = useRef<HTMLVideoElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
-  const preloadRef     = useRef<HTMLImageElement[]>([]);
-  const frameRef       = useRef(-1);
   const phaseRef       = useRef<TaxiPhaseKey>('STREET');
 
   const [phase, setPhase]       = useState<TaxiPhaseKey>('STREET');
@@ -1074,15 +1117,6 @@ function TaxiSection() {
     const panel   = panelRef.current;
     if (!section || !panel) return;
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && preloadRef.current.length === 0)
-          preloadChunked(TAXI_FRAME_COUNT, taxiFrameSrc, preloadRef.current);
-      },
-      { rootMargin: '350% 0px' }
-    );
-    observer.observe(section);
-
     let sectionTop    = section.offsetTop;
     let sectionHeight = section.offsetHeight;
     const updateGeometry = () => {
@@ -1095,10 +1129,11 @@ function TaxiSection() {
     const onScroll = () => { cachedScrollY = window.scrollY; };
     window.addEventListener('scroll', onScroll, { passive: true });
 
-    let displayV    = 0;
-    let prevScrollV = 0;
-    let lastTime    = 0;
-    const AUTO_SPEED = 1 / (5 * 1000);
+    let displayV      = 0;
+    let prevScrollV   = 0;
+    let lastTime      = 0;
+    let vidAutoPlaying = false;
+    const AUTO_SPEED  = 1 / (5 * 1000);
 
     let rafId: number | null = null;
     let active = false;
@@ -1107,8 +1142,8 @@ function TaxiSection() {
       const dt = lastTime > 0 ? Math.min(time - lastTime, 50) : 16;
       lastTime = time;
 
-      const scrollY  = cachedScrollY;
-      const vh       = window.innerHeight;
+      const scrollY   = cachedScrollY;
+      const vh        = window.innerHeight;
       const maxScroll = sectionHeight - vh;
 
       if (scrollY <= sectionTop) {
@@ -1116,6 +1151,7 @@ function TaxiSection() {
         panel.style.top      = '0';
         panel.style.bottom   = '';
         displayV = 0; prevScrollV = 0;
+        if (vidAutoPlaying) { videoRef.current?.pause(); vidAutoPlaying = false; }
       } else if (scrollY >= sectionTop + maxScroll) {
         panel.style.position = 'absolute';
         panel.style.top      = '';
@@ -1126,10 +1162,7 @@ function TaxiSection() {
         panel.style.bottom   = '';
       }
 
-      const scrollV = maxScroll > 0
-        ? Math.max(0, Math.min(1, (scrollY - sectionTop) / maxScroll))
-        : 0;
-
+      const scrollV     = maxScroll > 0 ? Math.max(0, Math.min(1, (scrollY - sectionTop) / maxScroll)) : 0;
       const inRange     = scrollY > sectionTop && scrollY < sectionTop + maxScroll;
       const isScrolling = Math.abs(scrollV - prevScrollV) > 0.0002;
 
@@ -1141,23 +1174,44 @@ function TaxiSection() {
 
       prevScrollV = scrollV;
 
-      const v = displayV;
-      const c = Math.max(0, Math.min(TAXI_FRAME_COUNT - 1, Math.round(v * (TAXI_FRAME_COUNT - 1))));
+      const vid = videoRef.current;
+      if (vidAutoPlaying && vid && (vid.paused || vid.ended)) vidAutoPlaying = false;
 
-      if (c !== frameRef.current) {
-        frameRef.current = c;
-        const qt = preloadRef.current[c];
-        if (frameImgRef.current && qt?.src) frameImgRef.current.src = qt.src;
+      if (isScrolling) {
+        if (vidAutoPlaying) { vid?.pause(); vidAutoPlaying = false; }
+        if (vid && vid.readyState >= 2) {
+          const tf = Math.round(displayV * VIDEO_DURATION * FPS);
+          const cf = Math.round(vid.currentTime * FPS);
+          if (tf !== cf) vid.currentTime = tf / FPS;
+        }
+      } else if (inRange && displayV < 0.999) {
+        if (!vidAutoPlaying && vid) {
+          if (vid.readyState >= 3) {
+            vid.playbackRate = 0.96;
+            vid.currentTime  = displayV * VIDEO_DURATION;
+            vid.play().catch(() => { vidAutoPlaying = false; });
+            vidAutoPlaying = true;
+          } else if (vid.readyState >= 2) {
+            const tf = Math.round(displayV * VIDEO_DURATION * FPS);
+            const cf = Math.round(vid.currentTime * FPS);
+            if (tf !== cf) vid.currentTime = tf / FPS;
+          }
+        }
+      } else {
+        if (vidAutoPlaying) { vid?.pause(); vidAutoPlaying = false; }
       }
+
+      const v = displayV;
+
       if (progressBarRef.current)
         progressBarRef.current.style.height = `${v * 100}%`;
 
       scrollProgress.set(v);
 
       const newPhase: TaxiPhaseKey =
-        c < Math.round(TAXI_FRAME_COUNT * 0.25) ? 'STREET'  :
-        c < Math.round(TAXI_FRAME_COUNT * 0.50) ? 'CONNECT' :
-        c < Math.round(TAXI_FRAME_COUNT * 0.75) ? 'VERIFY'  : 'MESH';
+        v < 0.25 ? 'STREET'  :
+        v < 0.50 ? 'CONNECT' :
+        v < 0.75 ? 'VERIFY'  : 'MESH';
 
       if (newPhase !== phaseRef.current) {
         phaseRef.current = newPhase;
@@ -1170,7 +1224,10 @@ function TaxiSection() {
     const visObs = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) { active = true; rafId = requestAnimationFrame(tick); }
-        else { active = false; if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; } }
+        else {
+          active = false; if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+          if (vidAutoPlaying) { videoRef.current?.pause(); vidAutoPlaying = false; }
+        }
       },
       { rootMargin: '200px 0px' }
     );
@@ -1179,7 +1236,6 @@ function TaxiSection() {
     return () => {
       active = false;
       if (rafId !== null) cancelAnimationFrame(rafId);
-      observer.disconnect();
       visObs.disconnect();
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', updateGeometry);
@@ -1234,15 +1290,13 @@ function TaxiSection() {
           {/* ── LEFT: Frame sequence ── */}
           <div className="w-full md:w-5/12 relative flex items-center justify-center">
             <div className="relative w-full flex items-center justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                ref={frameImgRef}
-                src={taxiFrameSrc(0)}
-                alt="taxi transformation"
-                width={1172}
-                height={1764}
-                className="h-[45vh] w-auto md:h-full md:max-h-[80vh]"
-                style={{ display: 'block' }}
+              <video
+                ref={videoRef}
+                src="/videos/taxi.mp4"
+                muted
+                playsInline
+                preload="auto"
+                style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain' }}
               />
             </div>
           </div>
@@ -1321,10 +1375,6 @@ function TaxiSection() {
 }
 
 // ─── Bike + Auto section (three-column) ──────────────────────────────────────
-const BIKE_FRAME_COUNT = 121;
-const AUTO_FRAME_COUNT = 121;
-const bikeFrameSrc = (i: number) => `/frames-bike/frame_${String(i + 1).padStart(3, '0')}.jpg`;
-const autoFrameSrc = (i: number) => `/frames-auto/frame_${String(i + 1).padStart(3, '0')}.jpg`;
 
 type FleetPhaseKey = 'ORIGINS' | 'SIGNAL' | 'PROVEN' | 'FLEET';
 
@@ -1384,22 +1434,15 @@ function MobileCircle({ mobilePhase, suffix }: { mobilePhase: FleetPhaseKey; suf
 }
 
 function BikeAutoSection() {
-  const sectionRef    = useRef<HTMLElement>(null);
-  const panelRef      = useRef<HTMLDivElement>(null);
-  const bikeImgRef    = useRef<HTMLImageElement>(null);
-  const autoImgRef    = useRef<HTMLImageElement>(null);
-  const bikeCanvasMobileRef = useRef<HTMLCanvasElement>(null);
-  const autoCanvasMobileRef = useRef<HTMLCanvasElement>(null);
-  const bikeBitmaps      = useRef<Array<ImageBitmap | null>>([]);
-  const autoBitmaps      = useRef<Array<ImageBitmap | null>>([]);
+  const sectionRef       = useRef<HTMLElement>(null);
+  const panelRef         = useRef<HTMLDivElement>(null);
+  const bikeVideoRef     = useRef<HTMLVideoElement>(null); // desktop
+  const autoVideoRef     = useRef<HTMLVideoElement>(null); // desktop
+  const bikeVideoMobileRef = useRef<HTMLVideoElement>(null); // mobile
+  const autoVideoMobileRef = useRef<HTMLVideoElement>(null); // mobile
   const mobilePanelRef   = useRef<HTMLDivElement>(null);
   const mobileViewRef    = useRef<'bike' | 'auto'>('bike');
   const mobilePhaseRef   = useRef<FleetPhaseKey>('ORIGINS');
-  const progressBarRef   = useRef<HTMLDivElement>(null);
-  const bikePreload      = useRef<HTMLImageElement[]>([]);
-  const autoPreload      = useRef<HTMLImageElement[]>([]);
-  const bikeFrameRef     = useRef(-1);
-  const autoFrameRef     = useRef(-1);
   const phaseRef         = useRef<FleetPhaseKey>('ORIGINS');
 
   const [phase, setPhase]             = useState<FleetPhaseKey>('ORIGINS');
@@ -1414,17 +1457,6 @@ function BikeAutoSection() {
     const panel   = panelRef.current;
     if (!section || !panel) return;
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && bikePreload.current.length === 0) {
-          preloadChunked(BIKE_FRAME_COUNT, bikeFrameSrc, bikePreload.current, bikeBitmaps.current);
-          setTimeout(() => preloadChunked(AUTO_FRAME_COUNT, autoFrameSrc, autoPreload.current, autoBitmaps.current), 800);
-        }
-      },
-      { rootMargin: '350% 0px' }
-    );
-    observer.observe(section);
-
     let sectionTop    = section.offsetTop;
     let sectionHeight = section.offsetHeight;
     const updateGeometry = () => {
@@ -1437,10 +1469,12 @@ function BikeAutoSection() {
     const onScroll = () => { cachedScrollY = window.scrollY; };
     window.addEventListener('scroll', onScroll, { passive: true });
 
-    let displayV    = 0;
-    let prevScrollV = 0;
-    let lastTime    = 0;
-    const AUTO_SPEED = 1 / (5 * 1000);
+    let displayV        = 0;
+    let prevScrollV     = 0;
+    let lastTime        = 0;
+    let bikeDesktopPlay = false;
+    let autoDesktopPlay = false;
+    const AUTO_SPEED    = 1 / (5 * 1000);
 
     let rafId: number | null = null;
     let active = false;
@@ -1458,6 +1492,8 @@ function BikeAutoSection() {
         panel.style.top      = '0';
         panel.style.bottom   = '';
         displayV = 0; prevScrollV = 0;
+        if (bikeDesktopPlay) { bikeVideoRef.current?.pause(); bikeDesktopPlay = false; }
+        if (autoDesktopPlay) { autoVideoRef.current?.pause(); autoDesktopPlay = false; }
       } else if (scrollY >= sectionTop + maxScroll) {
         panel.style.position = 'absolute';
         panel.style.top      = '';
@@ -1477,37 +1513,68 @@ function BikeAutoSection() {
       } else if (inRange) {
         displayV = Math.min(1, displayV + AUTO_SPEED * dt);
       }
-      // Mobile: stop auto-play just below v=0.5 so user must scroll to switch from bike to auto
-      if (mobileViewRef.current === 'bike' && !isScrolling) {
-        displayV = Math.min(displayV, 0.499);
+      prevScrollV = scrollV;
+
+      const bikeD = bikeVideoRef.current;
+      const autoD = autoVideoRef.current;
+
+      // Reset stale play flags — video ended or paused externally while flag was still true
+      if (bikeDesktopPlay && bikeD && (bikeD.paused || bikeD.ended)) bikeDesktopPlay = false;
+      if (autoDesktopPlay && autoD && (autoD.paused || autoD.ended)) autoDesktopPlay = false;
+
+      const seekFrame = (vid: HTMLVideoElement | null, t: number) => {
+        if (!vid) return;
+        const tf = Math.round(t * FPS); const cf = Math.round(vid.currentTime * FPS);
+        if (tf !== cf) vid.currentTime = tf / FPS;
+      };
+
+      const canAutoPlay = !isScrolling && inRange && displayV < 0.999;
+
+      if (isScrolling) {
+        // Scroll: pause native playback and seek precisely
+        if (bikeDesktopPlay) { bikeD?.pause(); bikeDesktopPlay = false; }
+        if (autoDesktopPlay) { autoD?.pause(); autoDesktopPlay = false; }
+        seekFrame(bikeD, displayV * VIDEO_DURATION);
+        seekFrame(autoD, displayV * VIDEO_DURATION);
+      } else if (canAutoPlay) {
+        // Auto-play: play() BEFORE currentTime to avoid AbortError (seek-while-paused race)
+        if (!bikeDesktopPlay && bikeD) {
+          if (bikeD.readyState >= 3) {
+            bikeD.playbackRate = 0.96;
+            bikeD.play().catch(() => { bikeDesktopPlay = false; });
+            bikeD.currentTime = displayV * VIDEO_DURATION;
+            bikeDesktopPlay = true;
+          } else if (bikeD.readyState >= 2) { seekFrame(bikeD, displayV * VIDEO_DURATION); }
+        }
+        if (!autoDesktopPlay && autoD) {
+          if (autoD.readyState >= 3) {
+            autoD.playbackRate = 0.96;
+            autoD.play().catch(() => { autoDesktopPlay = false; });
+            autoD.currentTime = displayV * VIDEO_DURATION;
+            autoDesktopPlay = true;
+          } else if (autoD.readyState >= 2) { seekFrame(autoD, displayV * VIDEO_DURATION); }
+        }
+      } else if (!isScrolling) {
+        // Paused at cap or finished — stop native playback
+        if (bikeDesktopPlay) { bikeD?.pause(); bikeDesktopPlay = false; }
+        if (autoDesktopPlay) { autoD?.pause(); autoDesktopPlay = false; }
       }
 
-      prevScrollV = scrollV;
       const v = displayV;
 
-      // Desktop: both sequences animate simultaneously
-      const bc = Math.max(0, Math.min(BIKE_FRAME_COUNT - 1, Math.round(v * (BIKE_FRAME_COUNT - 1))));
-      const ac = Math.max(0, Math.min(AUTO_FRAME_COUNT - 1, Math.round(v * (AUTO_FRAME_COUNT - 1))));
-
-      if (bc !== bikeFrameRef.current) {
-        bikeFrameRef.current = bc;
-        const bq = bikePreload.current[bc];
-        if (bikeImgRef.current && bq?.src) bikeImgRef.current.src = bq.src;
-      }
-      if (ac !== autoFrameRef.current) {
-        autoFrameRef.current = ac;
-        const aq = autoPreload.current[ac];
-        if (autoImgRef.current && aq?.src) autoImgRef.current.src = aq.src;
-      }
-      if (progressBarRef.current)
-        progressBarRef.current.style.height = `${v * 100}%`;
+      // Mobile: bike plays v 0→0.5 (full animation), auto plays v 0.5→1 (full animation)
+      const vBike = Math.min(1, v * 2);
+      const vAuto = Math.max(0, (v - 0.5) * 2);
+      seekFrame(bikeVideoMobileRef.current, vBike * VIDEO_DURATION);
+      seekFrame(autoVideoMobileRef.current, vAuto * VIDEO_DURATION);
 
       scrollProgress.set(v);
 
+      const vForPhase = v; // desktop
       const newPhase: FleetPhaseKey =
-        bc < Math.round(BIKE_FRAME_COUNT * 0.25) ? 'ORIGINS' :
-        bc < Math.round(BIKE_FRAME_COUNT * 0.50) ? 'SIGNAL'  :
-        bc < Math.round(BIKE_FRAME_COUNT * 0.75) ? 'PROVEN'  : 'FLEET';
+        vForPhase < 0.25 ? 'ORIGINS' :
+        vForPhase < 0.50 ? 'SIGNAL'  :
+        vForPhase < 0.75 ? 'PROVEN'  : 'FLEET';
 
       if (newPhase !== phaseRef.current) {
         phaseRef.current = newPhase;
@@ -1525,29 +1592,13 @@ function BikeAutoSection() {
           mp.style.position = 'fixed'; mp.style.top = '0'; mp.style.bottom = '';
         }
       }
-      // Mobile: bike plays v 0→0.5, auto plays v 0.5→1 (each gets full animation)
-      const vBike = Math.min(1, v * 2);
-      const bcM   = Math.round(vBike * (BIKE_FRAME_COUNT - 1));
-      const vAuto = Math.max(0, (v - 0.5) * 2);
-      const acM   = Math.round(vAuto * (AUTO_FRAME_COUNT - 1));
-      // Draw to canvas via ImageBitmap (decode already done in idle — zero main-thread cost)
-      const bikeBm = bikeBitmaps.current[bcM];
-      const bikeCanvas = bikeCanvasMobileRef.current;
-      if (bikeCanvas && bikeBm) {
-        bikeCanvas.getContext('2d')?.drawImage(bikeBm, 0, 0, bikeCanvas.width, bikeCanvas.height);
-      }
-      const autoBm = autoBitmaps.current[acM];
-      const autoCanvas = autoCanvasMobileRef.current;
-      if (autoCanvas && autoBm) {
-        autoCanvas.getContext('2d')?.drawImage(autoBm, 0, 0, autoCanvas.width, autoCanvas.height);
-      }
+
       // Mobile phase: tracks the active panel's animation progress
       const activeMobileV = mobileViewRef.current === 'bike' ? vBike : vAuto;
-      const mobileFrame   = Math.round(activeMobileV * (BIKE_FRAME_COUNT - 1));
       const newMobilePhase: FleetPhaseKey =
-        mobileFrame < Math.round(BIKE_FRAME_COUNT * 0.25) ? 'ORIGINS' :
-        mobileFrame < Math.round(BIKE_FRAME_COUNT * 0.50) ? 'SIGNAL'  :
-        mobileFrame < Math.round(BIKE_FRAME_COUNT * 0.75) ? 'PROVEN'  : 'FLEET';
+        activeMobileV < 0.25 ? 'ORIGINS' :
+        activeMobileV < 0.50 ? 'SIGNAL'  :
+        activeMobileV < 0.75 ? 'PROVEN'  : 'FLEET';
       if (newMobilePhase !== mobilePhaseRef.current) {
         mobilePhaseRef.current = newMobilePhase;
         setMobilePhase(newMobilePhase);
@@ -1564,7 +1615,11 @@ function BikeAutoSection() {
     const visObs = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) { active = true; rafId = requestAnimationFrame(tick); }
-        else { active = false; if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; } }
+        else {
+          active = false; if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+          if (bikeDesktopPlay) { bikeVideoRef.current?.pause(); bikeDesktopPlay = false; }
+          if (autoDesktopPlay) { autoVideoRef.current?.pause(); autoDesktopPlay = false; }
+        }
       },
       { rootMargin: '200px 0px' }
     );
@@ -1573,7 +1628,6 @@ function BikeAutoSection() {
     return () => {
       active = false;
       if (rafId !== null) cancelAnimationFrame(rafId);
-      observer.disconnect();
       visObs.disconnect();
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', updateGeometry);
@@ -1597,16 +1651,9 @@ function BikeAutoSection() {
 
           {/* ── LEFT: Bike ── */}
           <div className="flex w-1/2 md:w-[38%] items-center justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              ref={bikeImgRef}
-              src={bikeFrameSrc(0)}
-              alt="bike transformation"
-              width={1080}
-              height={1920}
-              className="h-[30vh] w-auto md:h-auto md:max-h-[82vh]"
-              style={{ display: 'block' }}
-            />
+            <video ref={bikeVideoRef} src="/videos/bike.mp4" muted playsInline preload="auto"
+              className="h-auto max-h-[82vh] w-auto"
+              style={{ display: 'block' }} />
           </div>
 
           {/* ── CENTRE: Circle text ── */}
@@ -1693,27 +1740,13 @@ function BikeAutoSection() {
               </motion.p>
             </AnimatePresence>
 
-            {/* Progress rail */}
-            <div
-              className="hidden md:block"
-              style={{ width: '1px', height: '80px', background: `${CHARCOAL}12`, position: 'relative', marginTop: '8px' }}
-            >
-              <div ref={progressBarRef} style={{ width: '100%', height: '0%', background: CHARCOAL }} />
-            </div>
           </div>
 
           {/* ── RIGHT: Auto ── */}
           <div className="flex w-1/2 md:w-[38%] items-center justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              ref={autoImgRef}
-              src={autoFrameSrc(0)}
-              alt="auto transformation"
-              width={1080}
-              height={1916}
-              className="h-[30vh] w-auto md:h-auto md:max-h-[82vh]"
-              style={{ display: 'block' }}
-            />
+            <video ref={autoVideoRef} src="/videos/auto.mp4" muted playsInline preload="auto"
+              className="h-auto max-h-[82vh] w-auto"
+              style={{ display: 'block' }} />
           </div>
         </div>
       </motion.div>
@@ -1726,14 +1759,16 @@ function BikeAutoSection() {
       >
         {/* Bike layout — visible during first half of scroll */}
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px 8px', gap: '12px', opacity: mobileView === 'bike' ? 1 : 0, transition: 'opacity 0.4s ease', pointerEvents: mobileView === 'bike' ? 'auto' : 'none' }}>
-          <canvas ref={bikeCanvasMobileRef} width={1080} height={1920} style={{ width: 'clamp(200px, 62vw, 320px)', height: 'auto', maxHeight: '52vh', display: 'block' }} />
+          <video ref={bikeVideoMobileRef} src="/videos/bike.mp4" muted playsInline preload="auto"
+            style={{ width: 'clamp(200px, 62vw, 320px)', height: 'auto', maxHeight: '52vh', display: 'block' }} />
           <MobileCircle mobilePhase={mobilePhase} suffix="b" />
         </div>
 
         {/* Auto layout — visible during second half of scroll */}
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px 8px', gap: '12px', opacity: mobileView === 'auto' ? 1 : 0, transition: 'opacity 0.4s ease', pointerEvents: mobileView === 'auto' ? 'auto' : 'none' }}>
           <MobileCircle mobilePhase={mobilePhase} suffix="a" />
-          <canvas ref={autoCanvasMobileRef} width={1080} height={1916} style={{ width: 'clamp(200px, 62vw, 320px)', height: 'auto', maxHeight: '52vh', display: 'block' }} />
+          <video ref={autoVideoMobileRef} src="/videos/auto.mp4" muted playsInline preload="auto"
+            style={{ width: 'clamp(200px, 62vw, 320px)', height: 'auto', maxHeight: '52vh', display: 'block' }} />
         </div>
       </div>
     </section>
@@ -2160,6 +2195,7 @@ function Footer() {
 // ─── Root page ────────────────────────────────────────────────────────────────
 export default function Home() {
   const [onlineBuses, setOnlineBuses] = useState<number | null>(null);
+  const [ready, setReady] = useState(false);
   const lenisRef = useRef<Lenis | null>(null);
 
   // Lenis smooth scroll
@@ -2196,17 +2232,22 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="overflow-x-hidden" style={{ background: WHITE, color: CHARCOAL, position: 'relative' }}>
-      <Grain />
-      <Navbar onlineBuses={onlineBuses} />
-      <HeroSection onlineBuses={onlineBuses} />
-      <TransformSection />
-      <TaxiSection />
-      <BikeAutoSection />
-      <DePINSection />
-      <ReputationSection />
-      <CTASection onlineBuses={onlineBuses} />
-      <Footer />
-    </div>
+    <>
+      <Preloader onReady={() => setReady(true)} />
+      <main style={{ opacity: ready ? 1 : 0, transition: 'opacity 0.4s ease' }}>
+        <div className="overflow-x-hidden" style={{ background: WHITE, color: CHARCOAL, position: 'relative' }}>
+          <Grain />
+          <Navbar onlineBuses={onlineBuses} />
+          <HeroSection onlineBuses={onlineBuses} />
+          <TransformSection />
+          <TaxiSection />
+          <BikeAutoSection />
+          <DePINSection />
+          <ReputationSection />
+          <CTASection onlineBuses={onlineBuses} />
+          <Footer />
+        </div>
+      </main>
+    </>
   );
 }
