@@ -1339,6 +1339,34 @@ const FLEET_PHASES: Record<FleetPhaseKey, { badge: string; title: string; body: 
   },
 };
 
+function MobileCircle({ mobilePhase, suffix }: { mobilePhase: FleetPhaseKey; suffix: string }) {
+  const d = FLEET_PHASES[mobilePhase];
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', gap: '6px' }}>
+        {(['ORIGINS', 'SIGNAL', 'PROVEN', 'FLEET'] as FleetPhaseKey[]).map((p) => (
+          <div key={p} style={{ width: p === mobilePhase ? '24px' : '6px', height: '2px', borderRadius: '2px', background: p === mobilePhase ? (d.isTech ? CYAN : CHARCOAL) : `${CHARCOAL}20`, transition: 'width 0.4s ease, background 0.4s ease' }} />
+        ))}
+      </div>
+      <div style={{ width: 'clamp(140px, 46vw, 200px)', height: 'clamp(140px, 46vw, 200px)', borderRadius: '50%', border: `1.5px solid ${d.isTech ? CYAN : CHARCOAL}30`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px', textAlign: 'center', background: d.isTech ? `${CYAN}06` : 'transparent', transition: 'border-color 0.4s, background 0.4s' }}>
+        <div style={{ fontFamily: MONO, fontSize: '9px', color: d.isTech ? CYAN : `${CHARCOAL}50`, letterSpacing: '0.18em', marginBottom: '8px' }}>{d.badge}</div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={mobilePhase + '-' + suffix}
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.92 }}
+            transition={{ duration: 0.35 }}
+            style={{ fontFamily: d.isTech ? MONO : PLAYFAIR, fontSize: d.isTech ? '0.78rem' : '1rem', fontWeight: 700, color: d.isTech ? CYAN : CHARCOAL, lineHeight: 1.2, letterSpacing: d.isTech ? '0.04em' : '-0.01em', whiteSpace: 'pre-line' }}
+          >
+            {d.title}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
 function BikeAutoSection() {
   const sectionRef    = useRef<HTMLElement>(null);
   const panelRef      = useRef<HTMLDivElement>(null);
@@ -1346,22 +1374,20 @@ function BikeAutoSection() {
   const autoImgRef    = useRef<HTMLImageElement>(null);
   const bikeImgMobileRef = useRef<HTMLImageElement>(null);
   const autoImgMobileRef = useRef<HTMLImageElement>(null);
-  const progressBarRef = useRef<HTMLDivElement>(null);
-  const bikePreload   = useRef<HTMLImageElement[]>([]);
-  const autoPreload   = useRef<HTMLImageElement[]>([]);
-  const bikeFrameRef  = useRef(-1);
-  const autoFrameRef  = useRef(-1);
-  const phaseRef      = useRef<FleetPhaseKey>('ORIGINS');
+  const mobilePanelRef   = useRef<HTMLDivElement>(null);
+  const mobileViewRef    = useRef<'bike' | 'auto'>('bike');
+  const mobilePhaseRef   = useRef<FleetPhaseKey>('ORIGINS');
+  const progressBarRef   = useRef<HTMLDivElement>(null);
+  const bikePreload      = useRef<HTMLImageElement[]>([]);
+  const autoPreload      = useRef<HTMLImageElement[]>([]);
+  const bikeFrameRef     = useRef(-1);
+  const autoFrameRef     = useRef(-1);
+  const phaseRef         = useRef<FleetPhaseKey>('ORIGINS');
 
-  const [phase, setPhase]       = useState<FleetPhaseKey>('ORIGINS');
-  const [sectionH, setSectionH] = useState('400vh');
-
-  useEffect(() => {
-    const update = () => setSectionH(window.innerWidth < 768 ? '250vh' : '400vh');
-    update();
-    window.addEventListener('resize', update, { passive: true });
-    return () => window.removeEventListener('resize', update);
-  }, []);
+  const [phase, setPhase]             = useState<FleetPhaseKey>('ORIGINS');
+  const [mobileView, setMobileView]   = useState<'bike' | 'auto'>('bike');
+  const [mobilePhase, setMobilePhase] = useState<FleetPhaseKey>('ORIGINS');
+  const sectionH = '400vh';
 
   const scrollProgress = useMotionValue(0);
 
@@ -1437,7 +1463,7 @@ function BikeAutoSection() {
       prevScrollV = scrollV;
       const v = displayV;
 
-      // Both sequences driven by the same v — one RAF loop, zero extra cost
+      // Desktop: both sequences animate simultaneously
       const bc = Math.max(0, Math.min(BIKE_FRAME_COUNT - 1, Math.round(v * (BIKE_FRAME_COUNT - 1))));
       const ac = Math.max(0, Math.min(AUTO_FRAME_COUNT - 1, Math.round(v * (AUTO_FRAME_COUNT - 1))));
 
@@ -1445,13 +1471,11 @@ function BikeAutoSection() {
         bikeFrameRef.current = bc;
         const bq = bikePreload.current[bc];
         if (bikeImgRef.current && bq?.src) bikeImgRef.current.src = bq.src;
-        if (bikeImgMobileRef.current && bq?.src) bikeImgMobileRef.current.src = bq.src;
       }
       if (ac !== autoFrameRef.current) {
         autoFrameRef.current = ac;
         const aq = autoPreload.current[ac];
         if (autoImgRef.current && aq?.src) autoImgRef.current.src = aq.src;
-        if (autoImgMobileRef.current && aq?.src) autoImgMobileRef.current.src = aq.src;
       }
       if (progressBarRef.current)
         progressBarRef.current.style.height = `${v * 100}%`;
@@ -1466,6 +1490,43 @@ function BikeAutoSection() {
       if (newPhase !== phaseRef.current) {
         phaseRef.current = newPhase;
         setPhase(newPhase);
+      }
+
+      // Mobile panel positioning
+      const mp = mobilePanelRef.current;
+      if (mp) {
+        if (scrollY <= sectionTop) {
+          mp.style.position = 'absolute'; mp.style.top = '0'; mp.style.bottom = '';
+        } else if (scrollY >= sectionTop + maxScroll) {
+          mp.style.position = 'absolute'; mp.style.top = ''; mp.style.bottom = '0';
+        } else {
+          mp.style.position = 'fixed'; mp.style.top = '0'; mp.style.bottom = '';
+        }
+      }
+      // Mobile: bike plays v 0→0.5, auto plays v 0.5→1 (each gets full animation)
+      const vBike = Math.min(1, v * 2);
+      const bcM   = Math.round(vBike * (BIKE_FRAME_COUNT - 1));
+      const bqm   = bikePreload.current[bcM];
+      if (bikeImgMobileRef.current && bqm?.src) bikeImgMobileRef.current.src = bqm.src;
+      const vAuto = Math.max(0, (v - 0.5) * 2);
+      const acM   = Math.round(vAuto * (AUTO_FRAME_COUNT - 1));
+      const aqm   = autoPreload.current[acM];
+      if (autoImgMobileRef.current && aqm?.src) autoImgMobileRef.current.src = aqm.src;
+      // Mobile phase: tracks the active panel's animation progress
+      const activeMobileV = mobileViewRef.current === 'bike' ? vBike : vAuto;
+      const mobileFrame   = Math.round(activeMobileV * (BIKE_FRAME_COUNT - 1));
+      const newMobilePhase: FleetPhaseKey =
+        mobileFrame < Math.round(BIKE_FRAME_COUNT * 0.25) ? 'ORIGINS' :
+        mobileFrame < Math.round(BIKE_FRAME_COUNT * 0.50) ? 'SIGNAL'  :
+        mobileFrame < Math.round(BIKE_FRAME_COUNT * 0.75) ? 'PROVEN'  : 'FLEET';
+      if (newMobilePhase !== mobilePhaseRef.current) {
+        mobilePhaseRef.current = newMobilePhase;
+        setMobilePhase(newMobilePhase);
+      }
+      const newMobileView = v >= 0.5 ? 'auto' : 'bike';
+      if (newMobileView !== mobileViewRef.current) {
+        mobileViewRef.current = newMobileView;
+        setMobileView(newMobileView);
       }
 
       if (active) rafId = requestAnimationFrame(tick);
@@ -1628,79 +1689,25 @@ function BikeAutoSection() {
         </div>
       </motion.div>
 
-      {/* ── MOBILE: two sequential sticky panels ── */}
-      <div className="md:hidden" style={{ height: '100%' }}>
-
-        {/* Panel 1: Bike on top, circle text below */}
-        <div style={{ position: 'sticky', top: 0, height: '100vh', zIndex: 1, background: WHITE, overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 16px', gap: '16px' }}>
+      {/* ── MOBILE: single JS-driven panel, switches at v=0.5 ── */}
+      <div
+        ref={mobilePanelRef}
+        className="md:hidden"
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100vh', overflow: 'hidden', background: WHITE }}
+      >
+        {/* Bike layout — visible during first half of scroll */}
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 16px', gap: '16px', opacity: mobileView === 'bike' ? 1 : 0, transition: 'opacity 0.4s ease', pointerEvents: mobileView === 'bike' ? 'auto' : 'none' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            ref={bikeImgMobileRef}
-            src={bikeFrameSrc(0)}
-            alt="bike transformation"
-            width={1080}
-            height={1920}
-            style={{ height: '44vh', width: 'auto', display: 'block' }}
-          />
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              {(['ORIGINS', 'SIGNAL', 'PROVEN', 'FLEET'] as FleetPhaseKey[]).map((p) => (
-                <div key={p} style={{ width: p === phase ? '24px' : '6px', height: '2px', borderRadius: '2px', background: p === phase ? (data.isTech ? CYAN : CHARCOAL) : `${CHARCOAL}20`, transition: 'width 0.4s ease, background 0.4s ease' }} />
-              ))}
-            </div>
-            <div style={{ width: 'clamp(130px, 44vw, 190px)', height: 'clamp(130px, 44vw, 190px)', borderRadius: '50%', border: `1.5px solid ${data.isTech ? CYAN : CHARCOAL}30`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px', textAlign: 'center', background: data.isTech ? `${CYAN}06` : 'transparent', transition: 'border-color 0.4s, background 0.4s' }}>
-              <div style={{ fontFamily: MONO, fontSize: '9px', color: data.isTech ? CYAN : `${CHARCOAL}50`, letterSpacing: '0.18em', marginBottom: '8px' }}>{data.badge}</div>
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={phase + '-m1'}
-                  initial={{ opacity: 0, scale: 0.92 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.92 }}
-                  transition={{ duration: 0.35 }}
-                  style={{ fontFamily: data.isTech ? MONO : PLAYFAIR, fontSize: data.isTech ? '0.78rem' : '1rem', fontWeight: 700, color: data.isTech ? CYAN : CHARCOAL, lineHeight: 1.2, letterSpacing: data.isTech ? '0.04em' : '-0.01em', whiteSpace: 'pre-line' }}
-                >
-                  {data.title}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </div>
+          <img ref={bikeImgMobileRef} src={bikeFrameSrc(0)} alt="bike transformation" width={1080} height={1920} style={{ height: '46vh', width: 'auto', display: 'block' }} />
+          <MobileCircle mobilePhase={mobilePhase} suffix="b" />
         </div>
 
-        {/* Panel 2: circle text on top, Auto below — slides over Panel 1 */}
-        <div style={{ position: 'sticky', top: 0, height: '100vh', zIndex: 2, background: WHITE, overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 16px', gap: '16px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              {(['ORIGINS', 'SIGNAL', 'PROVEN', 'FLEET'] as FleetPhaseKey[]).map((p) => (
-                <div key={p} style={{ width: p === phase ? '24px' : '6px', height: '2px', borderRadius: '2px', background: p === phase ? (data.isTech ? CYAN : CHARCOAL) : `${CHARCOAL}20`, transition: 'width 0.4s ease, background 0.4s ease' }} />
-              ))}
-            </div>
-            <div style={{ width: 'clamp(130px, 44vw, 190px)', height: 'clamp(130px, 44vw, 190px)', borderRadius: '50%', border: `1.5px solid ${data.isTech ? CYAN : CHARCOAL}30`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px', textAlign: 'center', background: data.isTech ? `${CYAN}06` : 'transparent', transition: 'border-color 0.4s, background 0.4s' }}>
-              <div style={{ fontFamily: MONO, fontSize: '9px', color: data.isTech ? CYAN : `${CHARCOAL}50`, letterSpacing: '0.18em', marginBottom: '8px' }}>{data.badge}</div>
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={phase + '-m2'}
-                  initial={{ opacity: 0, scale: 0.92 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.92 }}
-                  transition={{ duration: 0.35 }}
-                  style={{ fontFamily: data.isTech ? MONO : PLAYFAIR, fontSize: data.isTech ? '0.78rem' : '1rem', fontWeight: 700, color: data.isTech ? CYAN : CHARCOAL, lineHeight: 1.2, letterSpacing: data.isTech ? '0.04em' : '-0.01em', whiteSpace: 'pre-line' }}
-                >
-                  {data.title}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </div>
+        {/* Auto layout — visible during second half of scroll */}
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 16px', gap: '16px', opacity: mobileView === 'auto' ? 1 : 0, transition: 'opacity 0.4s ease', pointerEvents: mobileView === 'auto' ? 'auto' : 'none' }}>
+          <MobileCircle mobilePhase={mobilePhase} suffix="a" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            ref={autoImgMobileRef}
-            src={autoFrameSrc(0)}
-            alt="auto transformation"
-            width={1080}
-            height={1916}
-            style={{ height: '44vh', width: 'auto', display: 'block' }}
-          />
+          <img ref={autoImgMobileRef} src={autoFrameSrc(0)} alt="auto transformation" width={1080} height={1916} style={{ height: '46vh', width: 'auto', display: 'block' }} />
         </div>
-
       </div>
     </section>
   );
