@@ -201,16 +201,32 @@ const ric = (cb: () => void, timeout: number) =>
 
 // Phase 1: load 5 keyframes immediately so any scroll position has a nearby frame.
 // Phase 2: fill all remaining frames in chunks of 16 during idle time.
-function preloadChunked(count: number, src: (i: number) => string, target: HTMLImageElement[]) {
+// If bitmaps[] is supplied, each loaded img is also decoded into an ImageBitmap
+// (off-main-thread via createImageBitmap) for zero-cost canvas drawing.
+function preloadChunked(
+  count: number,
+  src: (i: number) => string,
+  target: HTMLImageElement[],
+  bitmaps?: Array<ImageBitmap | null>
+) {
+  const loadOne = (k: number) => {
+    if (target[k]) return;
+    const img = new window.Image();
+    img.src = src(k);
+    target[k] = img;
+    if (bitmaps) {
+      img.onload = () =>
+        createImageBitmap(img)
+          .then(bm => { bitmaps[k] = bm; })
+          .catch(() => { bitmaps[k] = null; });
+    }
+  };
   const keyframes = [0, Math.round(count * 0.25), Math.round(count * 0.5), Math.round(count * 0.75), count - 1];
-  keyframes.forEach(k => { const img = new window.Image(); img.src = src(k); target[k] = img; });
-
+  keyframes.forEach(loadOne);
   let i = 0;
   const next = () => {
     const end = Math.min(i + 16, count);
-    for (; i < end; i++) {
-      if (!target[i]) { const img = new window.Image(); img.src = src(i); target[i] = img; }
-    }
+    for (; i < end; i++) loadOne(i);
     if (i < count) ric(next, 150);
   };
   ric(next, 80);
@@ -1372,8 +1388,10 @@ function BikeAutoSection() {
   const panelRef      = useRef<HTMLDivElement>(null);
   const bikeImgRef    = useRef<HTMLImageElement>(null);
   const autoImgRef    = useRef<HTMLImageElement>(null);
-  const bikeImgMobileRef = useRef<HTMLImageElement>(null);
-  const autoImgMobileRef = useRef<HTMLImageElement>(null);
+  const bikeCanvasMobileRef = useRef<HTMLCanvasElement>(null);
+  const autoCanvasMobileRef = useRef<HTMLCanvasElement>(null);
+  const bikeBitmaps      = useRef<Array<ImageBitmap | null>>([]);
+  const autoBitmaps      = useRef<Array<ImageBitmap | null>>([]);
   const mobilePanelRef   = useRef<HTMLDivElement>(null);
   const mobileViewRef    = useRef<'bike' | 'auto'>('bike');
   const mobilePhaseRef   = useRef<FleetPhaseKey>('ORIGINS');
@@ -1399,8 +1417,8 @@ function BikeAutoSection() {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && bikePreload.current.length === 0) {
-          preloadChunked(BIKE_FRAME_COUNT, bikeFrameSrc, bikePreload.current);
-          setTimeout(() => preloadChunked(AUTO_FRAME_COUNT, autoFrameSrc, autoPreload.current), 800);
+          preloadChunked(BIKE_FRAME_COUNT, bikeFrameSrc, bikePreload.current, bikeBitmaps.current);
+          setTimeout(() => preloadChunked(AUTO_FRAME_COUNT, autoFrameSrc, autoPreload.current, autoBitmaps.current), 800);
         }
       },
       { rootMargin: '350% 0px' }
@@ -1459,9 +1477,9 @@ function BikeAutoSection() {
       } else if (inRange) {
         displayV = Math.min(1, displayV + AUTO_SPEED * dt);
       }
-      // Mobile: stop auto-play at the bike→auto boundary so the user must scroll to switch panels
+      // Mobile: stop auto-play just below v=0.5 so user must scroll to switch from bike to auto
       if (mobileViewRef.current === 'bike' && !isScrolling) {
-        displayV = Math.min(displayV, 0.5);
+        displayV = Math.min(displayV, 0.499);
       }
 
       prevScrollV = scrollV;
@@ -1510,12 +1528,19 @@ function BikeAutoSection() {
       // Mobile: bike plays v 0→0.5, auto plays v 0.5→1 (each gets full animation)
       const vBike = Math.min(1, v * 2);
       const bcM   = Math.round(vBike * (BIKE_FRAME_COUNT - 1));
-      const bqm   = bikePreload.current[bcM];
-      if (bikeImgMobileRef.current && bqm?.src) bikeImgMobileRef.current.src = bqm.src;
       const vAuto = Math.max(0, (v - 0.5) * 2);
       const acM   = Math.round(vAuto * (AUTO_FRAME_COUNT - 1));
-      const aqm   = autoPreload.current[acM];
-      if (autoImgMobileRef.current && aqm?.src) autoImgMobileRef.current.src = aqm.src;
+      // Draw to canvas via ImageBitmap (decode already done in idle — zero main-thread cost)
+      const bikeBm = bikeBitmaps.current[bcM];
+      const bikeCanvas = bikeCanvasMobileRef.current;
+      if (bikeCanvas && bikeBm) {
+        bikeCanvas.getContext('2d')?.drawImage(bikeBm, 0, 0, bikeCanvas.width, bikeCanvas.height);
+      }
+      const autoBm = autoBitmaps.current[acM];
+      const autoCanvas = autoCanvasMobileRef.current;
+      if (autoCanvas && autoBm) {
+        autoCanvas.getContext('2d')?.drawImage(autoBm, 0, 0, autoCanvas.width, autoCanvas.height);
+      }
       // Mobile phase: tracks the active panel's animation progress
       const activeMobileV = mobileViewRef.current === 'bike' ? vBike : vAuto;
       const mobileFrame   = Math.round(activeMobileV * (BIKE_FRAME_COUNT - 1));
@@ -1701,16 +1726,14 @@ function BikeAutoSection() {
       >
         {/* Bike layout — visible during first half of scroll */}
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px 8px', gap: '12px', opacity: mobileView === 'bike' ? 1 : 0, transition: 'opacity 0.4s ease', pointerEvents: mobileView === 'bike' ? 'auto' : 'none' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img ref={bikeImgMobileRef} src={bikeFrameSrc(0)} alt="bike transformation" width={1080} height={1920} style={{ width: 'clamp(200px, 62vw, 320px)', height: 'auto', maxHeight: '52vh', display: 'block' }} />
+          <canvas ref={bikeCanvasMobileRef} width={1080} height={1920} style={{ width: 'clamp(200px, 62vw, 320px)', height: 'auto', maxHeight: '52vh', display: 'block' }} />
           <MobileCircle mobilePhase={mobilePhase} suffix="b" />
         </div>
 
         {/* Auto layout — visible during second half of scroll */}
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px 8px', gap: '12px', opacity: mobileView === 'auto' ? 1 : 0, transition: 'opacity 0.4s ease', pointerEvents: mobileView === 'auto' ? 'auto' : 'none' }}>
           <MobileCircle mobilePhase={mobilePhase} suffix="a" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img ref={autoImgMobileRef} src={autoFrameSrc(0)} alt="auto transformation" width={1080} height={1916} style={{ width: 'clamp(200px, 62vw, 320px)', height: 'auto', maxHeight: '52vh', display: 'block' }} />
+          <canvas ref={autoCanvasMobileRef} width={1080} height={1916} style={{ width: 'clamp(200px, 62vw, 320px)', height: 'auto', maxHeight: '52vh', display: 'block' }} />
         </div>
       </div>
     </section>
