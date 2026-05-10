@@ -193,31 +193,27 @@ const FRAME_COUNT = 121;
 const frameSrc = (i: number) =>
   `/frames/frame_${String(i + 1).padStart(3, '0')}.jpg`;
 
-// Loads frames in small idle-time chunks instead of 121 simultaneous requests.
-// First frame loads immediately so the first paint is instant.
-function preloadChunked(count: number, src: (i: number) => string, target: HTMLImageElement[]) {
-  const first = new window.Image();
-  first.src = src(0);
-  target[0] = first;
-  let i = 1;
-  const next = () => {
-    const end = Math.min(i + 8, count);
-    for (; i < end; i++) {
-      const img = new window.Image();
-      img.src = src(i);
-      target[i] = img;
-    }
-    if (i < count) {
-      'requestIdleCallback' in window
-        ? (window as Window & { requestIdleCallback: (cb: () => void, o?: object) => void })
-            .requestIdleCallback(next, { timeout: 400 })
-        : setTimeout(next, 32);
-    }
-  };
+type RICWindow = Window & { requestIdleCallback: (cb: () => void, o?: object) => void };
+const ric = (cb: () => void, timeout: number) =>
   'requestIdleCallback' in window
-    ? (window as Window & { requestIdleCallback: (cb: () => void, o?: object) => void })
-        .requestIdleCallback(next, { timeout: 200 })
-    : setTimeout(next, 32);
+    ? (window as RICWindow).requestIdleCallback(cb, { timeout })
+    : setTimeout(cb, 16);
+
+// Phase 1: load 5 keyframes immediately so any scroll position has a nearby frame.
+// Phase 2: fill all remaining frames in chunks of 16 during idle time.
+function preloadChunked(count: number, src: (i: number) => string, target: HTMLImageElement[]) {
+  const keyframes = [0, Math.round(count * 0.25), Math.round(count * 0.5), Math.round(count * 0.75), count - 1];
+  keyframes.forEach(k => { const img = new window.Image(); img.src = src(k); target[k] = img; });
+
+  let i = 0;
+  const next = () => {
+    const end = Math.min(i + 16, count);
+    for (; i < end; i++) {
+      if (!target[i]) { const img = new window.Image(); img.src = src(i); target[i] = img; }
+    }
+    if (i < count) ric(next, 150);
+  };
+  ric(next, 80);
 }
 
 // ─── Bus SVG removed — replaced by scroll-linked frame sequence ──────────────
@@ -748,7 +744,7 @@ function TransformSection() {
         if (entry.isIntersecting && preloadRef.current.length === 0)
           preloadChunked(FRAME_COUNT, frameSrc, preloadRef.current);
       },
-      { rootMargin: '100% 0px' }
+      { rootMargin: '350% 0px' }
     );
     observer.observe(section);
 
@@ -821,8 +817,8 @@ function TransformSection() {
 
       if (c !== frameRef.current) {
         frameRef.current = c;
-        if (frameImgRef.current)
-          frameImgRef.current.src = preloadRef.current[c]?.src ?? frameSrc(c);
+        const qf = preloadRef.current[c];
+        if (frameImgRef.current && qf?.src) frameImgRef.current.src = qf.src;
       }
       if (progressBarRef.current)
         progressBarRef.current.style.height = `${v * 100}%`;
@@ -1067,7 +1063,7 @@ function TaxiSection() {
         if (entry.isIntersecting && preloadRef.current.length === 0)
           preloadChunked(TAXI_FRAME_COUNT, taxiFrameSrc, preloadRef.current);
       },
-      { rootMargin: '100% 0px' }
+      { rootMargin: '350% 0px' }
     );
     observer.observe(section);
 
@@ -1134,8 +1130,8 @@ function TaxiSection() {
 
       if (c !== frameRef.current) {
         frameRef.current = c;
-        if (frameImgRef.current)
-          frameImgRef.current.src = preloadRef.current[c]?.src ?? taxiFrameSrc(c);
+        const qt = preloadRef.current[c];
+        if (frameImgRef.current && qt?.src) frameImgRef.current.src = qt.src;
       }
       if (progressBarRef.current)
         progressBarRef.current.style.height = `${v * 100}%`;
@@ -1218,7 +1214,7 @@ function TaxiSection() {
           ))}
         </div>
 
-        <div className="h-full max-w-7xl mx-auto px-6 flex flex-col-reverse md:flex-row items-center gap-3 md:gap-14 py-4 md:py-20">
+        <div className="h-full max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-3 md:gap-14 py-4 md:py-20">
           {/* ── LEFT: Frame sequence ── */}
           <div className="w-full md:w-5/12 relative flex items-center justify-center">
             <div className="relative w-full flex items-center justify-center">
@@ -1229,7 +1225,7 @@ function TaxiSection() {
                 alt="taxi transformation"
                 width={1172}
                 height={1764}
-                className="h-auto w-full max-h-[35vh] md:h-full md:w-auto md:max-h-[80vh]"
+                className="h-[45vh] w-auto md:h-full md:max-h-[80vh]"
                 style={{ display: 'block' }}
               />
             </div>
@@ -1348,6 +1344,8 @@ function BikeAutoSection() {
   const panelRef      = useRef<HTMLDivElement>(null);
   const bikeImgRef    = useRef<HTMLImageElement>(null);
   const autoImgRef    = useRef<HTMLImageElement>(null);
+  const bikeImgMobileRef = useRef<HTMLImageElement>(null);
+  const autoImgMobileRef = useRef<HTMLImageElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const bikePreload   = useRef<HTMLImageElement[]>([]);
   const autoPreload   = useRef<HTMLImageElement[]>([]);
@@ -1376,10 +1374,10 @@ function BikeAutoSection() {
       ([entry]) => {
         if (entry.isIntersecting && bikePreload.current.length === 0) {
           preloadChunked(BIKE_FRAME_COUNT, bikeFrameSrc, bikePreload.current);
-          preloadChunked(AUTO_FRAME_COUNT, autoFrameSrc, autoPreload.current);
+          setTimeout(() => preloadChunked(AUTO_FRAME_COUNT, autoFrameSrc, autoPreload.current), 800);
         }
       },
-      { rootMargin: '100% 0px' }
+      { rootMargin: '350% 0px' }
     );
     observer.observe(section);
 
@@ -1445,13 +1443,15 @@ function BikeAutoSection() {
 
       if (bc !== bikeFrameRef.current) {
         bikeFrameRef.current = bc;
-        if (bikeImgRef.current)
-          bikeImgRef.current.src = bikePreload.current[bc]?.src ?? bikeFrameSrc(bc);
+        const bq = bikePreload.current[bc];
+        if (bikeImgRef.current && bq?.src) bikeImgRef.current.src = bq.src;
+        if (bikeImgMobileRef.current && bq?.src) bikeImgMobileRef.current.src = bq.src;
       }
       if (ac !== autoFrameRef.current) {
         autoFrameRef.current = ac;
-        if (autoImgRef.current)
-          autoImgRef.current.src = autoPreload.current[ac]?.src ?? autoFrameSrc(ac);
+        const aq = autoPreload.current[ac];
+        if (autoImgRef.current && aq?.src) autoImgRef.current.src = aq.src;
+        if (autoImgMobileRef.current && aq?.src) autoImgMobileRef.current.src = aq.src;
       }
       if (progressBarRef.current)
         progressBarRef.current.style.height = `${v * 100}%`;
@@ -1500,12 +1500,13 @@ function BikeAutoSection() {
     >
       <motion.div
         ref={panelRef}
+        className="hidden md:block"
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100vh', overflow: 'hidden', background: WHITE }}
       >
-        <div className="h-full max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-2 md:gap-8 py-3 md:py-16">
+        <div className="h-full max-w-7xl mx-auto px-6 flex flex-wrap md:flex-nowrap md:flex-row items-center gap-2 md:gap-8 py-3 md:py-16">
 
           {/* ── LEFT: Bike ── */}
-          <div className="flex w-full md:w-[38%] items-center justify-center">
+          <div className="flex w-1/2 md:w-[38%] items-center justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               ref={bikeImgRef}
@@ -1513,13 +1514,13 @@ function BikeAutoSection() {
               alt="bike transformation"
               width={1080}
               height={1920}
-              className="h-auto w-full max-h-[20vh] md:w-auto md:max-h-[82vh]"
+              className="h-[30vh] w-auto md:h-auto md:max-h-[82vh]"
               style={{ display: 'block' }}
             />
           </div>
 
           {/* ── CENTRE: Circle text ── */}
-          <div className="w-full md:w-[24%] flex flex-col items-center justify-center gap-2 md:gap-6">
+          <div className="w-full md:w-[24%] flex flex-col items-center justify-center gap-2 md:gap-6 order-last md:order-none">
             {/* Phase dot rail */}
             <div className="flex gap-2">
               {(['ORIGINS', 'SIGNAL', 'PROVEN', 'FLEET'] as FleetPhaseKey[]).map((p) => (
@@ -1612,7 +1613,7 @@ function BikeAutoSection() {
           </div>
 
           {/* ── RIGHT: Auto ── */}
-          <div className="flex w-full md:w-[38%] items-center justify-center">
+          <div className="flex w-1/2 md:w-[38%] items-center justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               ref={autoImgRef}
@@ -1620,12 +1621,87 @@ function BikeAutoSection() {
               alt="auto transformation"
               width={1080}
               height={1916}
-              className="h-auto w-full max-h-[20vh] md:w-auto md:max-h-[82vh]"
+              className="h-[30vh] w-auto md:h-auto md:max-h-[82vh]"
               style={{ display: 'block' }}
             />
           </div>
         </div>
       </motion.div>
+
+      {/* ── MOBILE: two sequential sticky panels ── */}
+      <div className="md:hidden" style={{ height: '100%' }}>
+
+        {/* Panel 1: Bike on top, circle text below */}
+        <div style={{ position: 'sticky', top: 0, height: '100vh', zIndex: 1, background: WHITE, overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 16px', gap: '16px' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            ref={bikeImgMobileRef}
+            src={bikeFrameSrc(0)}
+            alt="bike transformation"
+            width={1080}
+            height={1920}
+            style={{ height: '44vh', width: 'auto', display: 'block' }}
+          />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {(['ORIGINS', 'SIGNAL', 'PROVEN', 'FLEET'] as FleetPhaseKey[]).map((p) => (
+                <div key={p} style={{ width: p === phase ? '24px' : '6px', height: '2px', borderRadius: '2px', background: p === phase ? (data.isTech ? CYAN : CHARCOAL) : `${CHARCOAL}20`, transition: 'width 0.4s ease, background 0.4s ease' }} />
+              ))}
+            </div>
+            <div style={{ width: 'clamp(130px, 44vw, 190px)', height: 'clamp(130px, 44vw, 190px)', borderRadius: '50%', border: `1.5px solid ${data.isTech ? CYAN : CHARCOAL}30`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px', textAlign: 'center', background: data.isTech ? `${CYAN}06` : 'transparent', transition: 'border-color 0.4s, background 0.4s' }}>
+              <div style={{ fontFamily: MONO, fontSize: '9px', color: data.isTech ? CYAN : `${CHARCOAL}50`, letterSpacing: '0.18em', marginBottom: '8px' }}>{data.badge}</div>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={phase + '-m1'}
+                  initial={{ opacity: 0, scale: 0.92 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.92 }}
+                  transition={{ duration: 0.35 }}
+                  style={{ fontFamily: data.isTech ? MONO : PLAYFAIR, fontSize: data.isTech ? '0.78rem' : '1rem', fontWeight: 700, color: data.isTech ? CYAN : CHARCOAL, lineHeight: 1.2, letterSpacing: data.isTech ? '0.04em' : '-0.01em', whiteSpace: 'pre-line' }}
+                >
+                  {data.title}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </div>
+        </div>
+
+        {/* Panel 2: circle text on top, Auto below — slides over Panel 1 */}
+        <div style={{ position: 'sticky', top: 0, height: '100vh', zIndex: 2, background: WHITE, overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 16px', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {(['ORIGINS', 'SIGNAL', 'PROVEN', 'FLEET'] as FleetPhaseKey[]).map((p) => (
+                <div key={p} style={{ width: p === phase ? '24px' : '6px', height: '2px', borderRadius: '2px', background: p === phase ? (data.isTech ? CYAN : CHARCOAL) : `${CHARCOAL}20`, transition: 'width 0.4s ease, background 0.4s ease' }} />
+              ))}
+            </div>
+            <div style={{ width: 'clamp(130px, 44vw, 190px)', height: 'clamp(130px, 44vw, 190px)', borderRadius: '50%', border: `1.5px solid ${data.isTech ? CYAN : CHARCOAL}30`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px', textAlign: 'center', background: data.isTech ? `${CYAN}06` : 'transparent', transition: 'border-color 0.4s, background 0.4s' }}>
+              <div style={{ fontFamily: MONO, fontSize: '9px', color: data.isTech ? CYAN : `${CHARCOAL}50`, letterSpacing: '0.18em', marginBottom: '8px' }}>{data.badge}</div>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={phase + '-m2'}
+                  initial={{ opacity: 0, scale: 0.92 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.92 }}
+                  transition={{ duration: 0.35 }}
+                  style={{ fontFamily: data.isTech ? MONO : PLAYFAIR, fontSize: data.isTech ? '0.78rem' : '1rem', fontWeight: 700, color: data.isTech ? CYAN : CHARCOAL, lineHeight: 1.2, letterSpacing: data.isTech ? '0.04em' : '-0.01em', whiteSpace: 'pre-line' }}
+                >
+                  {data.title}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            ref={autoImgMobileRef}
+            src={autoFrameSrc(0)}
+            alt="auto transformation"
+            width={1080}
+            height={1916}
+            style={{ height: '44vh', width: 'auto', display: 'block' }}
+          />
+        </div>
+
+      </div>
     </section>
   );
 }
