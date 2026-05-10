@@ -907,11 +907,11 @@ function TransformSection() {
           ))}
         </div>
 
-        <div className="h-full max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-8 md:gap-14 py-20">
+        <div className="h-full max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-3 md:gap-14 py-4 md:py-20">
           {/* ── LEFT: Phase text ── */}
           <div className="w-full md:w-7/12 flex flex-col justify-center">
             <div
-              className="mb-8 inline-block"
+              className="mb-2 md:mb-8 inline-block"
               style={{ fontFamily: MONO, fontSize: '10px', letterSpacing: '0.22em', color: data.isTech ? CYAN : DARK_GREEN }}
             >
               {data.badge}
@@ -960,7 +960,7 @@ function TransformSection() {
               </motion.p>
             </AnimatePresence>
 
-            <div className="mt-12 flex gap-3">
+            <div className="mt-4 md:mt-12 flex gap-3">
               {(['FOLK', 'SHIFT', 'CODE', 'PROTOCOL'] as PhaseKey[]).map((p) => (
                 <div
                   key={p}
@@ -1218,7 +1218,7 @@ function TaxiSection() {
           ))}
         </div>
 
-        <div className="h-full max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-8 md:gap-14 py-20">
+        <div className="h-full max-w-7xl mx-auto px-6 flex flex-col-reverse md:flex-row items-center gap-3 md:gap-14 py-4 md:py-20">
           {/* ── LEFT: Frame sequence ── */}
           <div className="w-full md:w-5/12 relative flex items-center justify-center">
             <div className="relative w-full flex items-center justify-center">
@@ -1229,7 +1229,7 @@ function TaxiSection() {
                 alt="taxi transformation"
                 width={1172}
                 height={1764}
-                className="h-full w-auto max-h-[80vh]"
+                className="h-auto w-full max-h-[35vh] md:h-full md:w-auto md:max-h-[80vh]"
                 style={{ display: 'block' }}
               />
             </div>
@@ -1238,7 +1238,7 @@ function TaxiSection() {
           {/* ── RIGHT: Phase text ── */}
           <div className="w-full md:w-7/12 flex flex-col justify-center">
             <div
-              className="mb-8 inline-block"
+              className="mb-2 md:mb-8 inline-block"
               style={{ fontFamily: MONO, fontSize: '10px', letterSpacing: '0.22em', color: data.isTech ? CYAN : DARK_GREEN }}
             >
               {data.badge}
@@ -1287,7 +1287,7 @@ function TaxiSection() {
               </motion.p>
             </AnimatePresence>
 
-            <div className="mt-12 flex gap-3">
+            <div className="mt-4 md:mt-12 flex gap-3">
               {(['STREET', 'CONNECT', 'VERIFY', 'MESH'] as TaxiPhaseKey[]).map((p) => (
                 <div
                   key={p}
@@ -1502,10 +1502,10 @@ function BikeAutoSection() {
         ref={panelRef}
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100vh', overflow: 'hidden', background: WHITE }}
       >
-        <div className="h-full max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-4 md:gap-8 py-16">
+        <div className="h-full max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-2 md:gap-8 py-3 md:py-16">
 
           {/* ── LEFT: Bike ── */}
-          <div className="w-full md:w-[38%] flex items-center justify-center">
+          <div className="flex w-full md:w-[38%] items-center justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               ref={bikeImgRef}
@@ -1513,13 +1513,13 @@ function BikeAutoSection() {
               alt="bike transformation"
               width={1080}
               height={1920}
-              className="h-auto w-auto max-h-[82vh]"
+              className="h-auto w-full max-h-[20vh] md:w-auto md:max-h-[82vh]"
               style={{ display: 'block' }}
             />
           </div>
 
           {/* ── CENTRE: Circle text ── */}
-          <div className="w-full md:w-[24%] flex flex-col items-center justify-center gap-6">
+          <div className="w-full md:w-[24%] flex flex-col items-center justify-center gap-2 md:gap-6">
             {/* Phase dot rail */}
             <div className="flex gap-2">
               {(['ORIGINS', 'SIGNAL', 'PROVEN', 'FLEET'] as FleetPhaseKey[]).map((p) => (
@@ -1539,8 +1539,8 @@ function BikeAutoSection() {
             {/* Circle */}
             <div
               style={{
-                width: 'clamp(200px, 22vw, 280px)',
-                height: 'clamp(200px, 22vw, 280px)',
+                width: 'clamp(130px, 22vw, 280px)',
+                height: 'clamp(130px, 22vw, 280px)',
                 borderRadius: '50%',
                 border: `1.5px solid ${data.isTech ? CYAN : CHARCOAL}30`,
                 display: 'flex',
@@ -1578,7 +1578,7 @@ function BikeAutoSection() {
               </AnimatePresence>
             </div>
 
-            {/* Body text below circle */}
+            {/* Body text below circle — hidden on mobile to save vertical space */}
             <AnimatePresence mode="wait">
               <motion.p
                 key={phase + '-body'}
@@ -1586,6 +1586,7 @@ function BikeAutoSection() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.35, delay: 0.1 }}
+                className="hidden md:block"
                 style={{
                   fontFamily: data.isTech ? MONO : 'inherit',
                   fontSize: data.isTech ? '0.78rem' : '0.88rem',
@@ -1611,7 +1612,7 @@ function BikeAutoSection() {
           </div>
 
           {/* ── RIGHT: Auto ── */}
-          <div className="w-full md:w-[38%] flex items-center justify-center">
+          <div className="flex w-full md:w-[38%] items-center justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               ref={autoImgRef}
@@ -1619,7 +1620,7 @@ function BikeAutoSection() {
               alt="auto transformation"
               width={1080}
               height={1916}
-              className="h-auto w-auto max-h-[82vh]"
+              className="h-auto w-full max-h-[20vh] md:w-auto md:max-h-[82vh]"
               style={{ display: 'block' }}
             />
           </div>
