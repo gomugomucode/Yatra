@@ -1459,6 +1459,10 @@ function BikeAutoSection() {
       } else if (inRange) {
         displayV = Math.min(1, displayV + AUTO_SPEED * dt);
       }
+      // Mobile: stop auto-play at the bike→auto boundary so the user must scroll to switch panels
+      if (mobileViewRef.current === 'bike' && !isScrolling) {
+        displayV = Math.min(displayV, 0.5);
+      }
 
       prevScrollV = scrollV;
       const v = displayV;
@@ -1696,17 +1700,17 @@ function BikeAutoSection() {
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100vh', overflow: 'hidden', background: WHITE }}
       >
         {/* Bike layout — visible during first half of scroll */}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 16px', gap: '16px', opacity: mobileView === 'bike' ? 1 : 0, transition: 'opacity 0.4s ease', pointerEvents: mobileView === 'bike' ? 'auto' : 'none' }}>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px 8px', gap: '12px', opacity: mobileView === 'bike' ? 1 : 0, transition: 'opacity 0.4s ease', pointerEvents: mobileView === 'bike' ? 'auto' : 'none' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img ref={bikeImgMobileRef} src={bikeFrameSrc(0)} alt="bike transformation" width={1080} height={1920} style={{ height: '46vh', width: 'auto', display: 'block' }} />
+          <img ref={bikeImgMobileRef} src={bikeFrameSrc(0)} alt="bike transformation" width={1080} height={1920} style={{ width: 'clamp(200px, 62vw, 320px)', height: 'auto', maxHeight: '52vh', display: 'block' }} />
           <MobileCircle mobilePhase={mobilePhase} suffix="b" />
         </div>
 
         {/* Auto layout — visible during second half of scroll */}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 16px', gap: '16px', opacity: mobileView === 'auto' ? 1 : 0, transition: 'opacity 0.4s ease', pointerEvents: mobileView === 'auto' ? 'auto' : 'none' }}>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px 8px', gap: '12px', opacity: mobileView === 'auto' ? 1 : 0, transition: 'opacity 0.4s ease', pointerEvents: mobileView === 'auto' ? 'auto' : 'none' }}>
           <MobileCircle mobilePhase={mobilePhase} suffix="a" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img ref={autoImgMobileRef} src={autoFrameSrc(0)} alt="auto transformation" width={1080} height={1916} style={{ height: '46vh', width: 'auto', display: 'block' }} />
+          <img ref={autoImgMobileRef} src={autoFrameSrc(0)} alt="auto transformation" width={1080} height={1916} style={{ width: 'clamp(200px, 62vw, 320px)', height: 'auto', maxHeight: '52vh', display: 'block' }} />
         </div>
       </div>
     </section>
