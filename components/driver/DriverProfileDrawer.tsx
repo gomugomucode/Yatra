@@ -28,7 +28,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Driver, Booking } from '@/lib/types';
 import { getDatabase, ref, onValue } from 'firebase/database';
 import { getFirebaseApp } from '@/lib/firebase';
-import { subscribeToBookings } from '@/lib/firebaseDb';
+import { subscribeToBookings, subscribeToTripRequests } from '@/lib/firebaseDb';
 
 function truncateAddress(addr: string): string {
   if (!addr || addr.length < 10) return '0x00...000';
@@ -84,15 +84,48 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
       setCompletionRate(stats.completionRate || 0);
     }
 
+    // Refs to store data for merging
+    let currentBookings: Booking[] = [];
+    let currentTrips: any[] = [];
+
+    const updateRecentList = () => {
+      // Map trips to booking-like objects for the UI
+      const mappedTrips = currentTrips
+        .filter(t => t.status === 'completed')
+        .map(t => ({
+          id: t.id,
+          passengerName: t.passengerName,
+          fare: t.fare || 30, // Minimum 30 based on new rules
+          timestamp: new Date(t.createdAt),
+          status: 'completed'
+        }));
+
+      const allRecent = [...currentBookings, ...mappedTrips]
+        .filter(item => item.status === 'completed')
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      // Deduplicate by ID
+      const unique = Array.from(new Map(allRecent.map(item => [item.id, item])).values());
+      setRecentBookings(unique.slice(0, 10) as Booking[]);
+    };
+
     // Subscribe to driver's recent bookings for the history slider
     const unsubscribeBookings = subscribeToBookings(currentUser.uid, 'driver', (data) => {
-      const sorted = [...data].sort(
-        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      );
-      setRecentBookings(sorted.slice(0, 10));
+      currentBookings = data;
+      updateRecentList();
     });
 
-    return () => { unsubRep(); unsubscribeBookings(); };
+    // Subscribe to on-demand trip requests (hail trips)
+    const unsubscribeTrips = subscribeToTripRequests(currentUser.uid, (data) => {
+      currentTrips = data;
+      updateRecentList();
+    });
+
+    return () => { 
+      unsubRep(); 
+      unsubscribeBookings(); 
+      unsubscribeTrips();
+    };
   }, [currentUser, open, userData]);
 
   const handleCopyAddress = () => {

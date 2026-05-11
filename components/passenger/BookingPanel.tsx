@@ -4,10 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Bus, Driver } from '@/lib/types';
-import { X, Navigation } from 'lucide-react';
+import { X, Navigation, CircleDollarSign } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { haversineDistance } from '@/lib/utils/geofencing';
 import { getDriverReputation, DriverRepData } from '@/lib/solana/trrl';
+import { getDatabase, ref, get } from 'firebase/database';
+import { getFirebaseApp } from '@/lib/firebase';
+import { calculateFareFromLocations } from '@/lib/utils/fareCalculator';
+import { VehicleTypeId, TripStatus } from '@/lib/types';
+import { getRoute } from '@/lib/routing/osrm';
 
 interface BookingPanelProps {
 	pickupLocation: { lat: number; lng: number; address?: string } | null;
@@ -26,6 +31,7 @@ interface BookingPanelProps {
 
 export default function BookingPanel({
 	pickupLocation,
+	dropoffLocation,
 	selectedBus,
 	onBook,
 	onReset,
@@ -41,16 +47,82 @@ export default function BookingPanel({
 	}>({});
 	const { toast } = useToast();
 	const [driverRep, setDriverRep] = useState<DriverRepData | null>(null);
+	const [driverProfile, setDriverProfile] = useState<Driver | null>(null);
+	const [osrmDistance, setOsrmDistance] = useState<number | null>(null);
+	const [fareLoading, setFareLoading] = useState(false);
 	const selectedRideBus = selectedBus as (Bus & { verificationBadge?: Driver['verificationBadge'] }) | null;
 
-	// Fetch reputation when bus is selected
+	// Fetch reputation and profile when bus is selected
 	useEffect(() => {
-		if (selectedBus?.id) {
-			getDriverReputation(selectedBus.id).then(setDriverRep).catch(console.error);
+		const driverId = selectedBus?.driverId || selectedBus?.id;
+		
+		if (driverId) {
+			// Fetch Reputation (uses driverId if available, fallback to bus id for mocks)
+			getDriverReputation(driverId).then(setDriverRep).catch(console.error);
+			
+			// Fetch Full Profile for Verification Badge (requires real driverId)
+			if (selectedBus?.driverId) {
+				const db = getDatabase(getFirebaseApp());
+				get(ref(db, `users/${selectedBus.driverId}`)).then(snap => {
+					if (snap.exists()) {
+						setDriverProfile(snap.val() as Driver);
+					} else {
+						setDriverProfile(null);
+					}
+				}).catch(err => {
+					console.error('[BookingPanel] Profile fetch error:', err);
+					setDriverProfile(null);
+				});
+			} else {
+				setDriverProfile(null);
+			}
 		} else {
-			queueMicrotask(() => setDriverRep(null));
+			setDriverRep(null);
+			setDriverProfile(null);
 		}
-	}, [selectedBus?.id]);
+	}, [selectedBus?.id, selectedBus?.driverId]);
+
+	// Async route-based fare calculation
+	useEffect(() => {
+		if (!pickupLocation || !dropoffLocation) {
+			setOsrmDistance(null);
+			return;
+		}
+
+		let isMounted = true;
+		setFareLoading(true);
+
+		getRoute(
+			pickupLocation.lat,
+			pickupLocation.lng,
+			dropoffLocation.lat,
+			dropoffLocation.lng
+		).then(route => {
+			if (!isMounted) return;
+			if (route) {
+				setOsrmDistance(route.distance);
+			} else {
+				setOsrmDistance(null);
+			}
+			setFareLoading(false);
+		}).catch(err => {
+			console.error('[BookingPanel] Route fetch error:', err);
+			if (isMounted) setFareLoading(false);
+		});
+
+		return () => { isMounted = false; };
+	}, [pickupLocation?.lat, pickupLocation?.lng, dropoffLocation?.lat, dropoffLocation?.lng]);
+
+	const estimatedTotal = useMemo(() => {
+		if (!pickupLocation || !dropoffLocation || !selectedBus) return 0;
+		return calculateFareFromLocations(
+			pickupLocation,
+			dropoffLocation,
+			selectedBus.vehicleType as VehicleTypeId,
+			numberOfPassengers,
+			osrmDistance || undefined
+		);
+	}, [pickupLocation, dropoffLocation, selectedBus, numberOfPassengers, osrmDistance]);
 
 	const seatsUnavailable =
 		!!selectedBus && (selectedBus.availableSeats ?? 0) <= 0;
@@ -139,7 +211,7 @@ export default function BookingPanel({
 									<>
 										<span>Bus {selectedBus.busNumber} Selected</span>
 										<div className="flex items-center gap-2 mt-1">
-											{selectedRideBus?.verificationBadge && (
+											{(selectedRideBus?.verificationBadge || driverProfile?.verificationBadge) && (
 												<span className="inline-flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full text-xs font-semibold w-fit border border-emerald-200">
 													<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /><path d="m9 12 2 2 4-4" /></svg>
 													ZK Verified
@@ -190,6 +262,22 @@ export default function BookingPanel({
 								<p className="text-lg font-bold text-foreground">{selectedBus.availableSeats}</p>
 							</div>
 						</div>
+
+						{/* Fare Display */}
+						{pickupLocation && dropoffLocation && (
+							<div className="flex items-center justify-between p-3 bg-emerald-50 rounded-xl border border-emerald-100 animate-in fade-in zoom-in-95 duration-300">
+								<div className="flex items-center gap-2">
+									<CircleDollarSign className="w-4 h-4 text-emerald-600" />
+									<span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Estimated Fare</span>
+								</div>
+								<div className="text-right">
+									<p className={`text-lg font-black ${fareLoading ? 'animate-pulse text-emerald-300' : 'text-emerald-700'}`}>
+										रु {fareLoading ? '--' : estimatedTotal}
+									</p>
+									<p className="text-[10px] text-emerald-600/70 font-medium">Incl. {numberOfPassengers} pax</p>
+								</div>
+							</div>
+						)}
 
 						{/* Optional Details Accordion */}
 						<details className="group">

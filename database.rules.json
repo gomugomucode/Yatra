@@ -27,8 +27,8 @@
     "bookings": {
       ".read": "auth != null",
       "$bookingId": {
-        ".read": "auth != null && (data.child('passengerId').val() === auth.uid || data.child('busId').val() === auth.uid || data.child('driverId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
-        ".write": "auth != null && (!data.exists() || data.child('passengerId').val() === auth.uid || data.child('busId').val() === auth.uid || data.child('driverId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+        ".read": "auth != null && (data.child('passengerId').val() === auth.uid || data.child('busId').val() === auth.uid || data.child('driverId').val() === auth.uid || root.child('buses').child(data.child('busId').val()).child('driverId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+        ".write": "auth != null && (!data.exists() || data.child('passengerId').val() === auth.uid || data.child('busId').val() === auth.uid || data.child('driverId').val() === auth.uid || root.child('buses').child(data.child('busId').val()).child('driverId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
         ".validate": "newData.hasChildren(['id','passengerId','busId','passengerName','phoneNumber','numberOfPassengers','pickupLocation','dropoffLocation','fare','status','timestamp'])"
       },
       ".indexOn": ["busId", "passengerId", "driverId"]
@@ -57,8 +57,9 @@
       }
     },
     "users": {
+      ".read": "auth != null",
       "$uid": {
-        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+        ".read": "auth != null",
         ".write": "auth != null && auth.uid === $uid",
         "stats": {
           ".write": "root.child('users').child(auth.uid).child('role').val() === 'admin'"
@@ -68,6 +69,7 @@
         }
       }
     },
+
     "alerts": {
       ".read": "auth != null",
       "$alertId": {

@@ -38,13 +38,18 @@ function defaultDriverRep(driverPubkey: string): DriverRepData {
 }
 
 export function calculateDriverScore(rep: DriverRepData): number {
-  if (rep.totalTrips === 0) return 0;
-  const completionRate = (rep.completedTrips / rep.totalTrips) * 400;
-  const ratingScore = (rep.avgRatingX100 / 500) * 300;
-  const punctuality = Math.min(rep.onTimeArrivals / Math.max(rep.completedTrips, 1), 1) * 200;
+  const total = Math.max(Number(rep.totalTrips || 0), 1);
+  const completed = Number(rep.completedTrips || 0);
+  const punctualityCount = Number(rep.onTimeArrivals || 0);
+  
+  const completionFactor = Math.min((completed / total) * 400, 400);
+  const ratingFactor = (Number(rep.avgRatingX100 || 500) / 500) * 300;
+  const punctuality = Math.min(punctualityCount / Math.max(completed, 1), 1) * 200;
   const zkBonus = rep.zkVerified ? 100 : 0;
-  const sosPenalty = rep.sosTriggered * 20;
-  return Math.min(Math.round(completionRate + ratingScore + punctuality + zkBonus - sosPenalty), 1000);
+  const sosPenalty = Number(rep.sosTriggered || 0) * 20;
+
+  const rawScore = Math.round(completionFactor + ratingFactor + punctuality + zkBonus - sosPenalty);
+  return Math.max(0, Math.min(isNaN(rawScore) ? 500 : rawScore, 1000));
 }
 
 /**
@@ -115,4 +120,17 @@ export async function getDriverReputation(driverId: string): Promise<DriverRepDa
   const db = getDatabase(getFirebaseApp());
   const snap = await get(ref(db, `reputation/drivers/${driverId}`));
   return snap.exists() ? snap.val() : null;
+}
+
+export function subscribeToDriverReputation(
+  driverId: string,
+  callback: (data: DriverRepData | null) => void
+): () => void {
+  const { onValue } = require('firebase/database');
+  const db = getDatabase(getFirebaseApp());
+  const repRef = ref(db, `reputation/drivers/${driverId}`);
+  
+  return onValue(repRef, (snap: any) => {
+    callback(snap.exists() ? snap.val() : null);
+  });
 }

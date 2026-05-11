@@ -109,6 +109,7 @@ export interface Bus {
   availableSeats: number;          // Calculated: capacity - online - offline
   lastSeatUpdate: Date;            // For showing "Updated Xs ago"
   driverId?: string;               // Firebase UID of the driver
+  driverWalletAddress?: string;     // Solana wallet for earnings
   // Additional fields
   onlineBooked?: number;           // Alias for onlineBookedSeats
   offlineBooked?: number;          // Alias for offlineOccupiedSeats
@@ -123,6 +124,7 @@ export interface Passenger {
   dropoffLocation: Location;
   status: 'waiting' | 'picked' | 'dropped';
   bookingTime: Date;
+  fare?: number;
 }
 
 export interface Booking {
