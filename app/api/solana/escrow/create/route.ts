@@ -11,11 +11,11 @@ export async function POST(request: Request) {
         const { tripId, passengerWallet, driverWallet, amountNPR } = await request.json();
 
         if (!tripId || !passengerWallet || !driverWallet || !amountNPR) {
-            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+            return NextResponse.json({ error: 'Missing required fields', code: 'INVALID_REQUEST' }, { status: 400 });
         }
 
         if (!checkRateLimit(`create-escrow:${tripId}`, 10, 3_600_000)) {
-            return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+            return NextResponse.json({ error: 'Rate limit exceeded', code: 'RATE_LIMIT' }, { status: 429 });
         }
 
         const connection = getConnection();
@@ -53,7 +53,11 @@ export async function POST(request: Request) {
         });
 
     } catch (error: any) {
-        console.error('[API Escrow] Create error:', error.message);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error('[API Escrow] Create execution failure:', error.message);
+        return NextResponse.json({ 
+            error: 'Solana transaction failed during escrow creation.', 
+            details: error.message,
+            code: 'TRANSACTION_FAILED'
+        }, { status: 500 });
     }
 }

@@ -167,7 +167,7 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
                 className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold h-10 rounded-xl"
                 onClick={() => {
                   setOpen(false);
-                  router.push('/auth/profile');
+                  router.push('/auth/profile?role=driver');
                 }}
               >
                 <ShieldCheck className="w-4 h-4 mr-2" />

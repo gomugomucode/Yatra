@@ -43,9 +43,9 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          {description && (
-            <DialogDescription>{description}</DialogDescription>
-          )}
+          <DialogDescription className={description ? "" : "sr-only"}>
+            {description || "Confirmation dialog"}
+          </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button

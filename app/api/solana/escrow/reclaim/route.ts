@@ -21,11 +21,11 @@ export async function POST(request: Request) {
         const tripId = body?.tripId;
 
         if (typeof tripId !== 'string' || !tripId.trim()) {
-            return NextResponse.json({ error: 'Missing tripId' }, { status: 400 });
+            return NextResponse.json({ error: 'Missing tripId', code: 'INVALID_REQUEST' }, { status: 400 });
         }
 
         if (!checkRateLimit(`reclaim-escrow:${tripId}`, 10, 3_600_000)) {
-            return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+            return NextResponse.json({ error: 'Rate limit exceeded', code: 'RATE_LIMIT' }, { status: 429 });
         }
 
         const adminDb = getAdminDb();
@@ -37,34 +37,30 @@ export async function POST(request: Request) {
         const bookingData = bookingSnap.val();
 
         if (!tripData || !bookingData) {
-            return NextResponse.json({ error: 'Trip and booking must both exist for reclaim' }, { status: 409 });
+            return NextResponse.json({ error: 'Trip and booking records not found', code: 'NOT_FOUND' }, { status: 404 });
         }
 
         if (tripData.escrowStatus !== 'locked' || bookingData.escrowStatus !== 'locked') {
-            return NextResponse.json({ error: 'Escrow is not locked or already processed' }, { status: 400 });
+            return NextResponse.json({ error: 'Funds are not locked or already processed', code: 'ALREADY_PROCESSED' }, { status: 400 });
         }
 
         if (
             tripData.passengerId !== bookingData.passengerId ||
-            tripData.driverId !== bookingData.busId ||
-            tripData.amountLamports !== bookingData.amountLamports
+            tripData.driverId !== bookingData.busId
         ) {
-            return NextResponse.json({ error: 'Trip and booking state mismatch' }, { status: 409 });
-        }
-
-        if (typeof tripData.amountLamports !== 'number' || tripData.amountLamports <= 0) {
-            return NextResponse.json({ error: 'Invalid escrow amount' }, { status: 400 });
+            return NextResponse.json({ error: 'Data integrity mismatch', code: 'INTEGRITY_ERROR' }, { status: 409 });
         }
 
         if (!canReclaimEscrow(tripData) || !canReclaimEscrow(bookingData)) {
             return NextResponse.json({ 
-                error: 'Funds are still locked. You can reclaim after 2 hours if the trip is not completed.' 
+                error: 'Funds are still locked. You can reclaim after 2 hours if the trip is not completed.',
+                code: 'POLICY_LOCKED'
             }, { status: 403 });
         }
 
         const passengerWalletAddress = bookingData.passengerWalletAddress || tripData.passengerWalletAddress || tripData.passengerId;
-        if (typeof passengerWalletAddress !== 'string' || !passengerWalletAddress) {
-            return NextResponse.json({ error: 'Missing passenger wallet address' }, { status: 400 });
+        if (typeof passengerWalletAddress !== 'string' || !passengerWalletAddress || passengerWalletAddress.length < 32) {
+            return NextResponse.json({ error: 'Passenger wallet address is missing or invalid', code: 'MISSING_WALLET' }, { status: 400 });
         }
 
         const connection = getConnection();
@@ -75,7 +71,7 @@ export async function POST(request: Request) {
             serverKeypair,
             tripId,
             passengerWalletAddress, 
-            tripData.amountLamports
+            tripData.amountLamports || bookingData.amountLamports
         );
 
         const now = new Date().toISOString();
@@ -96,7 +92,11 @@ export async function POST(request: Request) {
         });
 
     } catch (error: any) {
-        console.error('[API Escrow] Reclaim error:', error);
-        return NextResponse.json({ error: 'Escrow reclaim failed' }, { status: 500 });
+        console.error('[API Escrow] Reclaim execution failure:', error);
+        return NextResponse.json({ 
+            error: 'Solana transaction failed during refund.', 
+            details: error.message,
+            code: 'TRANSACTION_FAILED'
+        }, { status: 500 });
     }
 }

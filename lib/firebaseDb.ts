@@ -1,7 +1,8 @@
-import { getDatabase, ref, set, update, remove, onValue, push, get, onDisconnect, query, orderByChild, equalTo } from 'firebase/database';
+import { getDatabase, ref, set, update, remove, onValue, push, get, onDisconnect, query, orderByChild, equalTo, off } from 'firebase/database';
 import { getFirebaseApp } from './firebase';
 import { Bus, Booking, Location, LiveUser, TripStatus } from './types';
 import { isValidTripTransition } from '@/lib/tripStateMachine';
+import { releaseOnlineSeats } from './seatManagement';
 
 export const getDb = () => getDatabase(getFirebaseApp());
 const getActiveDriverRef = (driverId: string) => ref(getDb(), `drivers/active/${driverId}`);
@@ -13,31 +14,38 @@ export const subscribeToBuses = (callback: (buses: Bus[]) => void) => {
     const busesRef = ref(db, 'buses');
 
     const unsubscribe = onValue(busesRef, (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-            const busesList = Object.values(data).map((bus: any) => {
-                // Parse Location timestamps properly
-                if (bus.currentLocation) {
-                    const timestamp = bus.currentLocation.timestamp instanceof Date
-                        ? bus.currentLocation.timestamp
-                        : typeof bus.currentLocation.timestamp === 'string'
-                            ? new Date(bus.currentLocation.timestamp)
-                            : new Date();
+        try {
+            const data = snapshot.val();
+            console.log('[FirebaseDb] Buses snapshot received');
+            if (data) {
+                const busesList = Object.values(data).map((bus: any) => {
+                    // Parse Location timestamps properly
+                    if (bus.currentLocation) {
+                        const timestamp = bus.currentLocation.timestamp instanceof Date
+                            ? bus.currentLocation.timestamp
+                            : typeof bus.currentLocation.timestamp === 'string'
+                                ? new Date(bus.currentLocation.timestamp)
+                                : new Date();
 
-                    return {
-                        ...bus,
-                        currentLocation: {
-                            ...bus.currentLocation,
-                            timestamp,
-                        },
-                    };
-                }
-                return bus;
-            }) as Bus[];
-            callback(busesList);
-        } else {
-            callback([]);
+                        return {
+                            ...bus,
+                            currentLocation: {
+                                ...bus.currentLocation,
+                                timestamp,
+                            },
+                        };
+                    }
+                    return bus;
+                }) as Bus[];
+                callback(busesList);
+            } else {
+                callback([]);
+            }
+        } catch (error) {
+            console.error('[FirebaseDb] subscribeToBuses callback error:', error);
         }
+    }, (error) => {
+        console.error('[FirebaseDb] subscribeToBuses failed:', error);
     });
 
     return unsubscribe;
@@ -45,6 +53,7 @@ export const subscribeToBuses = (callback: (buses: Bus[]) => void) => {
 
 export const updateBusLocation = async (
     busId: string,
+    driverId: string,
     walletAddress: string,
     location: { lat: number; lng: number; heading?: number; speed?: number }
 ) => {
@@ -55,7 +64,7 @@ export const updateBusLocation = async (
     // Serialize location with timestamp as ISO string for Firebase
     const locationData = {
         id: busId,
-        driverId: busId,
+        driverId: driverId,
         walletAddress: walletAddress || null,
         role: 'driver',
         status: 'online',
@@ -74,6 +83,7 @@ export const updateBusLocation = async (
     const busMainRef = ref(db, `buses/${busId}`);
     await update(busMainRef, {
         driverWalletAddress: walletAddress,
+        driverId: driverId,
         locationSharingEnabled: true,
         isActive: true,
     });
@@ -98,6 +108,7 @@ export const setDriverOffline = async (driverId: string, walletAddress: string) 
         update(busRef, {
             isActive: false,
             locationSharingEnabled: false,
+            driverId: driverId,
         }),
     ]);
 };
@@ -108,32 +119,36 @@ export const setDriverOffline = async (driverId: string, walletAddress: string) 
  *
  * Return value is an async cleanup function that cancels onDisconnect hooks.
  */
-export const attachDriverPresence = (driverId: string, walletAddress: string) => {
+export const attachDriverPresence = (busId: string, driverId: string, walletAddress: string) => {
     const db = getDb();
     const connectedRef = ref(db, '.info/connected');
     const locationRef = getActiveDriverRef(driverId);
-    const busRef = ref(db, `buses/${driverId}`);
+    const busRef = ref(db, `buses/${busId}`);
 
     const unsubscribe = onValue(connectedRef, async (snapshot) => {
         if (snapshot.val() !== true) return;
 
         try {
+            console.log(`[Presence] Initializing bus state and attaching onDisconnect for bus=${busId}, driver=${driverId}`);
+            
+            // 1. First initialize/ensure the bus record exists with correct driverId.
+            // This satisfies security rules for subsequent onDisconnect registrations.
+            await update(busRef, {
+                isActive: true,
+                locationSharingEnabled: true,
+                driverId: driverId,
+                driverWalletAddress: walletAddress || null
+            });
+
+            // 2. Attach onDisconnect handlers
             await Promise.all([
                 onDisconnect(locationRef).update({
-                    id: driverId,
-                    driverId,
-                    walletAddress: walletAddress || null,
-                    role: 'driver',
                     status: 'offline',
                     isOnline: false,
                 }),
                 onDisconnect(busRef).update({
                     isActive: false,
                     locationSharingEnabled: false,
-                }),
-                update(busRef, {
-                    isActive: true,
-                    locationSharingEnabled: true,
                 }),
             ]);
         } catch (error) {
@@ -155,12 +170,13 @@ export const attachDriverPresence = (driverId: string, walletAddress: string) =>
  * @param busId - Bus ID
  * @param enabled - Whether location sharing is enabled
  */
-export const updateLocationSharingStatus = async (busId: string, enabled: boolean, walletAddress?: string) => {
+export const updateLocationSharingStatus = async (busId: string, enabled: boolean, driverId: string, walletAddress?: string) => {
     const db = getDb();
     const busRef = ref(db, `buses/${busId}`);
-    const updates: Record<string, boolean> = {
+    const updates: Record<string, string | boolean | null> = {
         locationSharingEnabled: enabled,
         isActive: enabled,
+        driverId: driverId,
     };
 
     await update(busRef, updates);
@@ -169,7 +185,7 @@ export const updateLocationSharingStatus = async (busId: string, enabled: boolea
         const locationRef = getActiveDriverRef(busId);
         await update(locationRef, {
             id: busId,
-            driverId: busId,
+            driverId: driverId,
             walletAddress: walletAddress || null,
             role: 'driver',
             status: 'offline',
@@ -216,37 +232,46 @@ export const subscribeToTripRequests = (
 ) => {
     const db = getDb();
     const tripsRef = ref(db, 'trips');
+    console.log(`[FirebaseDb] Subscribing to trips for driverId: ${busId}`);
     const driverQuery = query(tripsRef, orderByChild('driverId'), equalTo(busId));
 
     const unsubscribe = onValue(driverQuery, (snapshot) => {
-        const data = snapshot.val();
-        if (!data) {
-            callback([]);
-            return;
-        }
+        try {
+            const data = snapshot.val();
+            console.log(`[FirebaseDb] Trip update received for ${busId}. Count: ${data ? Object.keys(data).length : 0}`);
 
-        const requests = Object.values(data)
-            .map((entry: any) => ({
-                id: entry.id || entry.tripId,
-                tripId: entry.tripId || entry.id,
-                busId: entry.busId || entry.driverId,
-                driverId: entry.driverId || entry.busId,
-                passengerId: entry.passengerId,
-                bookingId: entry.bookingId,
-                passengerName: entry.passengerName || 'Passenger',
-                status: entry.status || 'requested',
-                lat: entry.lat ?? entry.pickupLocation?.lat,
-                lng: entry.lng ?? entry.pickupLocation?.lng,
-                createdAt: entry.createdAt || new Date().toISOString(),
-                updatedAt: entry.updatedAt || entry.createdAt || new Date().toISOString(),
-                pickupLocation: entry.pickupLocation || (entry.lat !== undefined && entry.lng !== undefined
-                    ? { lat: entry.lat, lng: entry.lng }
-                    : undefined),
-                dropoffLocation: entry.dropoffLocation,
-            }))
-            .filter((entry: TripRequest) => entry.driverId === busId && Number.isFinite(entry.lat) && Number.isFinite(entry.lng)) as TripRequest[];
-        requests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        callback(requests);
+            if (!data) {
+                callback([]);
+                return;
+            }
+
+            const requests = Object.values(data)
+                .map((entry: any) => ({
+                    id: entry.id || entry.tripId,
+                    tripId: entry.tripId || entry.id,
+                    busId: entry.busId || entry.driverId,
+                    driverId: entry.driverId || entry.busId,
+                    passengerId: entry.passengerId,
+                    bookingId: entry.bookingId,
+                    passengerName: entry.passengerName || 'Passenger',
+                    status: entry.status || 'requested',
+                    lat: entry.lat ?? entry.pickupLocation?.lat,
+                    lng: entry.lng ?? entry.pickupLocation?.lng,
+                    createdAt: entry.createdAt || new Date().toISOString(),
+                    updatedAt: entry.updatedAt || entry.createdAt || new Date().toISOString(),
+                    pickupLocation: entry.pickupLocation || (entry.lat !== undefined && entry.lng !== undefined
+                        ? { lat: entry.lat, lng: entry.lng }
+                        : undefined),
+                    dropoffLocation: entry.dropoffLocation,
+                }))
+                .filter((entry: TripRequest) => entry.driverId === busId && Number.isFinite(entry.lat) && Number.isFinite(entry.lng)) as TripRequest[];
+            requests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            callback(requests);
+        } catch (error) {
+            console.error('[FirebaseDb] subscribeToTripRequests callback error:', error);
+        }
+    }, (error) => {
+        console.error('[FirebaseDb] subscribeToTripRequests failed:', error);
     });
 
     return unsubscribe;
@@ -302,19 +327,25 @@ export const subscribeToBusLocation = (
 ) => {
     const locationRef = getActiveDriverRef(driverLocator);
     return onValue(locationRef, (snapshot) => {
-        const data = snapshot.val();
-        if (!data) {
-            callback(null);
-            return;
-        }
+        try {
+            const data = snapshot.val();
+            if (!data) {
+                callback(null);
+                return;
+            }
 
-        callback({
-            lat: data.lat,
-            lng: data.lng,
-            timestamp: data.timestamp || new Date().toISOString(),
-            heading: data.heading,
-            speed: data.speed,
-        });
+            callback({
+                lat: data.lat,
+                lng: data.lng,
+                timestamp: data.timestamp || new Date().toISOString(),
+                heading: data.heading,
+                speed: data.speed,
+            });
+        } catch (error) {
+            console.error('[FirebaseDb] subscribeToBusLocation callback error:', error);
+        }
+    }, (error) => {
+        console.error('[FirebaseDb] subscribeToBusLocation failed:', error);
     });
 };
 
@@ -361,17 +392,27 @@ export const subscribeToBookings = (
 ) => {
     const db = getDb();
     const bookingsRef = ref(db, 'bookings');
+    const queryField = role === 'passenger' ? 'passengerId' : (role === 'driver' ? 'driverId' : 'busId');
+    
+    console.log(`[FirebaseDb] subscribeToBookings: role=${role}, field=${queryField}, id=${id}`);
+    
     const targetRef = role === 'admin'
         ? bookingsRef
-        : query(bookingsRef, orderByChild(role === 'passenger' ? 'passengerId' : 'busId'), equalTo(id));
+        : query(bookingsRef, orderByChild(queryField), equalTo(id));
 
     const unsubscribe = onValue(targetRef, (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-            callback(Object.values(data) as Booking[]);
-        } else {
-            callback([]);
+        try {
+            const data = snapshot.val();
+            if (data) {
+                callback(Object.values(data) as Booking[]);
+            } else {
+                callback([]);
+            }
+        } catch (error) {
+            console.error('[FirebaseDb] subscribeToBookings callback error:', error);
         }
+    }, (error) => {
+        console.error('[FirebaseDb] subscribeToBookings failed:', error);
     });
 
     return unsubscribe;
@@ -519,84 +560,98 @@ export const subscribeToLiveUsers = (callback: (users: LiveUser[]) => void) => {
     let driverData: Record<string, any> = {};
     let passengerData: Record<string, any> = {};
     let cancelled = false;
-    // badge cache: fetched once per driver id per subscription lifetime
+    let emitTimeout: NodeJS.Timeout | null = null;
     const badgeCache = new Map<string, LiveUser['verificationBadge'] | null>();
 
     const emit = async () => {
-        const rawDrivers = Object.entries(driverData)
-            .map(([driverId, entry]: [string, any]) => ({
-                id: entry.id || driverId,
-                role: 'driver' as const,
-                lat: entry.lat,
-                lng: entry.lng,
-                isOnline: entry.isOnline ?? entry.status === 'online',
-                status: entry.status,
-                timestamp: entry.timestamp,
-                route: entry.route,
-                vehicleType: entry.vehicleType,
-                requestStatus: entry.requestStatus,
-            }))
-            .filter((entry) => Number.isFinite(entry.lat) && Number.isFinite(entry.lng));
+        if (cancelled) return;
 
-        const rawPassengers = Object.entries(passengerData)
-            .map(([passengerId, entry]: [string, any]) => ({
-                id: entry.id || passengerId,
-                role: 'passenger' as const,
-                lat: entry.lat,
-                lng: entry.lng,
-                isOnline: entry.isOnline ?? true,
-                status: entry.status,
-                timestamp: entry.timestamp,
-                route: entry.route,
-                vehicleType: entry.vehicleType,
-                requestStatus: entry.requestStatus,
-                sourceRole: entry.role,
-            }))
-            .filter((entry) =>
-                Number.isFinite(entry.lat) &&
-                Number.isFinite(entry.lng) &&
-                (entry.sourceRole === 'passenger' || entry.sourceRole === undefined)
-            )
-            .map(({ sourceRole, ...entry }) => entry);
+        try {
+            const rawDrivers = Object.entries(driverData)
+                .map(([driverId, entry]: [string, any]) => ({
+                    id: entry.id || driverId,
+                    role: 'driver' as const,
+                    lat: entry.lat,
+                    lng: entry.lng,
+                    isOnline: entry.isOnline ?? entry.status === 'online',
+                    status: entry.status,
+                    timestamp: entry.timestamp,
+                    route: entry.route,
+                    vehicleType: entry.vehicleType,
+                    requestStatus: entry.requestStatus,
+                }))
+                .filter((entry) => Number.isFinite(entry.lat) && Number.isFinite(entry.lng));
 
-        const rawList = [...rawDrivers, ...rawPassengers] as LiveUser[];
+            const rawPassengers = Object.entries(passengerData)
+                .map(([passengerId, entry]: [string, any]) => ({
+                    id: entry.id || passengerId,
+                    role: 'passenger' as const,
+                    lat: entry.lat,
+                    lng: entry.lng,
+                    isOnline: entry.isOnline ?? true,
+                    status: entry.status,
+                    timestamp: entry.timestamp,
+                    route: entry.route,
+                    vehicleType: entry.vehicleType,
+                    requestStatus: entry.requestStatus,
+                    sourceRole: entry.role,
+                }))
+                .filter((entry) =>
+                    Number.isFinite(entry.lat) &&
+                    Number.isFinite(entry.lng) &&
+                    (entry.sourceRole === 'passenger' || entry.sourceRole === undefined)
+                )
+                .map(({ sourceRole, ...entry }) => entry);
 
-        // Attach verificationBadge for drivers — fetch once per driver, then serve from cache.
-        const list = await Promise.all(
-            rawList.map(async (user) => {
-                if (user.role !== 'driver') return user;
-                if (badgeCache.has(user.id)) {
-                    const cached = badgeCache.get(user.id);
-                    return cached ? { ...user, verificationBadge: cached } : user;
-                }
-                try {
-                    const userRef = ref(db, `users/${user.id}`);
-                    const userSnap = await get(userRef);
-                    const badge = userSnap.exists() ? userSnap.val().verificationBadge ?? null : null;
-                    badgeCache.set(user.id, badge);
-                    return badge ? { ...user, verificationBadge: badge } : user;
-                } catch {
-                    badgeCache.set(user.id, null);
-                    return user;
-                }
-            })
-        );
+            const rawList = [...rawDrivers, ...rawPassengers] as LiveUser[];
 
-        if (!cancelled) callback(list);
+            // Optimize badge fetching: only fetch if not in cache
+            const list = await Promise.all(
+                rawList.map(async (user) => {
+                    if (user.role !== 'driver') return user;
+                    if (badgeCache.has(user.id)) {
+                        const cached = badgeCache.get(user.id);
+                        return cached ? { ...user, verificationBadge: cached } : user;
+                    }
+                    try {
+                        const userSnap = await get(ref(db, `users/${user.id}`));
+                        const badge = userSnap.exists() ? userSnap.val().verificationBadge ?? null : null;
+                        badgeCache.set(user.id, badge);
+                        return badge ? { ...user, verificationBadge: badge } : user;
+                    } catch {
+                        badgeCache.set(user.id, null);
+                        return user;
+                    }
+                })
+            );
+
+            if (!cancelled) callback(list);
+        } catch (error) {
+            console.error('[FirebaseDb] subscribeToLiveUsers emit error:', error);
+        }
+    };
+
+    const throttledEmit = () => {
+        if (emitTimeout) return;
+        emitTimeout = setTimeout(() => {
+            emitTimeout = null;
+            emit().catch(err => console.error('[LiveUsers] emit failed:', err));
+        }, 100); // Throttle to 10fps max for location updates
     };
 
     const unsubscribeDrivers = onValue(activeDriversRef, (snapshot) => {
         driverData = snapshot.val() || {};
-        emit().catch((error) => console.error('[LiveUsers] driver emit failed:', error));
-    });
+        throttledEmit();
+    }, (error) => console.error('[LiveUsers] drivers failed:', error));
 
     const unsubscribePassengers = onValue(passengerLocationsRef, (snapshot) => {
         passengerData = snapshot.val() || {};
-        emit().catch((error) => console.error('[LiveUsers] passenger emit failed:', error));
-    });
+        throttledEmit();
+    }, (error) => console.error('[LiveUsers] passengers failed:', error));
 
     return () => {
         cancelled = true;
+        if (emitTimeout) clearTimeout(emitTimeout);
         unsubscribeDrivers();
         unsubscribePassengers();
     };
@@ -655,6 +710,7 @@ export async function updateTripStatus(
     status: TripStatus,
     extraFields?: Record<string, unknown>
 ): Promise<void> {
+    console.log(`[FirebaseDb] updateTripStatus: ${tripId} -> ${status}`, extraFields);
     const db = getDb();
     const tripRef = ref(db, `trips/${tripId}`);
     const tripSnap = await get(tripRef);
@@ -683,10 +739,25 @@ export async function updateTripStatus(
     const bookingRef = ref(db, `bookings/${linkedBookingId}`);
     const bookingSnap = await get(bookingRef);
     if (bookingSnap.exists()) {
+        const bookingData = bookingSnap.val();
         await update(bookingRef, {
             status: mapTripStatusToBookingStatus(status),
             updatedAt: now,
         });
+
+        // CAPACITY GUARD: If trip is finishing, restore seats
+        const terminalStates = ['completed', 'cancelled', 'expired', 'rejected'];
+        const isFinishing = terminalStates.includes(status);
+        const wasAlreadyFinished = currentStatus && terminalStates.includes(currentStatus);
+
+        if (isFinishing && !wasAlreadyFinished) {
+            const seats = bookingData.numberOfPassengers || 1;
+            const busId = bookingData.busId;
+            if (busId) {
+                console.log(`[FirebaseDb] Releasing ${seats} seats for bus ${busId} (Trip ${status} from ${currentStatus})`);
+                await releaseOnlineSeats(busId, seats);
+            }
+        }
     }
 }
 
@@ -705,9 +776,9 @@ export async function autoCompleteTripByGPS(
     if (!tripSnap.exists()) {
         throw new Error(`Trip not found: ${tripId}`);
     }
+    const tripData = tripSnap.val() as { bookingId?: string, status?: TripStatus };
+    const currentStatus = tripData.status;
 
-    const tripData = tripSnap.val() as { bookingId?: string };
-    
     // 1. Update main trip record
     await update(tripRef, {
         status: 'completed',
@@ -722,13 +793,22 @@ export async function autoCompleteTripByGPS(
     const bookingRef = ref(db, `bookings/${linkedBookingId}`);
     const bookingSnap = await get(bookingRef);
     if (bookingSnap.exists()) {
+        const bookingData = bookingSnap.val();
         await update(bookingRef, {
             status: 'completed',
-            completedAt: now,
-            completionMethod: 'gps',
-            gpsVerifiedAt: now,
             updatedAt: now,
         });
+
+        // CAPACITY GUARD: Restore seats on GPS completion (if not already finished)
+        const terminalStates = ['completed', 'cancelled', 'expired', 'rejected'];
+        if (!currentStatus || !terminalStates.includes(currentStatus)) {
+            const seats = bookingData.numberOfPassengers || 1;
+            const busId = bookingData.busId;
+            if (busId) {
+                console.log(`[FirebaseDb] Releasing ${seats} seats for bus ${busId} (GPS Completed from ${currentStatus})`);
+                await releaseOnlineSeats(busId, seats);
+            }
+        }
     }
 
     // 2. Cleanup trip-specific location data
@@ -787,7 +867,40 @@ export async function submitTripRating(
 ): Promise<void> {
     const db = getDb();
     const field = rater === 'passenger' ? 'passengerRating' : 'driverRating';
-    await update(ref(db, `trips/${tripId}`), {
+    const tripRef = ref(db, `trips/${tripId}`);
+    
+    await update(tripRef, {
         [field]: { stars, comment, createdAt: new Date().toISOString() },
     });
+
+    // If passenger rated the driver, update driver's TRRL reputation
+    if (rater === 'passenger') {
+        try {
+            const tripSnap = await get(tripRef);
+            if (tripSnap.exists()) {
+                const tripData = tripSnap.val();
+                const driverId = tripData.driverId;
+                if (driverId) {
+                    const { updateDriverReputation, getDriverReputation } = await import('./solana/trrl');
+                    const currentRep = await getDriverReputation(driverId);
+                    
+                    // Fetch driver wallet for Solana anchor
+                    const driverSnap = await get(ref(db, `users/${driverId}`));
+                    const driverWallet = driverSnap.val()?.solanaWallet;
+                    
+                    if (driverWallet) {
+                        const totalRatings = (currentRep?.completedTrips || 1); // Approximation
+                        const currentAvg = currentRep?.avgRatingX100 || 500;
+                        const newAvg = Math.round(((currentAvg * totalRatings) + (stars * 100)) / (totalRatings + 1));
+                        
+                        await updateDriverReputation(driverId, driverWallet, {
+                            avgRatingX100: newAvg
+                        });
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn('[Rating] Failed to update reputation:', err);
+        }
+    }
 }

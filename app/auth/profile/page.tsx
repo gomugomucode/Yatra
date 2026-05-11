@@ -283,6 +283,7 @@ function ProfilePageContent() {
       const nowIso = new Date().toISOString();
       await rtdbSet(ref(rtdb, `buses/${currentUser.uid}`), {
         id: currentUser.uid,
+        driverId: currentUser.uid,
         driverName: name,
         busNumber: data.vehicleNumber,
         route: data.route,

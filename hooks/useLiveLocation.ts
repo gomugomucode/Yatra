@@ -57,65 +57,82 @@ export function useLiveLocation(
             return;
         }
 
-        watchIdRef.current = navigator.geolocation.watchPosition(
-            (position) => {
-                const { latitude, longitude } = position.coords;
-                const now = Date.now();
+        let isActive = true;
+        let hasLoggedError = false;
 
-                let shouldUpdate = false;
-                if (!lastPushRef.current) {
-                    shouldUpdate = true;
-                } else {
-                    const timeElapsed = now - lastPushRef.current.time;
-                    if (timeElapsed >= 3000) {
+        const startWatching = () => {
+            watchIdRef.current = navigator.geolocation.watchPosition(
+                (position) => {
+                    if (!isActive) return;
+                    const { latitude, longitude } = position.coords;
+                    const now = Date.now();
+
+                    let shouldUpdate = false;
+                    if (!lastPushRef.current) {
                         shouldUpdate = true;
-                    }
-                }
-
-                if (shouldUpdate) {
-                    console.log('📍 SENDING LOCATION:', {
-                        id,
-                        role,
-                        vehicleType,
-                        requestStatus: effectiveStatus,
-                        lat: latitude,
-                        lng: longitude
-                    });
-                    setLocation({ lat: latitude, lng: longitude });
-
-                    if (id && role) {
-                        const validRole = role as 'driver' | 'passenger';
-
-                        const userPayload: LiveUser = {
-                            id,
-                            role: validRole,
-                            lat: latitude,
-                            lng: longitude,
-                            isOnline: true,
-                            timestamp: new Date(now).toISOString(),
-                            vehicleType,
-                            requestStatus: effectiveStatus,
-                            ...(route ? { route } : {})
-                        };
-
-                        updateLiveUserStatus(userPayload).catch((err) => {
-                            console.error('Failed to update live location in Firebase:', err);
-                        });
+                    } else {
+                        const timeElapsed = now - lastPushRef.current.time;
+                        if (timeElapsed >= 3000) {
+                            shouldUpdate = true;
+                        }
                     }
 
-                    lastPushRef.current = { lat: latitude, lng: longitude, time: now };
+                    if (shouldUpdate) {
+                        setLocation({ lat: latitude, lng: longitude });
+
+                        if (id && role) {
+                            const validRole = role as 'driver' | 'passenger';
+                            const userPayload: LiveUser = {
+                                id,
+                                role: validRole,
+                                lat: latitude,
+                                lng: longitude,
+                                isOnline: true,
+                                timestamp: new Date(now).toISOString(),
+                                vehicleType,
+                                requestStatus: effectiveStatus,
+                                ...(route ? { route } : {})
+                            };
+
+                            updateLiveUserStatus(userPayload).catch((err) => {
+                                console.error('Failed to update live location in Firebase:', err);
+                            });
+                        }
+
+                        lastPushRef.current = { lat: latitude, lng: longitude, time: now };
+                    }
+                },
+                (err) => {
+                    if (!isActive) return;
+                    setError(err.message);
+                    if (!hasLoggedError) {
+                        console.warn('[useLiveLocation] Geolocation watch error:', err.message);
+                        hasLoggedError = true;
+                    }
+                },
+                {
+                    enableHighAccuracy: true,
+                    maximumAge: 0,
+                    timeout: 10000
                 }
-            },
-            (err) => {
-                setError(err.message);
-                console.error('Geolocation watch error:', err);
-            },
-            {
-                enableHighAccuracy: true,
-                maximumAge: 0,
-                timeout: 10000
-            }
-        );
+            );
+        };
+
+        if (navigator.permissions && navigator.permissions.query) {
+            navigator.permissions.query({ name: 'geolocation' }).then(result => {
+                if (result.state === 'denied') {
+                    if (!hasLoggedError) {
+                        console.warn('[useLiveLocation] Location permission denied.');
+                        setError('Location permission denied.');
+                        hasLoggedError = true;
+                    }
+                } else {
+                    startWatching();
+                }
+            }).catch(() => startWatching());
+        } else {
+            startWatching();
+        }
 
         return () => {
             if (watchIdRef.current !== null) {

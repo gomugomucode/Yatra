@@ -68,7 +68,7 @@ function MapUpdater({ center, selectedUserId, currentPosition }: { center: { lat
             map.flyTo([center.lat, center.lng], 16);
             lastUserIdRef.current = selectedUserId;
         }
-    }, [center, selectedUserId, map]);
+    }, [selectedUserId, map]); // Only trigger on selection change, not on coordinate updates
 
     useEffect(() => {
         if (!currentPosition) return;
@@ -77,15 +77,16 @@ function MapUpdater({ center, selectedUserId, currentPosition }: { center: { lat
         if (!hasCenteredOnceRef.current) {
             map.flyTo(currentPosition, 14);
             hasCenteredOnceRef.current = true;
-        } else {
+        } else if (!selectedUserId) {
             // If GPS drifts drastically (e.g. initial fake location -> real location)
+            // Only auto-center if no bus/user is currently selected
             const mapCenter = map.getCenter();
             const distance = map.distance(mapCenter, currentPosition);
             if (distance > 3000) { // 3km threshold
                 map.flyTo(currentPosition, 14);
             }
         }
-    }, [currentPosition, map]);
+    }, [currentPosition, map, selectedUserId]);
 
     return null;
 }

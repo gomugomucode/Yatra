@@ -53,15 +53,21 @@ export async function POST(request: Request) {
             return NextResponse.json({ minted: false, reason: 'no_wallet' });
         }
 
-        const privateKeyString = process.env.SOLANA_SERVER_KEY;
+        const privateKeyString = process.env.SOLANA_SERVER_PRIVATE_KEY;
         if (!privateKeyString) {
-            return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+            return NextResponse.json({ error: 'Server configuration error: SOLANA_SERVER_PRIVATE_KEY missing' }, { status: 500 });
         }
 
         let serverKeypair: Keypair;
         try {
-            serverKeypair = Keypair.fromSecretKey(bs58.decode(privateKeyString));
-        } catch {
+            // Support both Base58 and JSON array formats
+            if (privateKeyString.startsWith('[')) {
+                serverKeypair = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(privateKeyString)));
+            } else {
+                serverKeypair = Keypair.fromSecretKey(bs58.decode(privateKeyString));
+            }
+        } catch (e) {
+            console.error('[MINT] Key decode error:', e);
             return NextResponse.json({ error: 'Server key configuration error' }, { status: 500 });
         }
 
