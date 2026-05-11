@@ -111,6 +111,19 @@ export default function DriverDashboard() {
     isTracking: isOnline && locationEnabled
   });
 
+  const callStatusUpdateApi = async (tripId: string, status: string, extra?: Record<string, any>) => {
+    const res = await fetch('/api/trips/update-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tripId, status, extraFields: extra }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Update failed' }));
+      throw new Error(err.error || 'Server error');
+    }
+    return res.json();
+  };
+
   const handleAccidentConfirm = async () => {
     resetDetection();
     await handleReportEmergency('accident');
@@ -232,7 +245,7 @@ export default function DriverDashboard() {
         name: b.passengerName,
         pickupLocation: b.pickupLocation,
         dropoffLocation: b.dropoffLocation,
-        status: 'waiting',
+        status: (b.status === 'completed' ? 'dropped' : (['confirmed', 'active'].includes(b.status) ? 'picked' : 'waiting')) as any,
         bookingTime: b.timestamp,
       }));
 
@@ -447,33 +460,33 @@ export default function DriverDashboard() {
   const handleAcceptTrip = async () => {
     if (!activeTripRequest) return;
     try {
-      await updateTripStatus(activeTripRequest.id, 'accepted');
+      await callStatusUpdateApi(activeTripRequest.id, 'accepted');
       setActiveTripRequest((prev) => prev ? { ...prev, status: 'accepted' } : null);
       toast({ title: 'Trip accepted', description: 'Navigate to pickup point.' });
-    } catch {
-      toast({ title: 'Failed to accept trip', description: 'Check your connection and try again.', variant: 'destructive' });
+    } catch (error: any) {
+      toast({ title: 'Failed to accept trip', description: error.message || 'Check your connection and try again.', variant: 'destructive' });
     }
   };
 
   const handleRejectTrip = async () => {
     if (!activeTripRequest) return;
     try {
-      await updateTripStatus(activeTripRequest.id, 'rejected');
+      await callStatusUpdateApi(activeTripRequest.id, 'rejected');
       setActiveTripRequest(null);
       toast({ title: 'Trip rejected' });
-    } catch {
-      toast({ title: 'Failed to reject trip', description: 'Check your connection and try again.', variant: 'destructive' });
+    } catch (error: any) {
+      toast({ title: 'Failed to reject trip', description: error.message || 'Check your connection and try again.', variant: 'destructive' });
     }
   };
 
   const handleExpireTrip = async () => {
     if (!activeTripRequest) return;
     try {
-      await updateTripStatus(activeTripRequest.id, 'expired');
+      await callStatusUpdateApi(activeTripRequest.id, 'expired');
       setActiveTripRequest(null);
       toast({ title: 'Trip request expired' });
-    } catch {
-      toast({ title: 'Failed to expire trip', description: 'Check your connection and try again.', variant: 'destructive' });
+    } catch (error: any) {
+      toast({ title: 'Failed to expire trip', description: error.message || 'Check your connection and try again.', variant: 'destructive' });
     }
   };
 
@@ -481,16 +494,16 @@ export default function DriverDashboard() {
     if (!activeTripRequest) return;
     try {
       console.log(`[Driver] Boarding passenger for trip ${activeTripRequest.id}`);
-      await updateTripStatus(activeTripRequest.id, 'active');
+      await callStatusUpdateApi(activeTripRequest.id, 'active');
       setActiveTripRequest((prev) => prev ? { ...prev, status: 'active' } : null);
       
       // Sync local passenger list if this matches
       setPassengers(prev => prev.map(p => p.id === activeTripRequest.id ? { ...p, status: 'picked' } : p));
       
       toast({ title: 'Trip started', description: 'Navigate to destination.' });
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Driver] Passenger boarding failed:', error);
-      toast({ title: 'Failed to start trip', description: 'Check your connection and try again.', variant: 'destructive' });
+      toast({ title: 'Failed to start trip', description: error.message || 'Check your connection and try again.', variant: 'destructive' });
     }
   };
 
@@ -510,11 +523,14 @@ export default function DriverDashboard() {
     try {
       console.log(`[Driver] Completing trip ${activeTripRequest.id}`);
       
-      // 1. Mark trip as completed in Firebase
-      await autoCompleteTripByGPS(activeTripRequest.id);
+      const now = new Date().toISOString();
+      await callStatusUpdateApi(activeTripRequest.id, 'completed', {
+        completionMethod: 'gps',
+        gpsVerifiedAt: now
+      });
       
       const tripRecordId = activeTripRequest.id;
-      await handlePassengerDropoff(tripRecordId, true); // true = skip redundant status update since autoComplete already did it
+      await handlePassengerDropoff(tripRecordId, true); // true = skip redundant status update since API already did it
 
       setActiveTripRequest(null);
       toast({ title: 'Trip completed' });
@@ -763,7 +779,7 @@ export default function DriverDashboard() {
   const handlePassengerPickup = async (passengerId: string) => {
     try {
       console.log(`[Driver] Picking up passenger: ${passengerId}`);
-      await updateTripStatus(passengerId, 'active');
+      await callStatusUpdateApi(passengerId, 'active');
       
       setPassengers(prev =>
         prev.map(passenger =>
@@ -774,9 +790,9 @@ export default function DriverDashboard() {
       );
       
       toast({ title: 'Passenger Boarded', description: 'Trip status updated to active.' });
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Driver] Pickup failed:', error);
-      toast({ title: 'Pickup failed', variant: 'destructive' });
+      toast({ title: 'Pickup failed', description: error.message || 'Check connection.', variant: 'destructive' });
     }
   };
 
@@ -801,7 +817,7 @@ export default function DriverDashboard() {
       if (!selectedBus || !userData) return;
 
       if (!skipStatusUpdate) {
-        await updateTripStatus(passengerId, 'completed');
+        await callStatusUpdateApi(passengerId, 'completed');
       }
 
       toast({
@@ -904,21 +920,10 @@ export default function DriverDashboard() {
         });
       }
 
-      // 3. Update TRRL Reputation (Exactly once per dropoff)
-      if (currentUser && driverWalletAddress) {
-        try {
-          const currentRep = await getDriverReputation(currentUser.uid);
-          await updateDriverReputation(currentUser.uid, driverWalletAddress, {
-            totalTrips: (currentRep?.totalTrips || 0) + 1,
-            completedTrips: (currentRep?.completedTrips || 0) + 1,
-            zkVerified: !!driverProfile?.verificationBadge?.ageVerified,
-          });
-          console.log(`[Reputation] Score updated for driver ${currentUser.uid}`);
-        } catch (repErr) {
-          console.error('[Reputation] Failed to update driver score:', repErr);
-        }
-      }
-
+      // 3. Reputation and Stats are now handled by the /api/trips/update-status route
+      // triggered during the 'completed' transition. The rating modal here only handles
+      // the submission of the stars/comments.
+      
       setRatingTripId(passengerId);
       setRatingPassengerName(bookingData.passengerName || 'Passenger');
       setShowRatingModal(true);
@@ -1020,12 +1025,14 @@ export default function DriverDashboard() {
     );
   }
 
-  const completedTrips = passengers.filter((p: any) => p?.status === 'dropped').length;
+  // Lifetime Stats from Persistent DB (via userData.stats)
+  const stats = (userData as any)?.stats || {};
+  const completedTrips = stats.completedTrips || 0;
+  const totalEarnings = stats.totalEarnings || 0;
+  const completionRate = stats.completionRate || 0;
+  
+  // Session-based active count
   const activeTripsCount = passengers.filter((p: any) => p?.status === 'waiting' || p?.status === 'onBoard').length;
-  const estimatedEarnings = passengers.reduce((sum: number, p: any) => {
-    const fare = typeof p?.fare === 'number' ? p.fare : 0;
-    return sum + fare;
-  }, 0);
 
   const C = '#00D4AA';
   const CD = '#009E7F';
@@ -1052,7 +1059,7 @@ export default function DriverDashboard() {
             onClick={async () => {
               setShowPassengerReachedAlert(false);
               if (activeTripRequest?.id) {
-                await updateTripStatus(activeTripRequest.id, 'arrived');
+                await callStatusUpdateApi(activeTripRequest.id, 'arrived');
                 setActiveTripRequest((prev) => prev ? { ...prev, status: 'arrived' } : null);
               }
             }}
@@ -1280,8 +1287,8 @@ export default function DriverDashboard() {
           <section className="rounded-2xl p-4 space-y-3" style={{ background: 'white', border: `1px solid ${BORDER}`, boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
             <p className="text-xs uppercase tracking-widest font-black" style={{ color: MUTED }}>Earnings</p>
             <div className="rounded-2xl p-5" style={{ background: `linear-gradient(135deg, ${CL}, #C8F2E6)`, border: '1px solid #A7F3D0' }}>
-              <p className="text-[11px] uppercase tracking-widest font-bold" style={{ color: MUTED }}>Estimated Today</p>
-              <p className="mt-1 text-3xl font-black" style={{ color: INK }}>NPR {estimatedEarnings.toLocaleString()}</p>
+              <p className="text-[11px] uppercase tracking-widest font-bold" style={{ color: MUTED }}>Lifetime Earnings</p>
+              <p className="mt-1 text-3xl font-black" style={{ color: INK }}>NPR {totalEarnings.toLocaleString()}</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl p-3" style={{ background: SURF, border: `1px solid ${BORDER}` }}>

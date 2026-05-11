@@ -423,10 +423,16 @@ export const subscribeToBookings = (
 export const createUserProfile = async (userId: string, userData: any) => {
     const db = getDb();
     const userRef = ref(db, `users/${userId}`);
-    await set(userRef, {
+    
+    // Check if user already exists to preserve createdAt
+    const snapshot = await get(userRef);
+    const existingData = snapshot.exists() ? snapshot.val() : {};
+    
+    // Use update to avoid wiping out stats/badges not present in the creation/update form
+    await update(userRef, {
         ...userData,
         id: userId,
-        createdAt: new Date().toISOString(),
+        createdAt: existingData.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString()
     });
 };

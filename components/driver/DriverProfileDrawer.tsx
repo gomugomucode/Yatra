@@ -48,6 +48,8 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
   const [reputationScore, setReputationScore] = useState<number>(0);
   const [totalTrips, setTotalTrips] = useState<number>(0);
   const [completedTrips, setCompletedTrips] = useState<number>(0);
+  const [totalEarnings, setTotalEarnings] = useState<number>(0);
+  const [completionRate, setCompletionRate] = useState<number>(0);
   const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
 
   const isControlled = controlledOpen !== undefined && onOpenChange !== undefined;
@@ -74,6 +76,13 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
           setReputationScore(data.score || 0);
           setTotalTrips(data.totalTrips || 0);
           setCompletedTrips(data.completedTrips || 0);
+        }
+
+        // Also sync from userData.stats for earnings
+        const stats = (userData as any)?.stats;
+        if (stats) {
+          setTotalEarnings(stats.totalEarnings || 0);
+          setCompletionRate(stats.completionRate || 0);
         }
       } catch (error) {
         console.error('Failed to fetch reputation', error);
@@ -167,7 +176,7 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
                 className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold h-10 rounded-xl"
                 onClick={() => {
                   setOpen(false);
-                  router.push('/auth/profile?role=driver');
+                  router.push('/auth/profile?role=driver&reverify=true');
                 }}
               >
                 <ShieldCheck className="w-4 h-4 mr-2" />
@@ -246,6 +255,10 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
               Digital Wallet
             </h3>
             <div className="rounded-xl bg-surface-soft border border-border p-5 space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground font-bold">Lifetime Earnings</span>
+                <span className="text-foreground font-black text-base">NPR {totalEarnings.toLocaleString()}</span>
+              </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground font-bold">Balance</span>
                 <span className="text-foreground font-black text-base">0.00 USDC · 0 SOL</span>

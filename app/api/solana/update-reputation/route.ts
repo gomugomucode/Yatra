@@ -25,8 +25,9 @@ export async function POST(request: Request) {
 
         // ── Phase 2: Anchoring Reputation ──
         // We use a PDA-like derivation for the "Reputation Account" in this simulation
-        const seed = Buffer.from(`yatra_rep_${driverId.slice(0, 16)}`);
-        const reputationPDA = Keypair.fromSeed(seed.slice(0, 32)).publicKey;
+        const crypto = require('crypto');
+        const seed = crypto.createHash('sha256').update(`yatra_rep_${driverId}`).digest();
+        const reputationPDA = Keypair.fromSeed(seed).publicKey;
 
         console.log(`[API Rep] Anchoring score ${score} for ${driverPubkey}`);
 

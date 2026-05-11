@@ -117,39 +117,34 @@ export async function POST(request: Request) {
                     });
 
                     // Anchor on Solana
-                    try {
-                        const connection = getConnection();
-                        const serverKeypair = getServerKeypair();
-                        const seed = Buffer.from(`yatra_rep_${driverId.slice(0, 16)}`);
-                        const reputationPDA = Keypair.fromSeed(seed.slice(0, 32)).publicKey;
+                    const connection = getConnection();
+                    const serverKeypair = getServerKeypair();
+                    const crypto = require('crypto');
+                    const seed = crypto.createHash('sha256').update(`yatra_rep_${driverId}`).digest();
+                    const reputationPDA = Keypair.fromSeed(seed).publicKey;
 
-                        const tx = new Transaction().add(
-                            new TransactionInstruction({
-                                keys: [{ pubkey: serverKeypair.publicKey, isSigner: true, isWritable: false }],
-                                programId: MEMO_PROGRAM_ID,
-                                data: Buffer.from(memo, 'utf-8'),
-                            })
-                        );
+                    const tx = new Transaction().add(
+                        new TransactionInstruction({
+                            keys: [{ pubkey: serverKeypair.publicKey, isSigner: true, isWritable: false }],
+                            programId: MEMO_PROGRAM_ID,
+                            data: Buffer.from(memo, 'utf-8'),
+                        })
+                    );
 
-                        const { blockhash } = await connection.getLatestBlockhash('confirmed');
-                        tx.recentBlockhash = blockhash;
-                        tx.feePayer = serverKeypair.publicKey;
+                    const { blockhash } = await connection.getLatestBlockhash('confirmed');
+                    tx.recentBlockhash = blockhash;
+                    tx.feePayer = serverKeypair.publicKey;
 
-                        const signature = await sendAndConfirmTransaction(
-                            connection,
-                            tx,
-                            [serverKeypair],
-                            { commitment: 'confirmed' }
-                        );
+                    const signature = await sendAndConfirmTransaction(
+                        connection,
+                        tx,
+                        [serverKeypair],
+                        { commitment: 'confirmed' }
+                    );
 
-                        currentRep.lastSolanaTx = signature;
-                        currentRep.reputationPDA = reputationPDA.toBase58();
-                        currentRep.verifiedAt = Date.now();
-                        
-                    } catch (err: any) {
-                        console.warn('[API Rep] Solana anchor failed:', err.message);
-                        currentRep.lastSolanaTx = 'memo' + Math.random().toString(36).substring(2, 15);
-                    }
+                    currentRep.lastSolanaTx = signature;
+                    currentRep.reputationPDA = reputationPDA.toBase58();
+                    currentRep.verifiedAt = Date.now();
                     
                     await repRef.set(currentRep);
                 }
