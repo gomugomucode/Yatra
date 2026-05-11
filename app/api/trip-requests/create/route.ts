@@ -56,9 +56,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Bus not found' }, { status: 404 });
     }
 
-    const busData = busSnap.val() as { isActive?: boolean; busNumber?: string };
+    const busData = busSnap.val() as { isActive?: boolean; busNumber?: string; driverId?: string };
     if (busData.isActive === false) {
       return NextResponse.json({ error: 'Bus is currently offline' }, { status: 409 });
+    }
+
+    const driverUid = busData.driverId;
+    if (!driverUid) {
+        return NextResponse.json({ 
+            error: 'Bus configuration incomplete', 
+            details: 'This bus is not yet linked to a verified driver dashboard. Please try another bus.' 
+        }, { status: 422 });
     }
 
     const passengerData = passengerSnap.exists() ? passengerSnap.val() as { name?: string } : {};
@@ -73,7 +81,7 @@ export async function POST(request: Request) {
       id: tripRequestRef.key!,
       tripId: tripRequestRef.key!,
       busId,
-      driverId: busId,
+      driverId: driverUid,
       passengerId,
       passengerName,
       status: 'requested' as const,
@@ -85,10 +93,12 @@ export async function POST(request: Request) {
       ...(dropoffLocation ? { dropoffLocation } : {}),
     };
 
+    console.log('[TripAPI] Writing trip with driverId:', driverUid, 'passengerId:', passengerId);
     await tripRequestRef.set(tripRequest);
+    console.log('[TripAPI] Trip written successfully:', tripRequestRef.key);
 
     // Push notification to the driver device(s), if registered.
-    const driverSnap = await adminDb.ref(`users/${busId}`).once('value');
+    const driverSnap = await adminDb.ref(`users/${driverUid}`).once('value');
     if (driverSnap.exists()) {
       const driverData = driverSnap.val() as { pushTokens?: string[]; pushToken?: string };
       const tokens = Array.from(

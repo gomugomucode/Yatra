@@ -70,13 +70,22 @@ export async function POST(request: Request) {
       );
     }
 
-    // Initialize Firebase Admin
+    // 1. Initialize Firebase Admin
     const adminApp = getAdminApp();
     const db = getDatabase(adminApp);
 
-    const busRef = db.ref(`buses/${busId}`);
+    // LAZY CLEANUP: Expire old bookings for this bus before proceeding
+    // This ensures availableSeats is accurate.
+    try {
+        const { expireOldBookings } = await import('@/lib/seatManagement');
+        await expireOldBookings(busId);
+    } catch (e) {
+        console.warn('[Booking] Lazy cleanup failed, continuing anyway:', e);
+    }
 
-    // 1. Fetch bus first for static data (vehicleType) and initial validation
+    const busRef = db.ref(`buses/${busId}`);
+    
+    // 2. Fetch bus first for static data (vehicleType) and initial validation
     const busSnapshot = await busRef.once('value');
     const initialBusData = busSnapshot.val();
 
@@ -97,7 +106,28 @@ export async function POST(request: Request) {
     // Determine vehicle type: prefer request, fallback to bus data, fallback to 'bus'
     const vehicleType = requestedVehicleType || initialBusData.vehicleType || 'bus';
 
-    // 2. Calculate fare (local logic, no side effects)
+    // 2. Prevent Duplicate Active Bookings
+    const activeBookingsSnap = await db.ref('bookings')
+        .orderByChild('passengerId')
+        .equalTo(passengerId)
+        .once('value');
+    
+    if (activeBookingsSnap.exists()) {
+        const activeBookings = Object.values(activeBookingsSnap.val()) as Booking[];
+        const hasDuplicate = activeBookings.some(b => 
+            b.busId === busId && 
+            ['pending', 'confirmed', 'requested', 'accepted', 'active'].includes(b.status)
+        );
+        
+        if (hasDuplicate) {
+            return NextResponse.json(
+                { error: 'You already have an active booking for this bus. Please cancel it first.' },
+                { status: 409 }
+            );
+        }
+    }
+
+    // 3. Calculate fare (local logic, no side effects)
     let fare = 0;
     try {
       fare = calculateFareFromLocations(
@@ -156,6 +186,7 @@ export async function POST(request: Request) {
 
     const booking: Omit<Booking, 'id'> = {
       passengerId,
+      driverId: initialBusData.driverId || busId,
       busId,
       passengerName,
       phoneNumber,
@@ -183,14 +214,27 @@ export async function POST(request: Request) {
       id: newBookingRef.key!,
     };
 
-    await newBookingRef.set(bookingWithId);
+    try {
+      await newBookingRef.set(bookingWithId);
+    } catch (bookingWriteError) {
+      console.error('[Booking] Record write failed, rolling back seats:', bookingWriteError);
+      // ROLLBACK: Decrement seats on bus if booking write failed
+      await busRef.transaction((currentBus) => {
+        if (!currentBus) return;
+        const online = currentBus.onlineBookedSeats || 0;
+        const newOnline = Math.max(0, online - numberOfPassengers);
+        currentBus.onlineBookedSeats = newOnline;
+        currentBus.availableSeats = Math.max(0, (currentBus.capacity || 0) - newOnline - (currentBus.offlineOccupiedSeats || 0));
+        return currentBus;
+      });
+      throw bookingWriteError; // Re-throw to catch block
+    }
 
     // 5. Solana Escrow (for Digital Payments)
     if (paymentMethod === 'digital') {
       try {
         console.log(`[Escrow] Initializing escrow for booking: ${bookingWithId.id}`);
         
-        // Fetch driver wallet from the bus data (which we have from Step 1)
         const driverWallet = initialBusData.driverWalletAddress;
         const passengerProfileSnap = await db.ref(`users/${passengerId}`).once('value');
         const passengerWallet = passengerProfileSnap.exists()
@@ -198,51 +242,67 @@ export async function POST(request: Request) {
           : null;
         
         if (!driverWallet || !passengerWallet) {
-          console.warn(`[Escrow] Missing wallet linkage (driver=${!!driverWallet}, passenger=${!!passengerWallet}). Escrow skipped.`);
+          const errorMsg = !passengerWallet
+            ? 'Your Solana wallet is not linked. Please link it in your profile to use digital payments.'
+            : 'The driver for this bus has not linked their Solana wallet. Please choose another bus or use cash.';
+          
+          console.warn(`[Escrow] Missing wallet linkage: ${errorMsg}`);
+          
+          // Revert booking creation if digital payment fails due to setup
+          await newBookingRef.remove();
+          return NextResponse.json({ 
+            error: errorMsg,
+            code: 'WALLET_MISSING'
+          }, { status: 400 });
+        }
+
+        // Internal call to escrow API
+        const { getAppUrl } = await import('@/lib/utils/url');
+        const baseUrl = getAppUrl();
+        
+        const escrowRes = await fetch(`${baseUrl}/api/solana/escrow/create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tripId: bookingWithId.id,
+            passengerWallet: passengerWallet,
+            driverWallet: driverWallet,
+            amountNPR: fare
+          })
+        });
+
+        if (!escrowRes.ok) {
+          const escrowData = await escrowRes.json().catch(() => ({}));
+          console.error('[Escrow] API Error:', escrowData?.error);
+          
+          await newBookingRef.update({
+            escrowStatus: 'failed',
+            escrowError: escrowData?.error || 'Escrow transaction failed',
+          });
+          
+          // We don't remove the booking here as it might be a transient Solana failure,
+          // but we notify the user.
+          return NextResponse.json({ 
+            error: 'Solana network error. Funds could not be locked. Please try again or use cash.',
+            code: 'SOLANA_ERROR'
+          }, { status: 503 });
+        } else {
           await newBookingRef.update({
             escrowStatus: 'locked',
-            escrowError: !passengerWallet
-              ? 'Passenger wallet not linked'
-              : 'Driver wallet not linked',
+            passengerWalletAddress: passengerWallet,
+            driverWalletAddress: driverWallet,
           });
-        } else {
-          // Internal call to escrow API or direct lib call
-          // Since we are in an API route, we'll use a direct fetch to the local escrow create endpoint
-          // to keep the logic isolated.
-          const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
-          const host = request.headers.get('host');
-          
-          const escrowRes = await fetch(`${protocol}://${host}/api/solana/escrow/create`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              tripId: bookingWithId.id,
-              passengerWallet: passengerWallet,
-              driverWallet: driverWallet,
-              amountNPR: fare
-            })
-          });
-
-          if (!escrowRes.ok) {
-            const escrowData = await escrowRes.json().catch(() => ({}));
-            await newBookingRef.update({
-              escrowStatus: 'locked',
-              escrowError: escrowData?.error || 'Escrow initialization failed',
-            });
-          } else {
-            await newBookingRef.update({
-              escrowStatus: 'locked',
-              passengerWalletAddress: passengerWallet,
-              driverWalletAddress: driverWallet,
-            });
-          }
         }
       } catch (escrowErr) {
         console.error('[Escrow] Integration failed:', escrowErr);
         await newBookingRef.update({
-          escrowStatus: 'locked',
+          escrowStatus: 'failed',
           escrowError: escrowErr instanceof Error ? escrowErr.message : 'Escrow integration failed',
         });
+        return NextResponse.json({ 
+          error: 'Internal escrow service error. Please use cash or try again later.',
+          code: 'ESCROW_SERVICE_ERROR'
+        }, { status: 500 });
       }
     }
 

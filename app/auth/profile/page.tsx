@@ -141,6 +141,7 @@ function ProfilePageContent() {
 
   // ── 2. DERIVED STATE & MEMOIZED VALUES ──
   const roleFromUrl = searchParams.get('role') as 'driver' | 'passenger' | null;
+  const reverify = searchParams.get('reverify') === 'true';
   const effectiveRole = roleFromUrl || role;
 
   // ── 3. EFFECTS (Logic that runs after render) ──
@@ -155,12 +156,12 @@ function ProfilePageContent() {
   // Safe redirect guard
   useEffect(() => {
     if (!loading && currentUser && userData && !isSubmitting) {
-      if (checkProfileCompletion(userData)) {
+      if (checkProfileCompletion(userData) && !reverify) {
         // Use window.location.assign for a clean break from the auth flow
         window.location.assign(userData.role === 'driver' ? '/driver' : '/passenger');
       }
     }
-  }, [currentUser, userData, loading, isSubmitting]);
+  }, [currentUser, userData, loading, isSubmitting, reverify]);
 
   // Redirect to role selection if no valid role is found after auth resolves
   useEffect(() => {
@@ -283,6 +284,7 @@ function ProfilePageContent() {
       const nowIso = new Date().toISOString();
       await rtdbSet(ref(rtdb, `buses/${currentUser.uid}`), {
         id: currentUser.uid,
+        driverId: currentUser.uid,
         driverName: name,
         busNumber: data.vehicleNumber,
         route: data.route,

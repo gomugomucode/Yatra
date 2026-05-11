@@ -2,7 +2,7 @@ import { TripStatus } from '@/lib/types';
 
 export const TRIP_ALLOWED_TRANSITIONS: Record<TripStatus, TripStatus[]> = {
   requested: ['accepted', 'rejected', 'cancelled', 'expired'],
-  accepted: ['arrived', 'cancelled', 'expired'],
+  accepted: ['arrived', 'active', 'cancelled', 'expired'],
   arrived: ['active', 'cancelled', 'expired'],
   active: ['completed', 'cancelled'],
   completed: [],

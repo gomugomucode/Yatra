@@ -133,6 +133,7 @@ export async function POST(request: Request) {
             zkCommitment: zkResult.commitment,
             zkMemoSignature: memoSignature ?? null,
             isApproved: true,
+            ageVerified: zkResult.ageValid ?? true,
         };
 
         await adminDb.ref(`users/${driverId}`).update({
@@ -146,6 +147,18 @@ export async function POST(request: Request) {
             driverWalletAddress: driverWalletAddress,
             updatedAt: new Date().toISOString(),
         });
+
+        // ── Step 6: Sync Reputation ──────────────────────────────────────
+        try {
+            const repRef = adminDb.ref(`reputation/drivers/${driverId}`);
+            await repRef.update({
+                zkVerified: true,
+                verifiedAt: Date.now()
+            });
+        } catch (repErr) {
+            console.error('[verify-driver] Reputation sync failed:', repErr);
+            // Non-blocking: we still return success if the badge was minted
+        }
 
         return NextResponse.json({
             success: true,

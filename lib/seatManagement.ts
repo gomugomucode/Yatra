@@ -19,7 +19,7 @@ export function canAccommodateBooking(bus: Bus, numberOfPassengers: number): boo
 }
 
 /**
- * Update offline passenger count in Firebase Realtime Database
+ * Update offline passenger count in Firebase Realtime Database atomically.
  */
 export async function updateOfflineSeats(
     busId: string,
@@ -28,25 +28,22 @@ export async function updateOfflineSeats(
     const app = getFirebaseApp();
     const db = getDatabase(app);
     const busRef = ref(db, `buses/${busId}`);
+    
+    const { runTransaction } = await import('firebase/database');
 
-    // Ensure non-negative
-    const validOfflineSeats = Math.max(0, offlineSeats);
+    await runTransaction(busRef, (currentBus) => {
+        if (!currentBus) return currentBus;
 
-    // Get current bus data to calculate available seats
-    const snapshot = await get(busRef);
-    if (!snapshot.exists()) {
-        throw new Error(`Bus ${busId} not found`);
-    }
+        const validOfflineSeats = Math.max(0, offlineSeats);
+        const capacity = currentBus.capacity || 0;
+        const onlineBooked = currentBus.onlineBookedSeats || 0;
+        const availableSeats = capacity - onlineBooked - validOfflineSeats;
 
-    const busData = snapshot.val();
-    const capacity = busData.capacity || 0;
-    const onlineBooked = busData.onlineBookedSeats || 0;
-    const availableSeats = capacity - onlineBooked - validOfflineSeats;
+        currentBus.offlineOccupiedSeats = validOfflineSeats;
+        currentBus.availableSeats = Math.max(0, availableSeats);
+        currentBus.lastSeatUpdate = new Date().toISOString();
 
-    await update(busRef, {
-        offlineOccupiedSeats: validOfflineSeats,
-        availableSeats: Math.max(0, availableSeats),
-        lastSeatUpdate: new Date().toISOString(),
+        return currentBus;
     });
 }
 
@@ -101,7 +98,7 @@ export async function removeOfflinePassenger(busId: string): Promise<void> {
 }
 
 /**
- * Update online booked seats count
+ * Update online booked seats count using an atomic transaction.
  */
 export async function updateOnlineBookedSeats(
     busId: string,
@@ -111,22 +108,52 @@ export async function updateOnlineBookedSeats(
     const db = getDatabase(app);
     const busRef = ref(db, `buses/${busId}`);
 
-    const validOnlineSeats = Math.max(0, onlineSeats);
+    const { runTransaction } = await import('firebase/database');
+    
+    await runTransaction(busRef, (currentBus) => {
+        if (!currentBus) return currentBus;
+        
+        const validOnlineSeats = Math.max(0, onlineSeats);
+        const capacity = currentBus.capacity || 0;
+        const offlineOccupied = currentBus.offlineOccupiedSeats || 0;
+        const availableSeats = capacity - validOnlineSeats - offlineOccupied;
 
-    const snapshot = await get(busRef);
-    if (!snapshot.exists()) {
-        throw new Error(`Bus ${busId} not found`);
-    }
+        currentBus.onlineBookedSeats = validOnlineSeats;
+        currentBus.availableSeats = Math.max(0, availableSeats);
+        currentBus.lastSeatUpdate = new Date().toISOString();
+        
+        return currentBus;
+    });
+}
 
-    const busData = snapshot.val();
-    const capacity = busData.capacity || 0;
-    const offlineOccupied = busData.offlineOccupiedSeats || 0;
-    const availableSeats = capacity - validOnlineSeats - offlineOccupied;
+/**
+ * Atomically release a specific number of online seats.
+ */
+export async function releaseOnlineSeats(
+    busId: string,
+    seatsToRelease: number
+): Promise<void> {
+    if (seatsToRelease <= 0) return;
+    
+    const app = getFirebaseApp();
+    const db = getDatabase(app);
+    const busRef = ref(db, `buses/${busId}`);
 
-    await update(busRef, {
-        onlineBookedSeats: validOnlineSeats,
-        availableSeats: Math.max(0, availableSeats),
-        lastSeatUpdate: new Date().toISOString(),
+    const { runTransaction } = await import('firebase/database');
+    
+    await runTransaction(busRef, (currentBus) => {
+        if (!currentBus) return currentBus;
+        
+        const currentOnline = currentBus.onlineBookedSeats || 0;
+        const newOnline = Math.max(0, currentOnline - seatsToRelease);
+        const capacity = currentBus.capacity || 0;
+        const offlineOccupied = currentBus.offlineOccupiedSeats || 0;
+        
+        currentBus.onlineBookedSeats = newOnline;
+        currentBus.availableSeats = Math.max(0, capacity - newOnline - offlineOccupied);
+        currentBus.lastSeatUpdate = new Date().toISOString();
+        
+        return currentBus;
     });
 }
 
@@ -183,7 +210,7 @@ export function createBookingWithTimeout(
 }
 
 /**
- * Expire old bookings and release their seats
+ * Expire old bookings and release their seats atomically.
  */
 export async function expireOldBookings(busId: string): Promise<number> {
     const app = getFirebaseApp();
@@ -196,37 +223,51 @@ export async function expireOldBookings(busId: string): Promise<number> {
     }
 
     const bookings = snapshot.val();
-    let expiredCount = 0;
-    let totalSeatsReleased = 0;
+    let totalSeatsToRelease = 0;
 
+    // First, identify expired bookings
+    const expiredBookingIds: string[] = [];
     for (const [bookingId, booking] of Object.entries(bookings as Record<string, any>)) {
         if (
             booking.busId === busId &&
             booking.status === 'pending' &&
             isBookingExpired(booking)
         ) {
-            // Mark as expired
-            await update(ref(db, `bookings/${bookingId}`), {
-                status: 'expired',
-                isExpired: true,
-            });
-
-            totalSeatsReleased += booking.numberOfPassengers || 0;
-            expiredCount++;
+            expiredBookingIds.push(bookingId);
+            totalSeatsToRelease += booking.numberOfPassengers || 1;
         }
     }
 
-    // Update online booked seats
-    if (totalSeatsReleased > 0) {
-        const busSnapshot = await get(ref(db, `buses/${busId}`));
-        if (busSnapshot.exists()) {
-            const busData = busSnapshot.val();
-            const currentOnline = busData.onlineBookedSeats || 0;
-            await updateOnlineBookedSeats(busId, currentOnline - totalSeatsReleased);
-        }
-    }
+    if (expiredBookingIds.length === 0) return 0;
 
-    return expiredCount;
+    // Atomically update both bookings and the bus
+    const { runTransaction } = await import('firebase/database');
+    const busRef = ref(db, `buses/${busId}`);
+
+    // Mark bookings as expired
+    const updates: Record<string, any> = {};
+    expiredBookingIds.forEach(id => {
+        updates[`bookings/${id}/status`] = 'expired';
+        updates[`bookings/${id}/isExpired`] = true;
+        updates[`bookings/${id}/updatedAt`] = new Date().toISOString();
+    });
+    
+    // Use transaction for the bus seat release
+    await runTransaction(busRef, (currentBus) => {
+        if (!currentBus) return currentBus;
+        const online = currentBus.onlineBookedSeats || 0;
+        const newOnline = Math.max(0, online - totalSeatsToRelease);
+        currentBus.onlineBookedSeats = newOnline;
+        currentBus.availableSeats = Math.max(0, (currentBus.capacity || 0) - newOnline - (currentBus.offlineOccupiedSeats || 0));
+        currentBus.lastSeatUpdate = new Date().toISOString();
+        return currentBus;
+    });
+
+    // Apply booking status updates
+    const dbRef = ref(db);
+    await update(dbRef, updates);
+
+    return expiredBookingIds.length;
 }
 
 /**

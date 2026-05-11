@@ -132,50 +132,73 @@ export default function PassengerDashboard() {
 
   // Get user's current location
   useEffect(() => {
-    if (!navigator.geolocation) return;
+    if (typeof window === 'undefined' || !navigator.geolocation) return;
 
-    const watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        const loc = { lat: position.coords.latitude, lng: position.coords.longitude };
-        userLocationRef.current = loc;
-        setUserLocation(loc);
+    let watchId: number | null = null;
+    let isActive = true;
 
-        // Auto-set pickup to current location if not set
-        setPickupLocation(prev => prev ? prev : {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-          address: 'Current Location'
-        });
-      },
-      (error) => {
-        console.warn('Geolocation error:', error);
-        let errorMessage = "Unknown error acquiring position";
-        switch (error.code) {
-          case 1: errorMessage = "Location permission denied. Please enable it in settings."; break;
-          case 2: errorMessage = "Location unavailable. Check your GPS or network."; break;
-          case 3: errorMessage = "Location request timed out."; break;
-        }
+    const startWatching = () => {
+      watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          if (!isActive) return;
+          const loc = { lat: position.coords.latitude, lng: position.coords.longitude };
+          userLocationRef.current = loc;
+          setUserLocation(loc);
 
-        // Only show toast once per session or if critical
-        if (!hasLocationErrorRef.current) {
-          hasLocationErrorRef.current = true;
-          toast({
-            title: "Location Error",
-            description: errorMessage + " Using default location.",
-            variant: "destructive"
+          // Auto-set pickup to current location if not set
+          setPickupLocation(prev => prev ? prev : {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            address: 'Current Location'
           });
-          // Fallback to DEFAULT_LOCATION so map still works
-          setUserLocation({ lat: DEFAULT_LOCATION.lat, lng: DEFAULT_LOCATION.lng });
-        }
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 10000
-      }
-    );
+          hasLocationErrorRef.current = false;
+        },
+        (error) => {
+          if (!isActive) return;
+          console.warn('[Passenger] Geolocation error:', error.message);
+          
+          if (!hasLocationErrorRef.current) {
+            let errorMessage = "Unknown error acquiring position";
+            switch (error.code) {
+              case 1: errorMessage = "Location permission denied. Please enable it in settings."; break;
+              case 2: errorMessage = "Location unavailable. Check your GPS or network."; break;
+              case 3: errorMessage = "Location request timed out."; break;
+            }
+            
+            hasLocationErrorRef.current = true;
+            toast({
+              title: "Location Error",
+              description: errorMessage + " Using default location.",
+              variant: "destructive"
+            });
+            setUserLocation({ lat: DEFAULT_LOCATION.lat, lng: DEFAULT_LOCATION.lng });
+          }
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+      );
+    };
 
-    return () => navigator.geolocation.clearWatch(watchId);
+    // Check permissions first if available (Chrome/Edge/Firefox)
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: 'geolocation' }).then(result => {
+        if (result.state === 'denied') {
+          if (!hasLocationErrorRef.current) {
+            hasLocationErrorRef.current = true;
+            toast({ title: "Location Denied", description: "Please enable location for the best experience.", variant: "destructive" });
+            setUserLocation({ lat: DEFAULT_LOCATION.lat, lng: DEFAULT_LOCATION.lng });
+          }
+        } else {
+          startWatching();
+        }
+      }).catch(() => startWatching()); // Fallback to direct watch
+    } else {
+      startWatching();
+    }
+
+    return () => {
+      isActive = false;
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+    };
   }, [toast]);
 
   // Subscribe to real-time bus updates

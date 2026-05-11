@@ -64,6 +64,7 @@ interface BrowserAudioContextWindow extends Window {
 interface DriverBookingLookup {
   id?: string;
   passengerId?: string;
+  passengerName?: string;
   paymentMethod?: 'cash' | 'digital';
   escrowStatus?: 'locked' | 'released' | 'reclaimed';
   fare?: number;
@@ -109,6 +110,19 @@ export default function DriverDashboard() {
     heading: undefined, // We could pass heading if available
     isTracking: isOnline && locationEnabled
   });
+
+  const callStatusUpdateApi = async (tripId: string, status: string, extra?: Record<string, any>) => {
+    const res = await fetch('/api/trips/update-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tripId, status, extraFields: extra }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Update failed' }));
+      throw new Error(err.error || 'Server error');
+    }
+    return res.json();
+  };
 
   const handleAccidentConfirm = async () => {
     resetDetection();
@@ -225,13 +239,13 @@ export default function DriverDashboard() {
 
     let previousBookingCount = 0;
 
-    const unsubscribe = subscribeToBookings(selectedBus.id, 'driver', (bookings) => {
+    const unsubscribe = subscribeToBookings(currentUser!.uid, 'driver', (bookings) => {
       const mapped: Passenger[] = bookings.map((b) => ({
         id: b.id,
         name: b.passengerName,
         pickupLocation: b.pickupLocation,
         dropoffLocation: b.dropoffLocation,
-        status: 'waiting',
+        status: (b.status === 'completed' ? 'dropped' : (['confirmed', 'active'].includes(b.status) ? 'picked' : 'waiting')) as any,
         bookingTime: b.timestamp,
       }));
 
@@ -301,7 +315,8 @@ export default function DriverDashboard() {
     hasPlayedPassengerReachedRef.current = false;
     setShowPassengerReachedAlert(false);
 
-    const unsubscribe = subscribeToTripRequests(selectedBus.id, (requests) => {
+    const unsubscribe = subscribeToTripRequests(currentUser!.uid, (requests) => {
+      console.log('[DriverPage] Trip requests update:', requests.length, 'for busId:', selectedBus.id);
       if (requests.length === 0) {
         setActiveTripRequest(null);
         return;
@@ -445,125 +460,79 @@ export default function DriverDashboard() {
   const handleAcceptTrip = async () => {
     if (!activeTripRequest) return;
     try {
-      await updateTripStatus(activeTripRequest.id, 'accepted');
+      await callStatusUpdateApi(activeTripRequest.id, 'accepted');
       setActiveTripRequest((prev) => prev ? { ...prev, status: 'accepted' } : null);
       toast({ title: 'Trip accepted', description: 'Navigate to pickup point.' });
-    } catch {
-      toast({ title: 'Failed to accept trip', description: 'Check your connection and try again.', variant: 'destructive' });
+    } catch (error: any) {
+      toast({ title: 'Failed to accept trip', description: error.message || 'Check your connection and try again.', variant: 'destructive' });
     }
   };
 
   const handleRejectTrip = async () => {
     if (!activeTripRequest) return;
     try {
-      await updateTripStatus(activeTripRequest.id, 'rejected');
+      await callStatusUpdateApi(activeTripRequest.id, 'rejected');
       setActiveTripRequest(null);
       toast({ title: 'Trip rejected' });
-    } catch {
-      toast({ title: 'Failed to reject trip', description: 'Check your connection and try again.', variant: 'destructive' });
+    } catch (error: any) {
+      toast({ title: 'Failed to reject trip', description: error.message || 'Check your connection and try again.', variant: 'destructive' });
     }
   };
 
   const handleExpireTrip = async () => {
     if (!activeTripRequest) return;
     try {
-      await updateTripStatus(activeTripRequest.id, 'expired');
+      await callStatusUpdateApi(activeTripRequest.id, 'expired');
       setActiveTripRequest(null);
       toast({ title: 'Trip request expired' });
-    } catch {
-      toast({ title: 'Failed to expire trip', description: 'Check your connection and try again.', variant: 'destructive' });
+    } catch (error: any) {
+      toast({ title: 'Failed to expire trip', description: error.message || 'Check your connection and try again.', variant: 'destructive' });
     }
   };
 
   const handlePassengerBoarded = async () => {
     if (!activeTripRequest) return;
     try {
-      await updateTripStatus(activeTripRequest.id, 'active');
+      console.log(`[Driver] Boarding passenger for trip ${activeTripRequest.id}`);
+      await callStatusUpdateApi(activeTripRequest.id, 'active');
       setActiveTripRequest((prev) => prev ? { ...prev, status: 'active' } : null);
+      
+      // Sync local passenger list if this matches
+      setPassengers(prev => prev.map(p => p.id === activeTripRequest.id ? { ...p, status: 'picked' } : p));
+      
       toast({ title: 'Trip started', description: 'Navigate to destination.' });
-    } catch {
-      toast({ title: 'Failed to start trip', description: 'Check your connection and try again.', variant: 'destructive' });
+    } catch (error: any) {
+      console.error('[Driver] Passenger boarding failed:', error);
+      toast({ title: 'Failed to start trip', description: error.message || 'Check your connection and try again.', variant: 'destructive' });
     }
   };
 
   const handleCompleteTrip = async () => {
-    if (!activeTripRequest || !userLocation) return;
+    if (!activeTripRequest) return;
     
-    // Use lastKnownLocationRef for higher precision/stability if available
-    const driverPos = lastKnownLocationRef.current || userLocation;
-
-    // Enforce README GPS Constraint (200m)
-    const distance = haversineDistance(
-      driverPos.lat, driverPos.lng,
-      activeTripRequest.lat, activeTripRequest.lng
-    );
-
-    if (distance > 200) {
+    // Pre-flight check: Ensure driver has a wallet for digital trips
+    if (activeTripRequest.bookingId && !driverWalletAddress) {
       toast({
-        title: 'Drop-off too far',
-        description: `You must be within 200m of the destination to complete the trip. (Current distance: ${Math.round(distance)}m)`,
+        title: 'Wallet Missing',
+        description: 'You must link a Solana wallet in your profile to receive digital payments for this trip.',
         variant: 'destructive',
       });
       return;
     }
 
     try {
-      // 1. Use the new autoCompleteTripByGPS utility for status transition and cleanup
-      await autoCompleteTripByGPS(activeTripRequest.id);
+      console.log(`[Driver] Completing trip ${activeTripRequest.id}`);
       
-      const tripRecordId = activeTripRequest.bookingId ?? activeTripRequest.passengerId;
-      if (tripRecordId) {
-        await handlePassengerDropoff(tripRecordId);
-      }
+      const now = new Date().toISOString();
+      await callStatusUpdateApi(activeTripRequest.id, 'completed', {
+        completionMethod: 'gps',
+        gpsVerifiedAt: now
+      });
+      
+      const tripRecordId = activeTripRequest.id;
+      await handlePassengerDropoff(tripRecordId, true); // true = skip redundant status update since API already did it
 
-      // 2. Escrow Release (if digital)
-      if (activeTripRequest.bookingId) {
-        // Fetch trip data to check payment method & escrow status
-        const { getDatabase, ref, get } = await import('firebase/database');
-        const { getFirebaseApp } = await import('@/lib/firebase');
-        const db = getDatabase(getFirebaseApp());
-        const tripSnap = await get(ref(db, `trips/${activeTripRequest.id}`));
-        const tripData = tripSnap.val();
-
-        if (tripData?.escrowStatus === 'locked') {
-          toast({ title: 'Releasing funds...', description: 'Verifying completion on-chain.' });
-          try {
-            const res = await fetch('/api/solana/escrow/release', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tripId: activeTripRequest.id })
-            });
-            const data = await res.json();
-            if (data.success) {
-              toast({ title: 'Payment Released', description: 'Funds transferred to your wallet.' });
-            } else {
-              throw new Error(data.error || 'Fund release failed');
-            }
-          } catch (err: any) {
-            console.error('[Escrow] Release call failed:', err);
-            toast({ 
-              title: 'Escrow Release Error', 
-              description: 'Funds are locked. Please contact support if not received.', 
-              variant: 'destructive' 
-            });
-          }
-        }
-      }
-
-      // 3. Update TRRL Reputation (only after successful completion)
-      if (currentUser && driverWalletAddress) {
-        const currentRep = await getDriverReputation(currentUser.uid);
-        await updateDriverReputation(currentUser.uid, driverWalletAddress, {
-          totalTrips: (currentRep?.totalTrips || 0) + 1,
-          completedTrips: (currentRep?.completedTrips || 0) + 1,
-          zkVerified: !!driverProfile?.verificationBadge?.ageVerified,
-        });
-      }
-
-      setRatingTripId(activeTripRequest.id);
-      setRatingPassengerName(activeTripRequest.passengerName);
       setActiveTripRequest(null);
-      setShowRatingModal(true);
       toast({ title: 'Trip completed' });
     } catch (error: any) {
       console.error('[Driver] Complete trip failed:', error);
@@ -573,72 +542,80 @@ export default function DriverDashboard() {
 
   // Driver foreground tracking with strict 5s heartbeat flush.
   useEffect(() => {
-    if (!locationEnabled || !selectedBus?.id || !isOnline || !driverWalletAddress) return;
+    if (!locationEnabled || !selectedBus?.id || !isOnline || !driverWalletAddress || !currentUser?.uid) return;
 
-    if (!navigator.geolocation) {
-      if (!hasGeolocationError) {
-        toast({
-          title: 'Location unavailable',
-          description: 'Geolocation is not supported by this browser.',
-          variant: 'destructive',
-        });
-        setHasGeolocationError(true);
-      }
-      return;
-    }
-
-    const busId = selectedBus.id;
+    const trackingBusId = selectedBus.id;
+    const trackingDriverId = currentUser.uid;
 
     const flushLocation = async () => {
       const payload = lastKnownLocationRef.current;
       if (!payload) return;
       try {
-        await updateBusLocation(busId, driverWalletAddress, payload);
+        await updateBusLocation(trackingBusId, trackingDriverId, driverWalletAddress, payload);
         lastFlushRef.current = Date.now();
       } catch (error) {
         console.error('[DRIVER] Failed to flush location:', error);
       }
     };
 
-    const watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        const next = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-          ...(position.coords.heading !== null && !Number.isNaN(position.coords.heading)
-            ? { heading: position.coords.heading }
-            : {}),
-          ...(position.coords.speed !== null && !Number.isNaN(position.coords.speed)
-            ? { speed: Math.max(0, Math.round(position.coords.speed * 3.6)) }
-            : {}),
-        };
+    const trackingOptions = {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 10000
+    };
 
-        lastKnownLocationRef.current = next;
-        setUserLocation({ lat: next.lat, lng: next.lng });
-        setCurrentSpeed(next.speed ?? 0);
+    let watchId: number | null = null;
+    let isActive = true;
 
-        if (Date.now() - lastFlushRef.current >= 5000) {
-          flushLocation().catch(() => undefined);
+    const startWatching = () => {
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          if (!isActive) return;
+          const { latitude: lat, longitude: lng, speed, heading } = pos.coords;
+          const next = {
+            lat,
+            lng,
+            ...(heading !== null && !Number.isNaN(heading) ? { heading } : {}),
+            ...(speed !== null && !Number.isNaN(speed) ? { speed: Math.max(0, Math.round(speed * 3.6)) } : {}),
+            timestamp: new Date()
+          };
+
+          setUserLocation({ lat, lng });
+          setCurrentSpeed(next.speed ?? 0);
+          setHasGeolocationError(false);
+          lastKnownLocationRef.current = next;
+
+          if (Date.now() - lastFlushRef.current >= 5000) {
+            flushLocation().catch(() => undefined);
+          }
+        },
+        (err) => {
+          if (!isActive) return;
+          console.warn('[Driver] Geolocation error:', err.message);
+          if (!hasGeolocationError) {
+            const msg = err.code === 1 ? 'Permission denied.' : err.code === 2 ? 'Position unavailable.' : 'Timeout.';
+            toast({ title: 'Location Lost', description: msg, variant: 'destructive' });
+            setHasGeolocationError(true);
+          }
+        },
+        trackingOptions
+      );
+    };
+
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: 'geolocation' }).then(result => {
+        if (result.state === 'denied') {
+          if (!hasGeolocationError) {
+            setHasGeolocationError(true);
+            toast({ title: 'Location Blocked', description: 'Please enable location to go live.', variant: 'destructive' });
+          }
+        } else {
+          startWatching();
         }
-      },
-      (error: GeolocationPositionError) => {
-        if (!hasGeolocationError) {
-          const message =
-            error.code === 1
-              ? 'Location permission was denied. Turn it on in browser settings.'
-              : error.code === 2
-                ? 'Location unavailable. Enable high-accuracy GPS.'
-                : 'Unable to access your location.';
-          toast({ title: 'Location error', description: message, variant: 'destructive' });
-          setHasGeolocationError(true);
-        }
-      },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 15000,
-      }
-    );
+      }).catch(() => startWatching());
+    } else {
+      startWatching();
+    }
 
     const heartbeatId = window.setInterval(() => {
       flushLocation().catch(() => undefined);
@@ -651,24 +628,25 @@ export default function DriverDashboard() {
     window.addEventListener('pagehide', handleVisibility);
 
     return () => {
-      navigator.geolocation.clearWatch(watchId);
+      isActive = false;
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
       window.clearInterval(heartbeatId);
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('pagehide', handleVisibility);
     };
-  }, [locationEnabled, selectedBus?.id, isOnline, toast, hasGeolocationError, driverWalletAddress]);
+  }, [locationEnabled, selectedBus?.id, isOnline, toast, hasGeolocationError, driverWalletAddress, currentUser?.uid]);
 
   // RTDB presence hooks: offline state is written immediately on disconnect.
   useEffect(() => {
-    if (!locationEnabled || !selectedBus?.id || !isOnline || !driverWalletAddress) return;
+    if (!locationEnabled || !selectedBus?.id || !isOnline || !driverWalletAddress || !currentUser?.uid) return;
 
-    const cleanup = attachDriverPresence(selectedBus.id, driverWalletAddress);
+    const cleanup = attachDriverPresence(selectedBus.id, currentUser.uid, driverWalletAddress);
     return () => {
       cleanup().catch((error) => {
         console.warn('[Presence] cleanup failed:', error);
       });
     };
-  }, [locationEnabled, selectedBus?.id, isOnline, driverWalletAddress]);
+  }, [locationEnabled, selectedBus?.id, isOnline, driverWalletAddress, currentUser?.uid]);
 
   // Keep screen awake while tracking to maximize background reliability in installed mode.
   useEffect(() => {
@@ -749,7 +727,7 @@ export default function DriverDashboard() {
 
       // Update Firebase with location sharing status
       try {
-        await updateLocationSharingStatus(selectedBus.id, enabled, driverWalletAddress);
+        await updateLocationSharingStatus(selectedBus.id, enabled, currentUser!.uid, driverWalletAddress);
         if (!enabled) {
           await setDriverOffline(selectedBus.id, driverWalletAddress);
         }
@@ -798,33 +776,53 @@ export default function DriverDashboard() {
     }
   };
 
-  const handlePassengerPickup = (passengerId: string) => {
-    setPassengers(prev =>
-      prev.map(passenger =>
-        passenger.id === passengerId
-          ? { ...passenger, status: 'picked' }
-          : passenger
-      )
-    );
+  const handlePassengerPickup = async (passengerId: string) => {
+    try {
+      console.log(`[Driver] Picking up passenger: ${passengerId}`);
+      await callStatusUpdateApi(passengerId, 'active');
+      
+      setPassengers(prev =>
+        prev.map(passenger =>
+          passenger.id === passengerId
+            ? { ...passenger, status: 'picked' }
+            : passenger
+        )
+      );
+      
+      toast({ title: 'Passenger Boarded', description: 'Trip status updated to active.' });
+    } catch (error: any) {
+      console.error('[Driver] Pickup failed:', error);
+      toast({ title: 'Pickup failed', description: error.message || 'Check connection.', variant: 'destructive' });
+    }
   };
 
-  const handlePassengerDropoff = async (passengerId: string) => {
+  const handlePassengerDropoff = async (passengerId: string, skipStatusUpdate: boolean = false) => {
+    // Prevent double execution
+    const passenger = passengers.find(p => p.id === passengerId);
+    if (passenger?.status === 'dropped') return;
+
+    console.log(`[Driver] Dropping off passenger: ${passengerId}`);
+
     // 1. Update UI state immediately (optimistic update)
     setPassengers(prev =>
-      prev.map(passenger =>
-        passenger.id === passengerId
-          ? { ...passenger, status: 'dropped' }
-          : passenger
+      prev.map(p =>
+        p.id === passengerId
+          ? { ...p, status: 'dropped' }
+          : p
       )
     );
 
-    // 2. Fetch Passenger Data & Trigger Minting
+    // 2. Fetch Passenger Data & Trigger Updates
     try {
       if (!selectedBus || !userData) return;
 
+      if (!skipStatusUpdate) {
+        await callStatusUpdateApi(passengerId, 'completed');
+      }
+
       toast({
-        title: 'Minting Receipt...',
-        description: 'Generating Soulbound Trip Ticket for passenger.',
+        title: 'Processing completion...',
+        description: 'Syncing reputation and minting receipt.',
       });
 
       const { getDatabase, ref, get } = await import('firebase/database');
@@ -897,6 +895,12 @@ export default function DriverDashboard() {
         },
         body: JSON.stringify(payload),
       });
+      
+      if (!mintRes.ok) {
+        const errorData = await mintRes.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server error (${mintRes.status})`);
+      }
+
       const mintData = await mintRes.json();
       if (mintData?.success) {
         toast({
@@ -916,27 +920,13 @@ export default function DriverDashboard() {
         });
       }
 
-      if (bookingData.paymentMethod === 'digital' && bookingData.escrowStatus === 'locked') {
-        try {
-          const releaseRes = await fetch('/api/solana/escrow/release', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tripId: bookingId }),
-          });
-          const releaseData = await releaseRes.json();
-          if (!releaseRes.ok || !releaseData?.success) {
-            throw new Error(releaseData?.error || 'Escrow release failed');
-          }
-          toast({ title: 'Payment Released', description: 'Escrow released to driver wallet.' });
-        } catch (releaseErr: any) {
-          toast({
-            title: 'Escrow release failed',
-            description: releaseErr?.message || 'Funds remain locked. Retry from support flow.',
-            variant: 'destructive',
-          });
-        }
-      }
-
+      // 3. Reputation and Stats are now handled by the /api/trips/update-status route
+      // triggered during the 'completed' transition. The rating modal here only handles
+      // the submission of the stars/comments.
+      
+      setRatingTripId(passengerId);
+      setRatingPassengerName(bookingData.passengerName || 'Passenger');
+      setShowRatingModal(true);
     } catch (error) {
       console.error('[Trip Ticket] Unexpected error during dropoff flow:', error);
     }
@@ -1035,12 +1025,14 @@ export default function DriverDashboard() {
     );
   }
 
-  const completedTrips = passengers.filter((p: any) => p?.status === 'dropped').length;
+  // Lifetime Stats from Persistent DB (via userData.stats)
+  const stats = (userData as any)?.stats || {};
+  const completedTrips = stats.completedTrips || 0;
+  const totalEarnings = stats.totalEarnings || 0;
+  const completionRate = stats.completionRate || 0;
+  
+  // Session-based active count
   const activeTripsCount = passengers.filter((p: any) => p?.status === 'waiting' || p?.status === 'onBoard').length;
-  const estimatedEarnings = passengers.reduce((sum: number, p: any) => {
-    const fare = typeof p?.fare === 'number' ? p.fare : 0;
-    return sum + fare;
-  }, 0);
 
   const C = '#00D4AA';
   const CD = '#009E7F';
@@ -1067,7 +1059,7 @@ export default function DriverDashboard() {
             onClick={async () => {
               setShowPassengerReachedAlert(false);
               if (activeTripRequest?.id) {
-                await updateTripStatus(activeTripRequest.id, 'arrived');
+                await callStatusUpdateApi(activeTripRequest.id, 'arrived');
                 setActiveTripRequest((prev) => prev ? { ...prev, status: 'arrived' } : null);
               }
             }}
@@ -1237,6 +1229,12 @@ export default function DriverDashboard() {
                     <BusIcon className="w-8 h-8 mx-auto" style={{ color: '#CBD5E1' }} />
                     <p className="font-bold text-sm" style={{ color: INK }}>No vehicle assigned</p>
                     <p className="text-xs" style={{ color: MUTED }}>Complete your driver profile to link a vehicle.</p>
+                    <Button 
+                      onClick={() => router.push('/auth/profile?role=driver')}
+                      className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full px-8 h-10 text-sm font-semibold shadow-lg"
+                    >
+                      Complete Profile
+                    </Button>
                   </div>
                 )}
               </div>
@@ -1289,8 +1287,8 @@ export default function DriverDashboard() {
           <section className="rounded-2xl p-4 space-y-3" style={{ background: 'white', border: `1px solid ${BORDER}`, boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
             <p className="text-xs uppercase tracking-widest font-black" style={{ color: MUTED }}>Earnings</p>
             <div className="rounded-2xl p-5" style={{ background: `linear-gradient(135deg, ${CL}, #C8F2E6)`, border: '1px solid #A7F3D0' }}>
-              <p className="text-[11px] uppercase tracking-widest font-bold" style={{ color: MUTED }}>Estimated Today</p>
-              <p className="mt-1 text-3xl font-black" style={{ color: INK }}>NPR {estimatedEarnings.toLocaleString()}</p>
+              <p className="text-[11px] uppercase tracking-widest font-bold" style={{ color: MUTED }}>Lifetime Earnings</p>
+              <p className="mt-1 text-3xl font-black" style={{ color: INK }}>NPR {totalEarnings.toLocaleString()}</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl p-3" style={{ background: SURF, border: `1px solid ${BORDER}` }}>

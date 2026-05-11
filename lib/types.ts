@@ -108,6 +108,7 @@ export interface Bus {
   offlineOccupiedSeats: number;   // Manually tracked by driver
   availableSeats: number;          // Calculated: capacity - online - offline
   lastSeatUpdate: Date;            // For showing "Updated Xs ago"
+  driverId?: string;               // Firebase UID of the driver
   // Additional fields
   onlineBooked?: number;           // Alias for onlineBookedSeats
   offlineBooked?: number;          // Alias for offlineOccupiedSeats
@@ -127,6 +128,7 @@ export interface Passenger {
 export interface Booking {
   id: string;
   passengerId: string;
+  driverId?: string;
   busId: string;
   passengerName: string;
   phoneNumber: string;

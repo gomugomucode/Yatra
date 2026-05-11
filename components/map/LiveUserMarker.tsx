@@ -23,7 +23,7 @@ const createRoleIcon = (role: 'driver' | 'passenger', vehicleType?: string) => {
 
     return L.divIcon({
         html: `<div style="font-size: 28px; line-height: 1; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">${label}</div>`,
-        className: 'custom-hackathon-icon flex items-center justify-center transition-transform hover:scale-110',
+        className: 'custom-hackathon-icon',
         iconSize: [32, 32],
         iconAnchor: [16, 16],
         popupAnchor: [0, -16]

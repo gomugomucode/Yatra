@@ -40,9 +40,38 @@ export function getEscrowPDA(tripId: string): PublicKey {
 }
 
 /**
+ * Executes a function with a simple exponential backoff retry strategy.
+ */
+async function executeWithRetry<T>(
+    fn: () => Promise<T>,
+    maxRetries: number = 3,
+    baseDelay: number = 1000
+): Promise<T> {
+    let lastError: any;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+            return await fn();
+        } catch (error: any) {
+            lastError = error;
+            // Only retry on potential transient errors
+            const isTransient = 
+                error.message?.includes('timeout') || 
+                error.message?.includes('429') || 
+                error.message?.includes('network') ||
+                error.message?.includes('too many requests');
+            
+            if (!isTransient && attempt > 0) break; 
+            
+            const delay = baseDelay * Math.pow(2, attempt);
+            console.warn(`[Solana] Attempt ${attempt + 1} failed. Retrying in ${delay}ms...`, error.message);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+    throw lastError;
+}
+
+/**
  * Creates an escrow for a trip.
- * Currently simulates the "locking" phase by ensuring the passenger has 
- * committed funds (verified by the server).
  */
 export async function createEscrowAccount(
     connection: Connection,
@@ -52,18 +81,9 @@ export async function createEscrowAccount(
     driverWallet: string,
     amountNPR: number
 ) {
-    // Convert NPR to SOL 
-    // Mock rate: 1 SOL ≈ $130 (devnet stability). 1 USD ≈ 130 NPR.
-    // So 1 NPR ≈ 0.00006 SOL.
-    // We use a slightly higher rate (0.0001) for visible Devnet transactions.
     const amountSOL = amountNPR * 0.0001;
     const amountLamports = Math.floor(amountSOL * LAMPORTS_PER_SOL);
-    
     const escrowPDA = getEscrowPDA(tripId);
-    
-    // For MVP, we use the Server Wallet to "fund" the escrow on behalf of the passenger
-    // after verifying they have paid or authorized. 
-    // In production, the passenger would sign a transaction to move funds.
     
     const transaction = new Transaction().add(
         SystemProgram.transfer({
@@ -73,7 +93,7 @@ export async function createEscrowAccount(
         })
     );
 
-    try {
+    return executeWithRetry(async () => {
         const signature = await sendAndConfirmTransaction(
             connection,
             transaction,
@@ -86,9 +106,7 @@ export async function createEscrowAccount(
             signature,
             amountLamports
         };
-    } catch (error: any) {
-        throw error;
-    }
+    });
 }
 
 /**
@@ -101,9 +119,6 @@ export async function releaseEscrow(
     driverWallet: string,
     amountLamports: number
 ) {
-    // Note: Since PDAs are not real wallets, in this simulation the server 
-    // (which holds the funds for the trip) transfers them to the driver.
-    
     const driverPubkey = new PublicKey(driverWallet);
     
     const transaction = new Transaction().add(
@@ -114,7 +129,7 @@ export async function releaseEscrow(
         })
     );
 
-    try {
+    return executeWithRetry(async () => {
         const signature = await sendAndConfirmTransaction(
             connection,
             transaction,
@@ -123,9 +138,7 @@ export async function releaseEscrow(
         );
 
         return signature;
-    } catch (error: any) {
-        throw error;
-    }
+    });
 }
 
 /**
@@ -148,7 +161,7 @@ export async function reclaimEscrow(
         })
     );
 
-    try {
+    return executeWithRetry(async () => {
         const signature = await sendAndConfirmTransaction(
             connection,
             transaction,
@@ -157,7 +170,5 @@ export async function reclaimEscrow(
         );
 
         return signature;
-    } catch (error: any) {
-        throw error;
-    }
+    });
 }

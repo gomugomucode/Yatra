@@ -10,37 +10,53 @@ export async function getRoute(
     duration: number;
     geometry: GeoJSON.LineString;
 } | null> {
+    if (
+        !isFinite(startLat) || !isFinite(startLng) ||
+        !isFinite(endLat) || !isFinite(endLng)
+    ) {
+        console.warn("[OSRM] Invalid coordinates provided to getRoute");
+        return null;
+    }
+
     try {
         const url = `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=full&geometries=geojson`;
 
-        const response = await fetch(url);
+        // Add a 5s timeout to avoid hanging
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
         if (!response.ok) {
-            console.error("OSRM API error:", response.statusText);
+            if (response.status === 429) {
+                console.warn("[OSRM] Rate limited by public API");
+            } else {
+                console.error(`[OSRM] API error: ${response.status} ${response.statusText}`);
+            }
             return null;
         }
 
         const data = await response.json();
 
         if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
-            console.warn("No route found from OSRM");
+            console.warn("[OSRM] No route found:", data.code);
             return null;
         }
 
         const route = data.routes[0];
 
-        // distance in meters -> KM
-        const distanceKm = route.distance / 1000;
-
-        // duration in seconds -> Minutes
-        const durationMin = route.duration / 60;
-
         return {
-            distance: distanceKm,
-            duration: durationMin,
+            distance: route.distance / 1000,
+            duration: route.duration / 60,
             geometry: route.geometry as GeoJSON.LineString,
         };
-    } catch (err) {
-        console.error("Failed to fetch route from OSRM:", err);
+    } catch (err: any) {
+        if (err.name === 'AbortError') {
+            console.warn("[OSRM] Request timed out");
+        } else {
+            console.error("[OSRM] Failed to fetch route:", err.message);
+        }
         return null;
     }
 }

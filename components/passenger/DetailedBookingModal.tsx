@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -24,20 +24,26 @@ import {
     Share2,
     ChevronDown,
     MapPin,
+    Navigation,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { calculateFareFromLocations } from '@/lib/utils/fareCalculator';
+import { VehicleTypeId } from '@/lib/types';
+import { useAuth } from '@/lib/contexts/AuthContext';
+import { getDatabase, ref, get } from 'firebase/database';
+import { getFirebaseApp } from '@/lib/firebase';
 
 // --- Data ---
 const NEPALI_CITIES = [
-    { id: 'butwal', name: 'Butwal', basePrice: 150 },
-    { id: 'kathmandu', name: 'Kathmandu', basePrice: 1200 },
-    { id: 'pokhara', name: 'Pokhara', basePrice: 800 },
-    { id: 'lalitpur', name: 'Lalitpur', basePrice: 1150 },
-    { id: 'bharatpur', name: 'Bharatpur', basePrice: 600 },
-    { id: 'janakpur', name: 'Janakpur', basePrice: 900 },
-    { id: 'biratnagar', name: 'Biratnagar', basePrice: 1500 },
-    { id: 'dharan', name: 'Dharan', basePrice: 1400 },
-    { id: 'nepalgunj', name: 'Nepalgunj', basePrice: 1100 },
+    { id: 'butwal', name: 'Butwal', lat: 27.7006, lng: 83.4484 },
+    { id: 'kathmandu', name: 'Kathmandu', lat: 27.7172, lng: 85.3240 },
+    { id: 'pokhara', name: 'Pokhara', lat: 28.2096, lng: 83.9856 },
+    { id: 'lalitpur', name: 'Lalitpur', lat: 27.6644, lng: 85.3188 },
+    { id: 'bharatpur', name: 'Bharatpur', lat: 27.6744, lng: 84.4300 },
+    { id: 'janakpur', name: 'Janakpur', lat: 26.7271, lng: 85.9229 },
+    { id: 'biratnagar', name: 'Biratnagar', lat: 26.4525, lng: 87.2717 },
+    { id: 'dharan', name: 'Dharan', lat: 26.8126, lng: 87.2831 },
+    { id: 'nepalgunj', name: 'Nepalgunj', lat: 28.0500, lng: 81.6167 },
 ];
 
 const VEHICLE_TYPES = [
@@ -55,26 +61,50 @@ const PAYMENT_METHODS = [
 
 export default function DetailedBookingModal() {
     const [isOpen, setIsOpen] = useState(false);
+    const { userData } = useAuth();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
-    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [originDropdownOpen, setOriginDropdownOpen] = useState(false);
+    const [destDropdownOpen, setDestDropdownOpen] = useState(false);
 
     // Form state
     const [vehicleType, setVehicleType] = useState('bus');
     const [passengers, setPassengers] = useState(1);
+    const [origin, setOrigin] = useState('');
     const [destination, setDestination] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('');
 
-    const selectedCity = NEPALI_CITIES.find(c => c.id === destination);
+    const selectedOrigin = NEPALI_CITIES.find(c => c.id === origin);
+    const selectedDest = NEPALI_CITIES.find(c => c.id === destination);
     const selectedVehicle = VEHICLE_TYPES.find(v => v.id === vehicleType);
-    const estimatedTotal = selectedCity && selectedVehicle
-        ? Math.round(selectedCity.basePrice * selectedVehicle.multiplier * passengers)
-        : 0;
+    
+    const estimatedTotal = useMemo(() => {
+        if (!selectedOrigin || !selectedDest || !selectedVehicle) return 0;
+        try {
+            return calculateFareFromLocations(
+                { lat: selectedOrigin.lat, lng: selectedOrigin.lng },
+                { lat: selectedDest.lat, lng: selectedDest.lng },
+                vehicleType as VehicleTypeId,
+                passengers
+            );
+        } catch (e) {
+            console.error('Fare calc error:', e);
+            return 0;
+        }
+    }, [selectedOrigin, selectedDest, vehicleType, passengers]);
 
     const handleNext = () => {
         if (step === 1) {
+            if (!origin) {
+                toast.error('Please select an origin city');
+                return;
+            }
             if (!destination) {
                 toast.error('Please select a destination city');
+                return;
+            }
+            if (origin === destination) {
+                toast.error('Origin and destination cannot be the same');
                 return;
             }
         }
@@ -88,24 +118,74 @@ export default function DetailedBookingModal() {
             toast.error('Please select a payment method');
             return;
         }
+        
         setLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        if (paymentMethod !== 'cash') {
-            toast.success(`Redirecting to ${PAYMENT_METHODS.find(p => p.id === paymentMethod)?.name}...`);
-        } else {
-            toast.success('Booking Confirmed! Pay cash on board.');
+        try {
+            // Find a bus to assign this booking to (Placeholder: pick first active bus)
+            const db = getDatabase(getFirebaseApp());
+            const busesSnap = await get(ref(db, 'buses'));
+            const buses = busesSnap.exists() ? Object.values(busesSnap.val()) : [];
+            const activeBus = (buses as any[]).find(b => b.isActive && b.vehicleType === vehicleType);
+            
+            if (!activeBus) {
+                toast.error(`No active ${vehicleType}s found on this route. Please try later.`);
+                setLoading(false);
+                return;
+            }
+
+            const response = await fetch('/api/bookings/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    bookingData: {
+                        busId: activeBus.id,
+                        passengerName: userData?.name || 'Quick Passenger',
+                        phoneNumber: userData?.phone || 'N/A',
+                        pickupLocation: {
+                            lat: selectedOrigin!.lat,
+                            lng: selectedOrigin!.lng,
+                            address: selectedOrigin!.name,
+                        },
+                        dropoffLocation: {
+                            lat: selectedDest!.lat,
+                            lng: selectedDest!.lng,
+                            address: selectedDest!.name,
+                        },
+                        numberOfPassengers: passengers,
+                        paymentMethod,
+                        vehicleType,
+                        status: 'pending',
+                    }
+                }),
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.error || 'Failed to create booking');
+            }
+
+            toast.success('Booking Confirmed!');
+            setStep(4);
+        } catch (error: any) {
+            console.error('Booking failed:', error);
+            toast.error(error.message || 'Booking failed. Please try again.');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
-        setStep(4);
     };
 
     const handleClose = () => {
         setIsOpen(false);
-        setTimeout(() => { setStep(1); setDestination(''); setPaymentMethod(''); }, 400);
+        setTimeout(() => { 
+            setStep(1); 
+            setOrigin('');
+            setDestination(''); 
+            setPaymentMethod(''); 
+        }, 400);
     };
 
     const handleShare = async () => {
-        const shareText = `I'm traveling to ${selectedCity?.name} via Yatra! Track my ride.`;
+        const shareText = `I'm traveling from ${selectedOrigin?.name} to ${selectedDest?.name} via Yatra! Track my ride.`;
         if (navigator.share) {
             try { await navigator.share({ title: 'My Yatra Trip', text: shareText, url: window.location.href }); }
             catch { /* ignored */ }
@@ -129,7 +209,7 @@ export default function DetailedBookingModal() {
             <DialogContent className="sm:max-w-[440px] bg-card border border-border text-foreground rounded-3xl p-6 shadow-2xl">
                 <DialogHeader className="mb-4">
                     <DialogTitle className="text-xl font-bold text-foreground flex items-center gap-2">
-                        {step === 1 && (<><MapPin className="w-5 h-5 text-primary" /> Choose Destination</>)}
+                        {step === 1 && (<><Navigation className="w-5 h-5 text-primary" /> Select Route</>)}
                         {step === 2 && (<><CreditCard className="w-5 h-5 text-primary" /> Payment Method</>)}
                         {step === 3 && (<><CheckCircle className="w-5 h-5 text-primary" /> Confirm Booking</>)}
                         {step === 4 && (<><CheckCircle className="w-5 h-5 text-emerald-400" /> Booking Confirmed!</>)}
@@ -144,7 +224,48 @@ export default function DetailedBookingModal() {
                     {step === 1 && (
                         <div className="space-y-5 animate-in slide-in-from-right-4 fade-in duration-300">
 
-                            {/* Where are you going? Dropdown */}
+                            {/* Origin Dropdown */}
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                                    Where are you now?
+                                </label>
+                                <div className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setOriginDropdownOpen(o => !o); setDestDropdownOpen(false); }}
+                                        className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl border text-left transition-all ${origin ? 'bg-primary-soft border-primary/30 text-primary-hover' : 'bg-surface-soft border-border text-muted-foreground' } hover:border-primary/60 focus:outline-none focus:border-primary`}
+                                    >
+                                        <span className="flex items-center gap-2 font-medium">
+                                            <Navigation className={`w-4 h-4 ${origin ? 'text-primary' : 'text-muted-foreground'}`} />
+                                            {selectedOrigin?.name || 'Select origin city...'}
+                                        </span>
+                                        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${originDropdownOpen ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    {originDropdownOpen && (
+                                        <div className="absolute z-50 mt-2 w-full bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
+                                            <div className="max-h-52 overflow-y-auto">
+                                                {NEPALI_CITIES.map((city) => (
+                                                    <button
+                                                        key={`origin-${city.id}`}
+                                                        type="button"
+                                                        onClick={() => { setOrigin(city.id); setOriginDropdownOpen(false); }}
+                                                        className={`w-full flex items-center justify-between px-4 py-3 text-left text-sm transition-colors ${origin === city.id ? 'bg-primary-soft text-primary-hover' : 'text-muted-foreground hover:bg-surface-soft' }`}
+                                                    >
+                                                        <span className="flex items-center gap-2">
+                                                            {origin === city.id && <CheckCircle className="w-3.5 h-3.5 text-primary shrink-0" />}
+                                                            {origin !== city.id && <span className="w-3.5 shrink-0" />}
+                                                            {city.name}
+                                                        </span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Destination Dropdown */}
                             <div className="space-y-2">
                                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
                                     Where are you going?
@@ -152,37 +273,31 @@ export default function DetailedBookingModal() {
                                 <div className="relative">
                                     <button
                                         type="button"
-                                        onClick={() => setDropdownOpen(o => !o)}
+                                        onClick={() => { setDestDropdownOpen(o => !o); setOriginDropdownOpen(false); }}
                                         className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl border text-left transition-all ${destination ? 'bg-primary-soft border-primary/30 text-primary-hover' : 'bg-surface-soft border-border text-muted-foreground' } hover:border-primary/60 focus:outline-none focus:border-primary`}
                                     >
                                         <span className="flex items-center gap-2 font-medium">
                                             <MapPin className={`w-4 h-4 ${destination ? 'text-primary' : 'text-muted-foreground'}`} />
-                                            {selectedCity?.name || 'Select a city...'}
+                                            {selectedDest?.name || 'Select destination city...'}
                                         </span>
-                                        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
+                                        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${destDropdownOpen ? 'rotate-180' : ''}`} />
                                     </button>
 
-                                    {/* Dropdown list */}
-                                    {dropdownOpen && (
+                                    {destDropdownOpen && (
                                         <div className="absolute z-50 mt-2 w-full bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
                                             <div className="max-h-52 overflow-y-auto">
                                                 {NEPALI_CITIES.map((city) => (
                                                     <button
-                                                        key={city.id}
+                                                        key={`dest-${city.id}`}
                                                         type="button"
-                                                        onClick={() => { setDestination(city.id); setDropdownOpen(false); }}
+                                                        onClick={() => { setDestination(city.id); setDestDropdownOpen(false); }}
                                                         className={`w-full flex items-center justify-between px-4 py-3 text-left text-sm transition-colors ${destination === city.id ? 'bg-primary-soft text-primary-hover' : 'text-muted-foreground hover:bg-surface-soft' }`}
                                                     >
                                                         <span className="flex items-center gap-2">
-                                                            {destination === city.id && (
-                                                                <CheckCircle className="w-3.5 h-3.5 text-primary shrink-0" />
-                                                            )}
-                                                            {destination !== city.id && (
-                                                                <span className="w-3.5 shrink-0" />
-                                                            )}
+                                                            {destination === city.id && <CheckCircle className="w-3.5 h-3.5 text-primary shrink-0" />}
+                                                            {destination !== city.id && <span className="w-3.5 shrink-0" />}
                                                             {city.name}
                                                         </span>
-                                                        <span className="text-xs text-muted-foreground font-mono font-bold">~रु {city.basePrice}</span>
                                                     </button>
                                                 ))}
                                             </div>
@@ -237,10 +352,16 @@ export default function DetailedBookingModal() {
                                     <span className="text-muted-foreground">Passengers</span>
                                     <span className="font-semibold text-foreground">{passengers}</span>
                                 </div>
-                                {selectedCity && (
+                                {selectedOrigin && (
                                     <div className="flex justify-between text-sm">
-                                        <span className="text-muted-foreground">Destination</span>
-                                        <span className="font-bold text-primary-hover">{selectedCity.name}</span>
+                                        <span className="text-muted-foreground">From</span>
+                                        <span className="font-bold text-foreground">{selectedOrigin.name}</span>
+                                    </div>
+                                )}
+                                {selectedDest && (
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">To</span>
+                                        <span className="font-bold text-primary-hover">{selectedDest.name}</span>
                                     </div>
                                 )}
                                 <div className="border-t border-border pt-2 flex justify-between items-center mt-1">
@@ -285,11 +406,11 @@ export default function DetailedBookingModal() {
                             </div>
                             <div className="text-center">
                                 <h3 className="text-xl font-black text-foreground">Booking Confirmed!</h3>
-                                <p className="text-muted-foreground text-sm mt-1">Your ride to <span className="text-primary-hover font-bold">{selectedCity?.name}</span> is scheduled.</p>
+                                <p className="text-muted-foreground text-sm mt-1">Your ride from <span className="text-foreground font-bold">{selectedOrigin?.name}</span> to <span className="text-primary-hover font-bold">{selectedDest?.name}</span> is scheduled.</p>
                             </div>
                             <div className="bg-card p-4 rounded-2xl shadow-md border border-border">
                                 <img
-                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=YATRA-${Date.now()}-${selectedCity?.id}`}
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=YATRA-${Date.now()}-${selectedOrigin?.id}-${selectedDest?.id}`}
                                     alt="Booking QR Code"
                                     className="w-44 h-44"
                                 />
@@ -312,9 +433,9 @@ export default function DetailedBookingModal() {
                     {step === 1 && (
                         <Button
                             onClick={handleNext}
-                            className={`flex-1 h-12 text-sm font-black rounded-2xl text-white transition-all duration-300 ${destination ? 'bg-gradient-to-r from-primary to-secondary hover:from-primary-hover hover:to-secondary/90 shadow-md animate-pulse-subtle' : 'bg-slate-100 text-slate-500 cursor-not-allowed' }`}
+                            className={`flex-1 h-12 text-sm font-black rounded-2xl text-white transition-all duration-300 ${origin && destination && origin !== destination ? 'bg-gradient-to-r from-primary to-secondary hover:from-primary-hover hover:to-secondary/90 shadow-md animate-pulse-subtle' : 'bg-slate-100 text-slate-500 cursor-not-allowed' }`}
                             style={{
-                                animation: destination ? 'pulse-glow 2s ease-in-out infinite' : 'none',
+                                animation: origin && destination && origin !== destination ? 'pulse-glow 2s ease-in-out infinite' : 'none',
                             }}
                         >
                             Next Step <ArrowRight className="w-4 h-4 ml-2" />
