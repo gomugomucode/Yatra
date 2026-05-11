@@ -60,9 +60,6 @@
       "$uid": {
         ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
         ".write": "auth != null && auth.uid === $uid",
-        "solanaWallet": {
-          ".read": "auth != null"
-        },
         "verificationBadge": {
           ".validate": "newData.hasChildren(['mintAddress', 'txSignature'])"
         }

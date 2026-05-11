@@ -872,50 +872,21 @@ export async function submitTripRating(
     stars: number,
     comment: string
 ): Promise<void> {
-    const db = getDb();
-    const field = rater === 'passenger' ? 'passengerRating' : 'driverRating';
-    let recordRef = ref(db, `trips/${tripId}`);
-    let snapshot = await get(recordRef);
-    
-    if (!snapshot.exists()) {
-        recordRef = ref(db, `bookings/${tripId}`);
-        snapshot = await get(recordRef);
-    }
-    
-    if (!snapshot.exists()) {
-        console.error(`[FirebaseDb] submitTripRating: Record not found for ${tripId}`);
-        return;
-    }
-
-    await update(recordRef, {
-        [field]: { stars, comment, createdAt: new Date().toISOString() },
-    });
-
-// If passenger rated the driver, update driver's TRRL reputation
-    if (rater === 'passenger') {
-        try {
-            const tripData = snapshot.val();
-            const driverId = tripData.driverId || tripData.busId; // Fallback to busId for bookings
-            if (driverId) {
-                const { updateDriverReputation, getDriverReputation } = await import('./solana/trrl');
-                const currentRep = await getDriverReputation(driverId);
-                
-                // Fetch driver wallet for Solana anchor
-                const walletSnap = await get(ref(db, `users/${driverId}/solanaWallet`));
-                const driverWallet = walletSnap.val();
-                
-                if (driverWallet) {
-                    const totalRatings = (currentRep?.completedTrips || 1); // Approximation
-                    const currentAvg = currentRep?.avgRatingX100 || 500;
-                    const newAvg = Math.round(((currentAvg * totalRatings) + (stars * 100)) / (totalRatings + 1));
-                    
-                    await updateDriverReputation(driverId, driverWallet, {
-                        avgRatingX100: newAvg
-                    });
-                }
-            }
-        } catch (err) {
-            console.warn('[Rating] Failed to update reputation:', err);
+    try {
+        const response = await fetch('/api/ratings/submit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ tripId, rater, stars, comment }),
+        });
+        
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || 'Failed to submit rating');
         }
+    } catch (err) {
+        console.error('[FirebaseDb] submitTripRating error:', err);
+        throw err;
     }
 }
