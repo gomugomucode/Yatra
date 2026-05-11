@@ -26,7 +26,7 @@ import {
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Driver, Booking } from '@/lib/types';
-import { getDatabase, ref, get } from 'firebase/database';
+import { getDatabase, ref, onValue } from 'firebase/database';
 import { getFirebaseApp } from '@/lib/firebase';
 import { subscribeToBookings } from '@/lib/firebaseDb';
 
@@ -65,31 +65,24 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
   useEffect(() => {
     if (!currentUser || !open) return;
     
-    // Fetch Reputation Score from Firebase
-    const fetchReputation = async () => {
-      try {
-        const db = getDatabase(getFirebaseApp());
-        const repRef = ref(db, `reputation/drivers/${currentUser.uid}`);
-        const snap = await get(repRef);
-        if (snap.exists()) {
-          const data = snap.val();
-          setReputationScore(data.score || 0);
-          setTotalTrips(data.totalTrips || 0);
-          setCompletedTrips(data.completedTrips || 0);
-        }
-
-        // Also sync from userData.stats for earnings
-        const stats = (userData as any)?.stats;
-        if (stats) {
-          setTotalEarnings(stats.totalEarnings || 0);
-          setCompletionRate(stats.completionRate || 0);
-        }
-      } catch (error) {
-        console.error('Failed to fetch reputation', error);
+    // Live subscription to reputation score
+    const db = getDatabase(getFirebaseApp());
+    const repRef = ref(db, `reputation/drivers/${currentUser.uid}`);
+    const unsubRep = onValue(repRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.val();
+        setReputationScore(data.score || 0);
+        setTotalTrips(data.totalTrips || 0);
+        setCompletedTrips(data.completedTrips || 0);
       }
-    };
-    
-    fetchReputation();
+    });
+
+    // Sync earnings from userData.stats (reactive via dep array)
+    const stats = (userData as any)?.stats;
+    if (stats) {
+      setTotalEarnings(stats.totalEarnings || 0);
+      setCompletionRate(stats.completionRate || 0);
+    }
 
     // Subscribe to driver's recent bookings for the history slider
     const unsubscribeBookings = subscribeToBookings(currentUser.uid, 'driver', (data) => {
@@ -99,8 +92,8 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
       setRecentBookings(sorted.slice(0, 10));
     });
 
-    return () => unsubscribeBookings();
-  }, [currentUser, open]);
+    return () => { unsubRep(); unsubscribeBookings(); };
+  }, [currentUser, open, userData]);
 
   const handleCopyAddress = () => {
     if (!wallet) return;

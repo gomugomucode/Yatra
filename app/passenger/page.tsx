@@ -1076,7 +1076,7 @@ export default function PassengerDashboard() {
 
           {/* Right: booking modal + avatar */}
           <div className="flex items-center gap-2 relative z-[100] pointer-events-auto">
-            <DetailedBookingModal />
+            <DetailedBookingModal currentLocation={pickupLocation} />
             <button
               className="w-11 h-11 rounded-full font-black text-sm flex items-center justify-center transition-all active:scale-95"
               style={{ background: '#E6FBF5', color: '#009E7F', border: '1.5px solid #A7F3D0' }}
