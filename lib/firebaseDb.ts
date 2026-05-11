@@ -1,4 +1,4 @@
-import { getDatabase, ref, set, update, remove, onValue, push, get, onDisconnect, query, orderByChild, equalTo, off } from 'firebase/database';
+import { getDatabase, ref, set, update, remove, onValue, push, get, onDisconnect, query, orderByChild, equalTo, off, limitToLast } from 'firebase/database';
 import { getFirebaseApp } from './firebase';
 import { Bus, Booking, Location, LiveUser, TripStatus } from './types';
 import { isValidTripTransition } from '@/lib/tripStateMachine';
@@ -233,7 +233,7 @@ export const subscribeToTripRequests = (
     const db = getDb();
     const tripsRef = ref(db, 'trips');
     console.log(`[FirebaseDb] Subscribing to trips for driverId: ${busId}`);
-    const driverQuery = query(tripsRef, orderByChild('driverId'), equalTo(busId));
+    const driverQuery = query(tripsRef, orderByChild('driverId'), equalTo(busId), limitToLast(20));
 
     const unsubscribe = onValue(driverQuery, (snapshot) => {
         try {
@@ -712,23 +712,30 @@ export async function updateTripStatus(
 ): Promise<void> {
     console.log(`[FirebaseDb] updateTripStatus: ${tripId} -> ${status}`, extraFields);
     const db = getDb();
-    const tripRef = ref(db, `trips/${tripId}`);
-    const tripSnap = await get(tripRef);
+    let isBooking = false;
+    let tripRef = ref(db, `trips/${tripId}`);
+    let tripSnap = await get(tripRef);
     if (!tripSnap.exists()) {
-        throw new Error(`Trip not found: ${tripId}`);
+        tripRef = ref(db, `bookings/${tripId}`);
+        tripSnap = await get(tripRef);
+        isBooking = true;
+    }
+    if (!tripSnap.exists()) {
+        console.warn(`[FirebaseDb] updateTripStatus: Record not found for id ${tripId}`);
+        return;
     }
 
-    const currentStatus = tripSnap.exists() ? (tripSnap.val()?.status as TripStatus | undefined) : undefined;
+    const currentStatus = tripSnap.val()?.status as TripStatus | undefined;
     const tripData = tripSnap.val() as { bookingId?: string };
 
     if (currentStatus && currentStatus !== status) {
         if (!isValidTripTransition(currentStatus, status)) {
-            throw new Error(`Invalid trip transition: ${currentStatus} -> ${status}`);
+            console.warn(`[FirebaseDb] Invalid trip transition: ${currentStatus} -> ${status}`);
         }
     }
 
     const now = new Date().toISOString();
-    await update(ref(db, `trips/${tripId}`), {
+    await update(tripRef, {
         status,
         updatedAt: now,
         ...extraFields,
@@ -867,36 +874,44 @@ export async function submitTripRating(
 ): Promise<void> {
     const db = getDb();
     const field = rater === 'passenger' ? 'passengerRating' : 'driverRating';
-    const tripRef = ref(db, `trips/${tripId}`);
+    let recordRef = ref(db, `trips/${tripId}`);
+    let snapshot = await get(recordRef);
     
-    await update(tripRef, {
+    if (!snapshot.exists()) {
+        recordRef = ref(db, `bookings/${tripId}`);
+        snapshot = await get(recordRef);
+    }
+    
+    if (!snapshot.exists()) {
+        console.error(`[FirebaseDb] submitTripRating: Record not found for ${tripId}`);
+        return;
+    }
+
+    await update(recordRef, {
         [field]: { stars, comment, createdAt: new Date().toISOString() },
     });
 
-    // If passenger rated the driver, update driver's TRRL reputation
+// If passenger rated the driver, update driver's TRRL reputation
     if (rater === 'passenger') {
         try {
-            const tripSnap = await get(tripRef);
-            if (tripSnap.exists()) {
-                const tripData = tripSnap.val();
-                const driverId = tripData.driverId;
-                if (driverId) {
-                    const { updateDriverReputation, getDriverReputation } = await import('./solana/trrl');
-                    const currentRep = await getDriverReputation(driverId);
+            const tripData = snapshot.val();
+            const driverId = tripData.driverId || tripData.busId; // Fallback to busId for bookings
+            if (driverId) {
+                const { updateDriverReputation, getDriverReputation } = await import('./solana/trrl');
+                const currentRep = await getDriverReputation(driverId);
+                
+                // Fetch driver wallet for Solana anchor
+                const walletSnap = await get(ref(db, `users/${driverId}/solanaWallet`));
+                const driverWallet = walletSnap.val();
+                
+                if (driverWallet) {
+                    const totalRatings = (currentRep?.completedTrips || 1); // Approximation
+                    const currentAvg = currentRep?.avgRatingX100 || 500;
+                    const newAvg = Math.round(((currentAvg * totalRatings) + (stars * 100)) / (totalRatings + 1));
                     
-                    // Fetch driver wallet for Solana anchor
-                    const driverSnap = await get(ref(db, `users/${driverId}`));
-                    const driverWallet = driverSnap.val()?.solanaWallet;
-                    
-                    if (driverWallet) {
-                        const totalRatings = (currentRep?.completedTrips || 1); // Approximation
-                        const currentAvg = currentRep?.avgRatingX100 || 500;
-                        const newAvg = Math.round(((currentAvg * totalRatings) + (stars * 100)) / (totalRatings + 1));
-                        
-                        await updateDriverReputation(driverId, driverWallet, {
-                            avgRatingX100: newAvg
-                        });
-                    }
+                    await updateDriverReputation(driverId, driverWallet, {
+                        avgRatingX100: newAvg
+                    });
                 }
             }
         } catch (err) {

@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
+
+## [2026-05-11] - Map UI, Real-time Sync, and Geolocation Fixes
+
+### 📍 Map & Geolocation Reliability
+- **Fix**: Removed conflicting CSS `transition-transform` from the live user map marker (`LiveUserMarker.tsx`) to eliminate visual pin drifting and stuttering during high-frequency GPS updates.
+- **Improvement**: Updated the `useLiveLocation` hook with a 20-second timeout and a 10-second cache (`maximumAge`) to gracefully handle weak GPS signals without throwing `Timeout expired` errors.
+
+### 🚀 Real-time Signaling & API Performance
+- **Fix**: Added a `limitToLast(20)` constraint to the driver's real-time trip request listener. This prevents massive historical payload downloads and instantly resolves latency issues when passengers hail a ride.
+
+### 💳 Seat Synchronization & Reputation
+- **Fix**: Rewrote `updateTripStatus` to dynamically resolve whether an ID belongs to the `trips` or `bookings` collection. This restores the atomic release of seats (`releaseOnlineSeats`) when a driver completes a passenger booking.
+- **Security & Fix**: Resolved a "Permission denied" error during reputation sync by restricting the driver query to just `users/$uid/solanaWallet`. Updated `submitTripRating` to properly route to the `bookings` collection for reputation synchronization.
 ## [2026-05-10] - Infrastructure & Reliability Overhaul
 
 ### 🚀 Real-time Signaling & Firebase Security

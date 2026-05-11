@@ -112,8 +112,8 @@ export function useLiveLocation(
                 },
                 {
                     enableHighAccuracy: true,
-                    maximumAge: 0,
-                    timeout: 10000
+                    maximumAge: 10000,
+                    timeout: 20000
                 }
             );
         };
