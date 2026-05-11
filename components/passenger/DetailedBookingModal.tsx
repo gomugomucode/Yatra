@@ -59,7 +59,11 @@ const PAYMENT_METHODS = [
     { id: 'cash', name: 'Cash on Board', icon: <Banknote className="w-5 h-5 text-emerald-500" /> },
 ];
 
-export default function DetailedBookingModal() {
+interface DetailedBookingModalProps {
+    currentLocation?: { lat: number; lng: number; address?: string } | null;
+}
+
+export default function DetailedBookingModal({ currentLocation }: DetailedBookingModalProps) {
     const [isOpen, setIsOpen] = useState(false);
     const { userData } = useAuth();
     const [step, setStep] = useState(1);
@@ -70,11 +74,14 @@ export default function DetailedBookingModal() {
     // Form state
     const [vehicleType, setVehicleType] = useState('bus');
     const [passengers, setPassengers] = useState(1);
-    const [origin, setOrigin] = useState('');
+    const [origin, setOrigin] = useState(currentLocation ? '__current__' : '');
     const [destination, setDestination] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('');
 
-    const selectedOrigin = NEPALI_CITIES.find(c => c.id === origin);
+    const originCities = currentLocation
+        ? [{ id: '__current__', name: currentLocation.address || 'Current Location', lat: currentLocation.lat, lng: currentLocation.lng }, ...NEPALI_CITIES]
+        : NEPALI_CITIES;
+    const selectedOrigin = originCities.find(c => c.id === origin);
     const selectedDest = NEPALI_CITIES.find(c => c.id === destination);
     const selectedVehicle = VEHICLE_TYPES.find(v => v.id === vehicleType);
     
@@ -245,7 +252,7 @@ export default function DetailedBookingModal() {
                                     {originDropdownOpen && (
                                         <div className="absolute z-50 mt-2 w-full bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
                                             <div className="max-h-52 overflow-y-auto">
-                                                {NEPALI_CITIES.map((city) => (
+                                                {originCities.map((city) => (
                                                     <button
                                                         key={`origin-${city.id}`}
                                                         type="button"

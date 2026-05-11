@@ -103,6 +103,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!initialBusData.driverId) {
+      return NextResponse.json(
+        { error: 'This vehicle has no driver linked. Please try another or wait for the driver to go online.' },
+        { status: 422 }
+      );
+    }
+
     // Determine vehicle type: prefer request, fallback to bus data, fallback to 'bus'
     const vehicleType = requestedVehicleType || initialBusData.vehicleType || 'bus';
 
@@ -186,7 +193,7 @@ export async function POST(request: Request) {
 
     const booking: Omit<Booking, 'id'> = {
       passengerId,
-      driverId: initialBusData.driverId || busId,
+      driverId: initialBusData.driverId,
       busId,
       passengerName,
       phoneNumber,

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getFirebaseAdminAuth, getAdminDb } from '@/lib/firebaseAdmin';
 import { getMessaging } from 'firebase-admin/messaging';
+import { calculateFareFromLocations, calculateDistance } from '@/lib/utils/fareCalculator';
+import { VehicleTypeId } from '@/lib/types';
 
 interface TripRequestBody {
   busId: string;
@@ -76,6 +78,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing pickupLocation coordinates' }, { status: 400 });
     }
 
+    // Calculate fare and distance if both locations are available
+    const vehicleType: VehicleTypeId = (busData as any).vehicleType || 'bus';
+    let fare = 0;
+    let distanceKm = 0;
+    if (pickupLocation && dropoffLocation) {
+      try {
+        fare = calculateFareFromLocations(pickupLocation, dropoffLocation, vehicleType, 1);
+        distanceKm = calculateDistance(pickupLocation.lat, pickupLocation.lng, dropoffLocation.lat, dropoffLocation.lng);
+      } catch (e) {
+        console.warn('[TripAPI] Fare calculation failed, defaulting to 0:', e);
+      }
+    }
+
     const tripRequestRef = adminDb.ref('trips').push();
     const tripRequest = {
       id: tripRequestRef.key!,
@@ -87,6 +102,9 @@ export async function POST(request: Request) {
       status: 'requested' as const,
       lat: pickupLocation.lat,
       lng: pickupLocation.lng,
+      fare,
+      distanceKm,
+      vehicleType,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       ...(pickupLocation ? { pickupLocation } : {}),

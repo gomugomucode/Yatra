@@ -529,7 +529,7 @@ export default function DriverDashboard() {
         gpsVerifiedAt: now
       });
       
-      const tripRecordId = activeTripRequest.id;
+      const tripRecordId = activeTripRequest.bookingId ?? activeTripRequest.id;
       await handlePassengerDropoff(tripRecordId, true); // true = skip redundant status update since API already did it
 
       setActiveTripRequest(null);
@@ -833,10 +833,11 @@ export default function DriverDashboard() {
       const bookingId = passengerId;
       const bookingSnap = await get(ref(db, `bookings/${bookingId}`));
       if (!bookingSnap.exists()) {
+        // Non-fatal: trip completed correctly, NFT minting is optional
+        console.warn('[Driver] Booking record not found for NFT minting:', bookingId);
         toast({
-          title: 'Receipt skipped',
-          description: 'Booking record missing. Unable to mint receipt.',
-          variant: 'destructive',
+          title: 'Trip completed',
+          description: 'Receipt minting skipped (no linked booking).',
         });
         return;
       }
