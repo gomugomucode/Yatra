@@ -14,7 +14,11 @@ export function calculateAvailableSeats(bus: Bus): number {
  * Check if bus can accommodate a booking request
  */
 export function canAccommodateBooking(bus: Bus, numberOfPassengers: number): boolean {
-    const available = calculateAvailableSeats(bus);
+    // Prefer the explicit availableSeats field if it exists, as it is what passengers see in the UI.
+    // If it's missing (e.g. legacy data), fall back to calculating it.
+    const available = (typeof bus.availableSeats === 'number') 
+        ? bus.availableSeats 
+        : calculateAvailableSeats(bus);
     return available >= numberOfPassengers;
 }
 
@@ -146,7 +150,7 @@ export async function releaseOnlineSeats(
         
         const currentOnline = currentBus.onlineBookedSeats || 0;
         const newOnline = Math.max(0, currentOnline - seatsToRelease);
-        const capacity = currentBus.capacity || 0;
+        const capacity = currentBus.capacity || 40; // Default to 40
         const offlineOccupied = currentBus.offlineOccupiedSeats || 0;
         
         currentBus.onlineBookedSeats = newOnline;

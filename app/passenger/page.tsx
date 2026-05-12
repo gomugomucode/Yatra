@@ -339,6 +339,7 @@ export default function PassengerDashboard() {
         setActiveTripId(null);
         setActiveTripPickup(null);
         setIsSelectingPickup(false);
+        setSelectedBus(null);
         return;
       }
 

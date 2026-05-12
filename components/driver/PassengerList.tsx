@@ -42,8 +42,9 @@ export default function PassengerList({
 	const onBoard = sortedPassengers.filter(p => p.status === 'picked').length;
 	const dropped = sortedPassengers.filter(p => p.status === 'dropped').length;
 
-	// Revenue color shifts cyan → emerald as count grows
-	const revenue = passengers.length * 75;
+	// Revenue based on actual passenger fares
+	const revenue = passengers.reduce((sum, p) => sum + (p.fare || 0), 0);
+
 	const revenueColor = revenue === 0
 		? '#22d3ee'
 		: revenue < 300

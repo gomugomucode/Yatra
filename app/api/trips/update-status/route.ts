@@ -60,31 +60,53 @@ export async function POST(request: Request) {
             }
         }
 
-        // 3. Update Status
+        // 3. Update Status with Idempotency
         const now = new Date().toISOString();
-        const updates: Record<string, any> = {
-            status,
-            updatedAt: now,
-            ...extraFields
-        };
-        if (status === 'completed') {
-            updates.completedAt = now;
+        let statusChanged = false;
+
+        const { committed, snapshot: updatedTripSnap } = await tripRef.transaction((currentTrip) => {
+            if (!currentTrip) return currentTrip;
+            if (currentTrip.status === status) {
+                statusChanged = false;
+                return; // Abort: already updated
+            }
+            statusChanged = true;
+            const terminalStates = ['completed', 'cancelled', 'expired', 'rejected'];
+            if (terminalStates.includes(currentTrip.status) && terminalStates.includes(status)) {
+                statusChanged = false;
+                return; // Abort: cannot change between terminal states
+            }
+
+            currentTrip.status = status;
+            currentTrip.updatedAt = now;
+            if (status === 'completed') {
+                currentTrip.completedAt = now;
+            }
+            // Apply extra fields
+            if (extraFields) {
+                Object.assign(currentTrip, extraFields);
+            }
+            return currentTrip;
+        });
+
+        if (!committed && !statusChanged) {
+            return NextResponse.json({ success: true, status, message: 'Already processed' });
         }
-        await tripRef.update(updates);
+
+        const finalTripData = updatedTripSnap.val();
 
         // 4. Sync linked record
-        const linkedBookingId = tripData.bookingId || (isBooking ? null : tripId);
+        const linkedBookingId = finalTripData.bookingId || (isBooking ? null : tripId);
         if (linkedBookingId && linkedBookingId !== tripId) {
             await adminDb.ref(`bookings/${linkedBookingId}`).update({
-                status: status === 'active' ? 'confirmed' : status, // map internal statuses
+                status: status === 'active' ? 'confirmed' : status,
                 updatedAt: now,
             });
         }
 
-        // 5. Aggregate Statistics (Only on state changes)
-        if (currentStatus !== status) {
+        // 5. Aggregate Statistics (Only if status actually changed)
+        if (statusChanged) {
             const statsRef = adminDb.ref(`users/${driverId}/stats`);
-            
             await statsRef.transaction((currentStats) => {
                 const stats = currentStats || {
                     completedTrips: 0,
@@ -95,32 +117,49 @@ export async function POST(request: Request) {
                 };
 
                 if (status === 'accepted' && currentStatus === 'requested') {
-                    stats.totalRides = (stats.totalRides || 0) + 1;
+                    stats.totalRides = Number(stats.totalRides || 0) + 1;
                 } else if (status === 'completed' && currentStatus !== 'completed') {
-                    stats.completedTrips = (stats.completedTrips || 0) + 1;
-                    const fare = tripData.fare || 0;
-                    stats.totalEarnings = (stats.totalEarnings || 0) + fare;
+                    stats.completedTrips = Number(stats.completedTrips || 0) + 1;
+                    const fare = Number(finalTripData.fare || 0);
+                    stats.totalEarnings = Number(stats.totalEarnings || 0) + fare;
                 } else if (status === 'cancelled' && currentStatus !== 'cancelled') {
-                    stats.cancelledTrips = (stats.cancelledTrips || 0) + 1;
+                    stats.cancelledTrips = Number(stats.cancelledTrips || 0) + 1;
                 }
 
-                // Recalculate completion rate
-                const total = stats.totalRides || stats.completedTrips || 1;
-                stats.completionRate = Math.round(((stats.completedTrips || 0) / total) * 100);
+                // Recalculate completion rate (Clamped to 100)
+                const completedCount = Number(stats.completedTrips || 0);
+                const totalAttempted = Math.max(Number(stats.totalRides || completedCount), 1);
+                stats.completionRate = Math.min(Math.round((completedCount / totalAttempted) * 100), 100);
 
                 return stats;
             });
 
-            // 6. Update Reputation Node (Sync with stats)
+            // 6. Update Reputation Node (Atomic)
             if (status === 'completed' || status === 'accepted') {
                 const repRef = adminDb.ref(`reputation/drivers/${driverId}`);
-                const repSnap = await repRef.get();
-                const repData = repSnap.exists() ? repSnap.val() : { totalTrips: 0, completedTrips: 0 };
-                
-                await repRef.update({
-                    totalTrips: (status === 'accepted' ? (repData.totalTrips || 0) + 1 : repData.totalTrips || 0),
-                    completedTrips: (status === 'completed' ? (repData.completedTrips || 0) + 1 : repData.completedTrips || 0),
-                    verifiedAt: Date.now()
+                await repRef.transaction((currentRep) => {
+                    const rep = currentRep || { totalTrips: 0, completedTrips: 0, score: 500 };
+                    
+                    if (status === 'accepted') {
+                        rep.totalTrips = Number(rep.totalTrips || 0) + 1;
+                    } else if (status === 'completed') {
+                        rep.completedTrips = Number(rep.completedTrips || 0) + 1;
+                    }
+                    rep.verifiedAt = Date.now();
+                    
+                    // Trigger score recalculation
+                    const total = Math.max(Number(rep.totalTrips || 0), 1);
+                    const completed = Number(rep.completedTrips || 0);
+                    const completionFactor = Math.min((completed / total) * 400, 400);
+                    const ratingFactor = (Number(rep.avgRatingX100 || 500) / 500) * 300;
+                    const punctuality = Math.min(Number(rep.onTimeArrivals || 0) / Math.max(completed, 1), 1) * 200;
+                    const zkBonus = rep.zkVerified ? 100 : 0;
+                    const sosPenalty = Number(rep.sosTriggered || 0) * 20;
+
+                    const rawScore = Math.round(completionFactor + ratingFactor + punctuality + zkBonus - sosPenalty);
+                    rep.score = Math.max(0, Math.min(isNaN(rawScore) ? 500 : rawScore, 1000));
+                    
+                    return rep;
                 });
             }
         }

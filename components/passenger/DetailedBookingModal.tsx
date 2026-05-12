@@ -32,6 +32,9 @@ import { VehicleTypeId } from '@/lib/types';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { getDatabase, ref, get } from 'firebase/database';
 import { getFirebaseApp } from '@/lib/firebase';
+import { useEffect } from 'react';
+import { getRoute } from '@/lib/routing/osrm';
+
 
 // --- Data ---
 const NEPALI_CITIES = [
@@ -47,9 +50,9 @@ const NEPALI_CITIES = [
 ];
 
 const VEHICLE_TYPES = [
-    { id: 'bus', name: 'Bus', icon: <Bus className="w-5 h-5" />, multiplier: 1 },
-    { id: 'taxi', name: 'Taxi', icon: <Car className="w-5 h-5" />, multiplier: 3 },
-    { id: 'bike', name: 'Bike', icon: <Bike className="w-5 h-5" />, multiplier: 0.8 },
+    { id: 'bus', name: 'Bus', icon: <Bus className="w-5 h-5" /> },
+    { id: 'taxi', name: 'Taxi', icon: <Car className="w-5 h-5" /> },
+    { id: 'bike', name: 'Bike', icon: <Bike className="w-5 h-5" /> },
 ];
 
 const PAYMENT_METHODS = [
@@ -77,6 +80,9 @@ export default function DetailedBookingModal({ currentLocation }: DetailedBookin
     const [origin, setOrigin] = useState(currentLocation ? '__current__' : '');
     const [destination, setDestination] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('');
+    const [osrmDistance, setOsrmDistance] = useState<number | null>(null);
+    const [fareLoading, setFareLoading] = useState(false);
+
 
     const originCities = currentLocation
         ? [{ id: '__current__', name: currentLocation.address || 'Current Location', lat: currentLocation.lat, lng: currentLocation.lng }, ...NEPALI_CITIES]
@@ -85,20 +91,48 @@ export default function DetailedBookingModal({ currentLocation }: DetailedBookin
     const selectedDest = NEPALI_CITIES.find(c => c.id === destination);
     const selectedVehicle = VEHICLE_TYPES.find(v => v.id === vehicleType);
     
+    // Async route-based fare calculation
+    useEffect(() => {
+        if (!selectedOrigin || !selectedDest) {
+            setOsrmDistance(null);
+            return;
+        }
+
+        let isMounted = true;
+        setFareLoading(true);
+
+        getRoute(
+            selectedOrigin.lat,
+            selectedOrigin.lng,
+            selectedDest.lat,
+            selectedDest.lng
+        ).then(route => {
+            if (!isMounted) return;
+            if (route) {
+                setOsrmDistance(route.distance);
+            } else {
+                setOsrmDistance(null); // Fallback to Haversine handled in utility
+            }
+            setFareLoading(false);
+        }).catch(err => {
+            console.error('[BookingModal] Route fetch error:', err);
+            if (isMounted) setFareLoading(false);
+        });
+
+        return () => { isMounted = false; };
+    }, [selectedOrigin?.id, selectedDest?.id]);
+
     const estimatedTotal = useMemo(() => {
         if (!selectedOrigin || !selectedDest || !selectedVehicle) return 0;
-        try {
-            return calculateFareFromLocations(
-                { lat: selectedOrigin.lat, lng: selectedOrigin.lng },
-                { lat: selectedDest.lat, lng: selectedDest.lng },
-                vehicleType as VehicleTypeId,
-                passengers
-            );
-        } catch (e) {
-            console.error('Fare calc error:', e);
-            return 0;
-        }
-    }, [selectedOrigin, selectedDest, vehicleType, passengers]);
+        return calculateFareFromLocations(
+            { lat: selectedOrigin.lat, lng: selectedOrigin.lng },
+            { lat: selectedDest.lat, lng: selectedDest.lng },
+            vehicleType as VehicleTypeId,
+            passengers,
+            osrmDistance || undefined
+        );
+    }, [selectedOrigin, selectedDest, vehicleType, passengers, osrmDistance]);
+
 
     const handleNext = () => {
         if (step === 1) {
@@ -373,8 +407,11 @@ export default function DetailedBookingModal({ currentLocation }: DetailedBookin
                                 )}
                                 <div className="border-t border-border pt-2 flex justify-between items-center mt-1">
                                     <span className="text-sm font-black text-foreground">Estimated Total</span>
-                                    <span className="text-xl font-black text-primary-hover">रु {estimatedTotal}</span>
+                                    <span className={`text-xl font-black ${fareLoading ? 'animate-pulse text-muted-foreground' : 'text-primary-hover'}`}>
+                                        रु {fareLoading ? '--' : estimatedTotal}
+                                    </span>
                                 </div>
+
                             </div>
                         </div>
                     )}

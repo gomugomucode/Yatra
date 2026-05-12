@@ -33,14 +33,17 @@ import {
   autoCompleteTripByGPS,
   subscribeTripLocation,
   submitTripRating,
+  subscribeToDriverRatings,
 } from '@/lib/firebaseDb';
+import { Star } from 'lucide-react';
+
 import { haversineDistance } from '@/lib/utils/geofencing';
 import TripRatingModal from '@/components/shared/TripRatingModal';
 import TripRequestPanel from '@/components/driver/TripRequestPanel';
 import { TripStatus } from '@/lib/types';
 import { addOfflinePassenger, removeOfflinePassenger } from '@/lib/seatManagement';
 import { useToast } from '@/components/ui/use-toast';
-import { updateDriverReputation, getDriverReputation } from '@/lib/solana/trrl';
+import { subscribeToDriverReputation, getDriverReputation, DriverRepData } from '@/lib/solana/trrl';
 import {
   Dialog,
   DialogContent,
@@ -92,7 +95,10 @@ export default function DriverDashboard() {
   const [driverEta, setDriverEta] = useState<number | null>(null);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'trips' | 'earnings' | 'profile'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'trips' | 'earnings' | 'rating' | 'profile'>('dashboard');
+  const [driverRatings, setDriverRatings] = useState<any[]>([]);
+  const [driverReputation, setDriverReputation] = useState<any>(null);
+
   const [ratingTripId, setRatingTripId] = useState<string | null>(null);
   const [ratingPassengerName, setRatingPassengerName] = useState<string>('');
   const driverProfile = userData && userData.role === 'driver' ? userData as Driver : null;
@@ -123,6 +129,26 @@ export default function DriverDashboard() {
     }
     return res.json();
   };
+
+  // Subscribe to driver ratings and reputation
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+    
+    // Subscribe to aggregate reputation
+    const unsubRep = subscribeToDriverReputation(currentUser.uid, (data) => {
+      setDriverReputation(data);
+    });
+
+    // List individual feedback
+    const unsubRatings = subscribeToDriverRatings(currentUser.uid, (ratings) => {
+      setDriverRatings(ratings);
+    });
+
+    return () => {
+      unsubRep();
+      unsubRatings();
+    };
+  }, [currentUser?.uid]);
 
   const handleAccidentConfirm = async () => {
     resetDetection();
@@ -201,12 +227,14 @@ export default function DriverDashboard() {
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
 
+    if (!currentUser?.uid) return;
+
     unsubscribe = subscribeToBuses((busesData) => {
       setBuses(busesData);
 
       // Try to find the driver's specific bus
       const driverBus =
-        busesData.find((b) => b.id === currentUser?.uid) ||
+        busesData.find((b) => b.id === currentUser.uid) ||
         (driverProfile?.vehicleNumber
           ? busesData.find((b) => b.busNumber === driverProfile.vehicleNumber)
           : undefined);
@@ -235,11 +263,11 @@ export default function DriverDashboard() {
 
   // Subscribe to real passengers (bookings) for the selected bus
   useEffect(() => {
-    if (!selectedBus) return;
+    if (!selectedBus || !currentUser?.uid) return;
 
     let previousBookingCount = 0;
 
-    const unsubscribe = subscribeToBookings(currentUser!.uid, 'driver', (bookings) => {
+    const unsubscribe = subscribeToBookings(currentUser.uid, 'driver', (bookings) => {
       const mapped: Passenger[] = bookings.map((b) => ({
         id: b.id,
         name: b.passengerName,
@@ -247,7 +275,9 @@ export default function DriverDashboard() {
         dropoffLocation: b.dropoffLocation,
         status: (b.status === 'completed' ? 'dropped' : (['confirmed', 'active'].includes(b.status) ? 'picked' : 'waiting')) as any,
         bookingTime: b.timestamp,
+        fare: b.fare,
       }));
+
 
       // Notify driver when new booking arrives
       if (bookings.length > previousBookingCount && previousBookingCount > 0) {
@@ -306,16 +336,16 @@ export default function DriverDashboard() {
     });
 
     return () => unsubscribe();
-  }, [selectedBus, toast]);
+  }, [selectedBus, toast, currentUser]);
 
   // Real-time passenger-driver handshake notifications from `trips/{tripId}`.
   useEffect(() => {
-    if (!selectedBus) return;
+    if (!selectedBus || !currentUser?.uid) return;
     lastTripRequestSeenRef.current = null;
     hasPlayedPassengerReachedRef.current = false;
     setShowPassengerReachedAlert(false);
 
-    const unsubscribe = subscribeToTripRequests(currentUser!.uid, (requests) => {
+    const unsubscribe = subscribeToTripRequests(currentUser.uid, (requests) => {
       console.log('[DriverPage] Trip requests update:', requests.length, 'for busId:', selectedBus.id);
       if (requests.length === 0) {
         setActiveTripRequest(null);
@@ -379,7 +409,7 @@ export default function DriverDashboard() {
     });
 
     return () => unsubscribe();
-  }, [selectedBus, toast]);
+  }, [selectedBus, toast, currentUser]);
 
   // Proximity alarm: driver approaches passenger pickup pin
   useEffect(() => {
@@ -1304,6 +1334,81 @@ export default function DriverDashboard() {
           </section>
         )}
 
+        {activeTab === 'rating' && (
+          <section className="space-y-4">
+            {/* Aggregate Score Card */}
+            <div className="rounded-2xl p-5 text-center space-y-2" style={{ background: 'white', border: `1px solid ${BORDER}`, boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
+              <p className="text-xs uppercase tracking-widest font-black text-muted-foreground">Performance Score</p>
+              <div className="flex items-center justify-center gap-1 text-4xl font-black" style={{ color: INK }}>
+                <span>{( (driverReputation?.avgRatingX100 || 500) / 100).toFixed(1)}</span>
+                <Star className="w-8 h-8 fill-yellow-400 text-yellow-400" />
+              </div>
+              <p className="text-sm font-bold" style={{ color: MUTED }}>{driverRatings.length} total reviews</p>
+              
+               <div className="mt-4 pt-4 border-t border-slate-100 flex justify-around">
+                <div>
+                  <p className="text-[10px] uppercase font-black tracking-tighter text-muted-foreground">Reputation Score</p>
+                  <p className="text-xl font-black" style={{ color: INK }}>{driverReputation?.score ?? 500}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase font-black tracking-tighter text-muted-foreground">Rating Count</p>
+                  <p className="text-xl font-black" style={{ color: INK }}>{driverReputation?.ratingCount || driverRatings.length}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase font-black tracking-tighter text-muted-foreground">Trips Done</p>
+                  <p className="text-xl font-black" style={{ color: INK }}>{driverReputation?.completedTrips || 0}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Feedback List */}
+            <div className="space-y-3">
+              <p className="text-xs uppercase tracking-widest font-black px-1" style={{ color: MUTED }}>Recent Feedback</p>
+              {driverRatings.length > 0 ? (
+                driverRatings.map((r, i) => (
+                  <div 
+                    key={r.id} 
+                    className="rounded-2xl p-4 space-y-3 animate-in fade-in slide-in-from-bottom-2"
+                    style={{ background: 'white', border: `1px solid ${BORDER}`, animationDelay: `${i * 50}ms` }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex gap-0.5">
+                        {[...Array(5)].map((_, idx) => (
+                          <Star 
+                            key={idx} 
+                            className={`w-3.5 h-3.5 ${idx < r.stars ? 'fill-yellow-400 text-yellow-400' : 'text-slate-200'}`} 
+                          />
+                        ))}
+                      </div>
+                      <span className="text-[10px] font-bold text-muted-foreground">
+                        {new Date(r.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    
+                    <p className="text-sm font-medium leading-relaxed" style={{ color: INK }}>"{r.comment || 'No comment provided'}"</p>
+                    
+                    <div className="pt-3 border-t border-slate-50 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black uppercase text-slate-500">
+                          {r.passengerName[0]}
+                        </div>
+                        <span className="text-xs font-bold" style={{ color: MUTED }}>{r.passengerName}</span>
+                      </div>
+                      <span className="text-xs font-black text-emerald-600">NPR {r.fare}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="py-12 text-center rounded-2xl border-2 border-dashed border-slate-200 bg-white">
+                  <Star className="w-10 h-10 mx-auto text-slate-200 mb-2" />
+                  <p className="text-sm font-bold text-slate-400">No feedback yet</p>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+
         {activeTab === 'profile' && (
           <section className="rounded-2xl p-4 space-y-3" style={{ background: 'white', border: `1px solid ${BORDER}`, boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
             <p className="text-xs uppercase tracking-widest font-black" style={{ color: MUTED }}>Driver Profile</p>
@@ -1412,13 +1517,15 @@ export default function DriverDashboard() {
         className="fixed inset-x-0 bottom-0 z-[1300] px-3 py-2"
         style={{ background: 'white', borderTop: `1px solid ${BORDER}` }}
       >
-        <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
+        <div className="mx-auto grid max-w-md grid-cols-5 gap-1">
           {([
             { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
             { id: 'trips', icon: Route, label: 'Trips' },
             { id: 'earnings', icon: CircleDollarSign, label: 'Earnings' },
+            { id: 'rating', icon: Star, label: 'Rating' },
             { id: 'profile', icon: UserRound, label: 'Profile' },
           ] as const).map(({ id, icon: Icon, label }) => (
+
             <button
               key={id}
               className="min-h-[44px] flex flex-col items-center justify-center gap-1 rounded-xl transition-all active:scale-95"

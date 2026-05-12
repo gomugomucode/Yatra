@@ -896,3 +896,46 @@ export async function submitTripRating(
         throw err;
     }
 }
+
+/**
+ * Subscribe to all ratings for a specific driver.
+ * Fetches historical trips/bookings where this driver was assigned and a rating was given.
+ */
+export function subscribeToDriverRatings(
+    driverId: string,
+    callback: (ratings: any[]) => void
+): () => void {
+    const db = getDb();
+    const bookingsRef = query(ref(db, 'bookings'), orderByChild('driverId'), equalTo(driverId));
+    
+    // Listen to bookings
+    const unsubscribe = onValue(bookingsRef, (snap) => {
+        const data = snap.val();
+        if (!data) {
+            callback([]);
+            return;
+        }
+
+        const ratings: any[] = [];
+        Object.values(data).forEach((booking: any) => {
+            if (booking.passengerRating) {
+                ratings.push({
+                    id: booking.id,
+                    stars: booking.passengerRating.stars,
+                    comment: booking.passengerRating.comment,
+                    createdAt: booking.passengerRating.createdAt || booking.timestamp,
+                    passengerName: booking.passengerName || 'Passenger',
+                    fare: booking.fare,
+                    status: booking.status,
+                });
+            }
+        });
+
+        // Sort by date desc
+        ratings.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        callback(ratings);
+    });
+
+    return unsubscribe;
+}
+

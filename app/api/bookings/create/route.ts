@@ -5,6 +5,8 @@ import { getDatabase } from 'firebase-admin/database';
 import { initializeApp, getApps, cert, type ServiceAccount } from 'firebase-admin/app';
 import { calculateFareFromLocations } from '@/lib/utils/fareCalculator';
 import { Booking, VehicleTypeId } from '@/lib/types';
+import { getRoute } from '@/lib/routing/osrm';
+
 
 // Initialize Firebase Admin for database access
 function getAdminApp() {
@@ -134,19 +136,28 @@ export async function POST(request: Request) {
         }
     }
 
-    // 3. Calculate fare (local logic, no side effects)
+    // 3. Calculate fare (async route-based calculation)
     let fare = 0;
     try {
+      const route = await getRoute(
+        pickupLocation.lat,
+        pickupLocation.lng,
+        dropoffLocation.lat,
+        dropoffLocation.lng
+      );
+      
       fare = calculateFareFromLocations(
         pickupLocation,
         dropoffLocation,
         vehicleType as VehicleTypeId,
-        numberOfPassengers
+        numberOfPassengers,
+        route?.distance || undefined
       );
     } catch (err) {
       console.warn('Error calculating fare:', err);
       fare = 0;
     }
+
 
     // 3. Run Transaction to reserve seats atomically
     const { committed, snapshot: transactionSnapshot } = await busRef.transaction((currentBus) => {

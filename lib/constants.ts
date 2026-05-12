@@ -45,9 +45,10 @@ export const VEHICLE_TYPES: VehicleType[] = [
     name: 'Bike',
     icon: '🏍️',
     capacity: 2,
-    fareMultiplier: 0.8,
+    fareMultiplier: 1.5,
     color: '#dc2626', // red
   },
+
 ];
 
 export const VEHICLE_TYPE_MAP: Record<VehicleTypeId, VehicleType> = VEHICLE_TYPES.reduce(
@@ -92,6 +93,8 @@ export const MOCK_BUSES: Bus[] = [
     isActive: true,
     emoji: VEHICLE_TYPE_MAP.bus.icon,
     vehicleType: 'bus',
+    driverId: 'mock-driver-123',
+    driverWalletAddress: 'H8k4...mock',
     onlineBookedSeats: 0,
     offlineOccupiedSeats: 0,
     availableSeats: VEHICLE_TYPE_MAP.bus.capacity,
@@ -109,6 +112,8 @@ export const MOCK_BUSES: Bus[] = [
     isActive: true,
     emoji: VEHICLE_TYPE_MAP.others.icon,
     vehicleType: 'others',
+    driverId: 'mock-driver-456',
+    driverWalletAddress: 'J2m1...mock',
     onlineBookedSeats: 0,
     offlineOccupiedSeats: 0,
     availableSeats: VEHICLE_TYPE_MAP.others.capacity,
@@ -126,6 +131,8 @@ export const MOCK_BUSES: Bus[] = [
     isActive: true,
     emoji: VEHICLE_TYPE_MAP.taxi.icon,
     vehicleType: 'taxi',
+    driverId: 'mock-driver-789',
+    driverWalletAddress: 'L9p5...mock',
     onlineBookedSeats: 0,
     offlineOccupiedSeats: 0,
     availableSeats: VEHICLE_TYPE_MAP.taxi.capacity,
@@ -143,6 +150,8 @@ export const MOCK_BUSES: Bus[] = [
     isActive: true,
     emoji: VEHICLE_TYPE_MAP.bike.icon,
     vehicleType: 'bike',
+    driverId: 'mock-driver-222',
+    driverWalletAddress: 'K1w9...mock',
     onlineBookedSeats: 0,
     offlineOccupiedSeats: 0,
     availableSeats: VEHICLE_TYPE_MAP.bike.capacity,
@@ -160,6 +169,8 @@ export const MOCK_BUSES: Bus[] = [
     isActive: true,
     emoji: VEHICLE_TYPE_MAP.bus.icon,
     vehicleType: 'bus',
+    driverId: 'mock-driver-333',
+    driverWalletAddress: 'M5n2...mock',
     onlineBookedSeats: 0,
     offlineOccupiedSeats: 0,
     availableSeats: VEHICLE_TYPE_MAP.bus.capacity,

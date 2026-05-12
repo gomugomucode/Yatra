@@ -80,43 +80,63 @@ export async function POST(request: Request) {
 
                 if (driverWallet) {
                     const repRef = adminDb.ref(`reputation/drivers/${driverId}`);
-                    const repSnap = await repRef.get();
                     
-                    let currentRep = repSnap.exists() ? repSnap.val() : {
-                        driverPubkey: driverWallet,
-                        totalTrips: 0,
-                        completedTrips: 0,
-                        avgRatingX100: 500,
-                        onTimeArrivals: 0,
-                        zkVerified: false,
-                        sosTriggered: 0,
-                        verifiedAt: Date.now()
-                    };
+                    await repRef.transaction((currentRep) => {
+                        const rep = currentRep || {
+                            driverPubkey: driverWallet,
+                            totalTrips: 0,
+                            completedTrips: 0,
+                            avgRatingX100: 500,
+                            onTimeArrivals: 0,
+                            zkVerified: false,
+                            sosTriggered: 0,
+                            verifiedAt: Date.now(),
+                            score: 500
+                        };
 
-                    const totalRatings = (currentRep.completedTrips || 1);
-                    const currentAvg = currentRep.avgRatingX100 || 500;
-                    const newAvg = Math.round(((currentAvg * totalRatings) + (stars * 100)) / (totalRatings + 1));
-                    
-                    currentRep.avgRatingX100 = newAvg;
-                    // Note: We don't fully recalculate 'score' here unless we copy calculateDriverScore.
-                    // Let's do a simple fallback calculation or leave score as is.
-                    const completionRate = currentRep.totalTrips > 0 ? (currentRep.completedTrips / currentRep.totalTrips) * 400 : 0;
-                    const ratingScore = (newAvg / 500) * 300;
-                    const punctuality = Math.min(currentRep.onTimeArrivals / Math.max(currentRep.completedTrips, 1), 1) * 200;
-                    const zkBonus = currentRep.zkVerified ? 100 : 0;
-                    const sosPenalty = (currentRep.sosTriggered || 0) * 20;
-                    currentRep.score = Math.min(Math.round(completionRate + ratingScore + punctuality + zkBonus - sosPenalty), 1000);
+                        // 1. Calculate New Average Rating
+                        // We treat this rating as an additional data point. 
+                        // To avoid complexity, we'll increment a separate 'ratingCount' if it exists, or derive it.
+                        const rCount = Number(rep.ratingCount || rep.completedTrips || 0);
+                        const currentAvg = Number(rep.avgRatingX100 || 500);
+                        const valStars = Number(stars) || 0;
+                        
+                        const nextAvg = Math.round(((currentAvg * rCount) + (valStars * 100)) / (rCount + 1));
+                        rep.avgRatingX100 = isNaN(nextAvg) ? currentAvg : nextAvg;
+                        rep.ratingCount = rCount + 1;
+
+                        // 2. Recalculate Performance Score (0-1000)
+                        const total = Math.max(Number(rep.totalTrips || 0), 1);
+                        const completed = Number(rep.completedTrips || 0);
+                        const punctualityCount = Number(rep.onTimeArrivals || 0);
+                        
+                        const completionRate = Math.min((completed / total) * 400, 400);
+                        const ratingScore = (rep.avgRatingX100 / 500) * 300;
+                        const punctuality = Math.min(punctualityCount / Math.max(completed, 1), 1) * 200;
+                        const zkBonus = rep.zkVerified ? 100 : 0;
+                        const sosPenalty = Number(rep.sosTriggered || 0) * 20;
+
+                        const rawScore = Math.round(completionRate + ratingScore + punctuality + zkBonus - sosPenalty);
+                        rep.score = Math.max(0, Math.min(isNaN(rawScore) ? 500 : rawScore, 1000));
+                        rep.verifiedAt = Date.now();
+
+                        return rep;
+                    });
+
+                    // 3. Post-transaction Solana anchoring (non-blocking or handled separately if needed)
+                    // We'll read the updated value for the memo
+                    const finalSnap = await repRef.get();
+                    const finalRep = finalSnap.val();
 
                     const memo = JSON.stringify({
                         type: 'YATRA_REP_V2',
                         driver: driverWallet,
-                        score: currentRep.score,
-                        trips: currentRep.completedTrips,
-                        zk: currentRep.zkVerified,
+                        score: finalRep.score,
+                        trips: finalRep.completedTrips,
+                        zk: finalRep.zkVerified,
                         ts: Date.now(),
                     });
 
-                    // Anchor on Solana
                     const connection = getConnection();
                     const serverKeypair = getServerKeypair();
                     const crypto = require('crypto');
@@ -142,11 +162,11 @@ export async function POST(request: Request) {
                         { commitment: 'confirmed' }
                     );
 
-                    currentRep.lastSolanaTx = signature;
-                    currentRep.reputationPDA = reputationPDA.toBase58();
-                    currentRep.verifiedAt = Date.now();
-                    
-                    await repRef.set(currentRep);
+                    await repRef.update({
+                        lastSolanaTx: signature,
+                        reputationPDA: reputationPDA.toBase58(),
+                        verifiedAt: Date.now()
+                    });
                 }
             }
         }
