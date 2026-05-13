@@ -2,12 +2,11 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getFirebaseAdminAuth, getAdminDb } from '@/lib/firebaseAdmin';
 import { getConnection, getServerKeypair } from '@/lib/solana/connection';
-import { 
-    Transaction, 
-    TransactionInstruction, 
-    PublicKey, 
+import {
+    Transaction,
+    TransactionInstruction,
+    PublicKey,
     sendAndConfirmTransaction,
-    Keypair 
 } from '@solana/web3.js';
 
 export const runtime = 'nodejs';
@@ -139,9 +138,11 @@ export async function POST(request: Request) {
 
                     const connection = getConnection();
                     const serverKeypair = getServerKeypair();
-                    const crypto = require('crypto');
-                    const seed = crypto.createHash('sha256').update(`yatra_rep_${driverId}`).digest();
-                    const reputationPDA = Keypair.fromSeed(seed).publicKey;
+
+                    const [reputationPDA] = PublicKey.findProgramAddressSync(
+                        [Buffer.from('yatra_rep'), Buffer.from(driverId.slice(0, 32))],
+                        MEMO_PROGRAM_ID
+                    );
 
                     const tx = new Transaction().add(
                         new TransactionInstruction({

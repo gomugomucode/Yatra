@@ -73,7 +73,7 @@ export default function WalletSettings() {
         }
     };
 
-    const isVerified = !!savedWallet && (savedWallet === connectedAddress || justVerified);
+    const isVerified = justVerified || (!!savedWallet && savedWallet === connectedAddress);
     const hasUnverifiedConnection = connected && connectedAddress && connectedAddress !== savedWallet && !justVerified;
 
     return (

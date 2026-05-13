@@ -1,14 +1,34 @@
-/**
- * Mock SMS Service
- * In production, replace this with Twilio, SparrowSMS, or AakashSMS integration.
- */
+const SPARROW_API = 'https://api.sparrowsms.com/v2/sms/';
+
 export const sendSMS = async (to: string, message: string): Promise<boolean> => {
-    if (process.env.NODE_ENV !== 'production') {
-        console.debug(`[SMS MOCK] sending SMS to ${to.slice(0, 4)}...`);
+    const token = process.env.SPARROWSMS_TOKEN;
+
+    if (!token) {
+        console.debug(`[SMS] No SPARROWSMS_TOKEN set — skipping. To: ${to.slice(0, 6)}... | Msg: ${message}`);
+        return false;
     }
 
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+        const res = await fetch(SPARROW_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token,
+                from: process.env.SPARROWSMS_SENDER_ID || 'Demo',
+                to,
+                text: message,
+            }),
+        });
 
-    return true;
+        if (!res.ok) {
+            const body = await res.text();
+            console.error(`[SMS] SparrowSMS error ${res.status}: ${body}`);
+            return false;
+        }
+
+        return true;
+    } catch (err: any) {
+        console.error('[SMS] Request failed:', err.message);
+        return false;
+    }
 };

@@ -77,7 +77,7 @@ export async function updateDriverReputation(
   // 4. Write to Firebase
   await set(repRef, newRep);
   
-  // 5. Anchor on Solana via Memo (Simulated for MVP, replacing with API call)
+  // 5. Anchor reputation hash on Solana via Memo program
   const memo = JSON.stringify({
     type: 'YATRA_REP_V2',
     driver: driverPubkey,
@@ -87,33 +87,20 @@ export async function updateDriverReputation(
     ts: Date.now(),
   });
 
-  console.log('[TRRL] Anchoring Reputation on Solana:', memo);
+  const response = await fetch('/api/solana/update-reputation', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ driverId, driverPubkey, score: newRep.score, memo }),
+  });
 
-  // In production, this fetch would update a real PDA via a program instruction
-  try {
-     const response = await fetch('/api/solana/update-reputation', {
-       method: 'POST',
-       headers: { 'Content-Type': 'application/json' },
-       body: JSON.stringify({ driverId, driverPubkey, score: newRep.score, memo })
-     });
-     const data = await response.json();
-     
-     if (data.success) {
-       await update(repRef, { 
-         lastSolanaTx: data.signature, 
-         reputationPDA: data.pda,
-         verifiedAt: Date.now() 
-       });
-       return data.signature;
-     }
-  } catch (err) {
-     console.warn('[TRRL] Solana anchor failed:', err);
+  const data = await response.json();
+
+  if (!response.ok || !data.success) {
+    throw new Error(`[TRRL] Solana Memo anchor failed: ${data.error ?? response.status}`);
   }
-  
-  // Fallback to local update if API fails (to keep app working offline/dev)
-  const mockSig = 'memo' + Math.random().toString(36).substring(2, 15);
-  await update(repRef, { lastSolanaTx: mockSig });
-  return mockSig;
+
+  await update(repRef, { lastSolanaTx: data.signature, verifiedAt: Date.now() });
+  return data.signature;
 }
 
 export async function getDriverReputation(driverId: string): Promise<DriverRepData | null> {

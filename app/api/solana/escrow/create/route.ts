@@ -5,6 +5,7 @@ import { getAdminDb } from '@/lib/firebaseAdmin';
 import { checkRateLimit } from '@/lib/utils/rateLimit';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
     try {

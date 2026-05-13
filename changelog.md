@@ -3,6 +3,40 @@
 All notable changes to this project are documented in this file.
 
 
+## [2026-05-13] - ZK, Solana Anchoring, Escrow, SMS & Wallet Connect Fixes
+
+### 🔐 ZK Identity
+
+- **Fix**: Replaced hardcoded `salt = BigInt(777)` in `lib/zk/prover.ts` with a cryptographically random 248-bit salt generated via `crypto.getRandomValues()` on every proof. Salt never leaves the device — it is a private circuit input only. Each proof now produces a unique commitment even for the same driver credentials.
+
+### ⛓️ TRRL Reputation — Solana Anchoring
+
+- **Fix**: Removed fake `mockSig = 'memo' + Math.random()...` fallback in `lib/solana/trrl.ts`. If the Memo transaction fails the function now throws instead of silently writing a fake signature to Firebase.
+- **Fix**: Replaced `Keypair.fromSeed(sha256(...))` fake PDA with `PublicKey.findProgramAddressSync` in `app/api/ratings/submit/route.ts` — this was the actual live code path for reputation anchoring after a passenger rating.
+- **Fix**: Removed unused `Keypair` import from `ratings/submit/route.ts`.
+- **New**: Added Solana Memo anchoring to `app/api/trips/update-status/route.ts` on trip completion. Previously the route updated Firebase reputation but never sent any on-chain transaction. Now posts a `TRIP_COMPLETED` Memo tx after each completed trip, stores the real devnet signature as `lastSolanaTx`.
+- **Fix**: Added `maxDuration = 60` to `update-reputation/route.ts` and `update-status/route.ts` to prevent Vercel timeouts during `sendAndConfirmTransaction`.
+- **Fix**: Removed misleading `reputationPDA` field (derived from `Keypair.fromSeed`) from `update-reputation/route.ts` response — a Keypair address is not a PDA.
+
+### 🔒 Escrow PDA
+
+- **Fix**: Replaced `Keypair.fromSeed(seed.slice(0, 32))` with `PublicKey.findProgramAddressSync` in `lib/solana/escrow.ts`. The old derivation produced an on-curve address with a private key, not a real program-derived address.
+- **Fix**: `createEscrowAccount` previously sent `SystemProgram.transfer` to the PDA address. Since `releaseEscrow` and `reclaimEscrow` pay from the server wallet (not the PDA), any SOL sent to the PDA would be permanently stranded — no custom program means no one can sign for a real PDA. Replaced with a Memo transaction that anchors the escrow commitment on-chain without stranding funds. The PDA now serves as a deterministic tracking identifier stored in Firebase.
+- **New**: Added `maxDuration = 60` to `app/api/solana/escrow/create/route.ts`.
+- **Fix**: Removed `Keypair` import from `escrow.ts` (no longer needed).
+
+### 📱 SMS Notifications
+
+- **Fix**: Replaced mock `sendSMS` in `lib/utils/sms.ts` (which always returned `true` and never sent anything) with a real SparrowSMS integration.
+- **New**: If `SPARROWSMS_TOKEN` is not set, logs to console and returns `false` — no more silent fake success.
+- **New**: Added `SPARROWSMS_TOKEN` and `SPARROWSMS_SENDER_ID` entries to `.env`.
+
+### 👛 Passenger Wallet Connect
+
+- **Fix**: `WalletProviderWrapper` had `wallets: []` — the connect modal opened but showed no wallets. Added `PhantomWalletAdapter` and `SolflareWalletAdapter` from `@solana/wallet-adapter-wallets`.
+- **Fix**: `isVerified` logic in `WalletSettings.tsx` required `savedWallet` (from Firebase) to be truthy before showing the green "Wallet verified" banner. For a first-time connection there is a brief window where `justVerified = true` but Firebase hasn't propagated yet, so the banner never appeared. Fixed to `justVerified || (!!savedWallet && savedWallet === connectedAddress)`.
+- **New**: `WalletProviderWrapper` now reads `NEXT_PUBLIC_SOLANA_RPC_URL` for the devnet endpoint instead of hardcoding it. Added `NEXT_PUBLIC_SOLANA_RPC_URL` to `.env`.
+
 ## [2026-05-11] - Map UI, Real-time Sync, and Geolocation Fixes
 
 ### 📍 Map & Geolocation Reliability

@@ -11,12 +11,15 @@ import {
 
 /**
  * Yatra Escrow System (Digital Payments)
- * 
- * Since this is an MVP, we are using a "System Escrow" pattern:
- * 1. Funds are sent from Passenger to a unique PDA (Program Derived Address)
- * 2. The PDA is derived from the tripId
- * 3. The Server Wallet acts as the authority to release funds
+ *
+ * Server-wallet custodian pattern (no custom on-chain program):
+ * 1. Server wallet holds the escrowed funds
+ * 2. A PDA is derived per trip as a deterministic on-chain identifier
+ * 3. A Memo tx anchors the escrow commitment on-chain at creation
+ * 4. Server releases to driver on completion, or refunds passenger on cancel
  */
+
+const MEMO_PROGRAM_ID = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
 
 export interface EscrowState {
     tripId: string;
@@ -28,15 +31,16 @@ export interface EscrowState {
 }
 
 /**
- * Generates a PDA for a specific trip.
- * In a real on-chain program, this would be derived from the programId.
- * For this implementation, we use a consistent derivation for tracking.
+ * Derives a deterministic off-curve PDA for a trip escrow.
+ * Used as a tracking identifier stored in Firebase — not the fund custodian.
+ * Seeds: ["yatra_escrow", tripId (first 32 bytes)]
  */
 export function getEscrowPDA(tripId: string): PublicKey {
-    // Mocking PDA derivation using the tripId string as a seed
-    // In production, use PublicKey.findProgramAddressSync
-    const seed = Buffer.from(`yatra_escrow_${tripId.slice(0, 16)}`);
-    return Keypair.fromSeed(seed.slice(0, 32)).publicKey;
+    const [pda] = PublicKey.findProgramAddressSync(
+        [Buffer.from('yatra_escrow'), Buffer.from(tripId.slice(0, 32))],
+        MEMO_PROGRAM_ID
+    );
+    return pda;
 }
 
 /**
@@ -72,6 +76,7 @@ async function executeWithRetry<T>(
 
 /**
  * Creates an escrow for a trip.
+ * Anchors the commitment on-chain via Memo. Server wallet holds the funds.
  */
 export async function createEscrowAccount(
     connection: Connection,
@@ -84,16 +89,31 @@ export async function createEscrowAccount(
     const amountSOL = amountNPR * 0.0001;
     const amountLamports = Math.floor(amountSOL * LAMPORTS_PER_SOL);
     const escrowPDA = getEscrowPDA(tripId);
-    
+
+    const memoContent = JSON.stringify({
+        app: 'YATRA',
+        type: 'ESCROW_CREATED',
+        tripId,
+        escrow: escrowPDA.toBase58(),
+        passenger: passengerWallet,
+        driver: driverWallet,
+        lamports: amountLamports,
+        ts: Date.now(),
+    });
+
     const transaction = new Transaction().add(
-        SystemProgram.transfer({
-            fromPubkey: serverKeypair.publicKey,
-            toPubkey: escrowPDA,
-            lamports: amountLamports,
+        new TransactionInstruction({
+            keys: [{ pubkey: serverKeypair.publicKey, isSigner: true, isWritable: false }],
+            programId: MEMO_PROGRAM_ID,
+            data: Buffer.from(memoContent, 'utf-8'),
         })
     );
 
     return executeWithRetry(async () => {
+        const { blockhash } = await connection.getLatestBlockhash('confirmed');
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = serverKeypair.publicKey;
+
         const signature = await sendAndConfirmTransaction(
             connection,
             transaction,
@@ -104,7 +124,7 @@ export async function createEscrowAccount(
         return {
             escrowAddress: escrowPDA.toBase58(),
             signature,
-            amountLamports
+            amountLamports,
         };
     });
 }

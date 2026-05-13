@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getConnection, getServerKeypair } from '@/lib/solana/connection';
-import { 
-    Transaction, 
-    TransactionInstruction, 
-    PublicKey, 
+import {
+    Transaction,
+    TransactionInstruction,
+    PublicKey,
     sendAndConfirmTransaction,
-    Keypair 
 } from '@solana/web3.js';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 const MEMO_PROGRAM_ID = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
 
@@ -22,14 +22,6 @@ export async function POST(request: Request) {
 
         const connection = getConnection();
         const serverKeypair = getServerKeypair();
-
-        // ── Phase 2: Anchoring Reputation ──
-        // We use a PDA-like derivation for the "Reputation Account" in this simulation
-        const crypto = require('crypto');
-        const seed = crypto.createHash('sha256').update(`yatra_rep_${driverId}`).digest();
-        const reputationPDA = Keypair.fromSeed(seed).publicKey;
-
-        console.log(`[API Rep] Anchoring score ${score} for ${driverPubkey}`);
 
         const tx = new Transaction().add(
             new TransactionInstruction({
@@ -50,14 +42,10 @@ export async function POST(request: Request) {
             { commitment: 'confirmed' }
         );
 
-        return NextResponse.json({
-            success: true,
-            signature,
-            pda: reputationPDA.toBase58()
-        });
+        return NextResponse.json({ success: true, signature });
 
     } catch (error: any) {
-        console.error('[API Rep] Update error:', error.message);
+        console.error('[update-reputation] Memo tx failed:', error.message);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
