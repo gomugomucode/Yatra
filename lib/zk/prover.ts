@@ -90,7 +90,10 @@ export async function generateDriverProof(input: DriverProofInput): Promise<Driv
 
     // ── 2. Input Preparation ───────────────────────────────────────────────
     const licenseHash = stringToBigInt(licenseNumber.replace(/[^a-zA-Z0-9]/g, '').toLowerCase());
-    const salt = BigInt(777); // Matches the server-side expectation
+    // Random 248-bit salt (safely below BN128 field prime). Never transmitted — private input only.
+    const saltBytes = new Uint8Array(31);
+    crypto.getRandomValues(saltBytes);
+    const salt = saltBytes.reduce((acc, byte) => (acc << BigInt(8)) | BigInt(byte), BigInt(0));
     const localCommitment = computeCommitment(licenseHash, birthYear, salt);
 
     // ── 3. Run Groth16 Prover ──────────────────────────────────────────────
