@@ -114,10 +114,14 @@ Yatra fixes this by combining three technologies that have never been unified in
 │    NonTransferable extension ← cannot be moved            │
 │    MetadataPointer extension ← trip data embedded         │
 │                                                           │
-│  DriverReputation PDA        ← on-chain driver score     │
-│    seeds: ["driver_rep", driver_pubkey]                   │
-│    fields: total_trips, avg_rating, zk_verified,          │
-│            on_time_rate, sos_count                        │
+│  TRRL Program (9BvgVET...)    ← multi-platform registry   │
+│    RegistryAdmin PDA          ← admin controls platforms  │
+│    PlatformEntry PDA          ← one per registered app    │
+│    DriverRep PDA              ← on-chain driver score     │
+│      seeds: ["driver_rep", driver_pubkey]                 │
+│      fields: score, trips, avg_rating, zk_verified,       │
+│              on_time_arrivals, sos_triggered,              │
+│              last_platform                                 │
 │                                                           │
 │  PassengerReputation PDA     ← on-chain passenger tier   │
 │    seeds: ["passenger_rep", passenger_pubkey]             │
@@ -179,42 +183,84 @@ idle ──► requested ──► accepted ──► arrived ──► active �
 
 ## TRRL — Tokenized Ride-Sharing Reputation Layer
 
-TRRL is the protocol layer that transforms Yatra from a transit app into infrastructure. It is a permissionless on-chain reputation system for ride-sharing drivers and passengers.
+TRRL is the protocol layer that transforms Yatra from a transit app into infrastructure. It is a permissionless, multi-platform on-chain reputation system for ride-sharing drivers — readable by any app, writable only by registered platforms.
 
 ### Driver Reputation Score (0–1000)
 
 ```
-base  = (completed_trips / total_trips) × 400        // Completion rate
-      + (avg_rating / 5.0) × 300                      // Rating weight
+score = (completed_trips / total_trips) × 400        // Completion rate
+      + (avg_rating / 5.0) × 300                      // Passenger ratings
       + min(on_time_arrivals / completed_trips, 1) × 200  // Punctuality
-      + (zk_verified ? 100 : 0)                        // Identity bonus
+      + (zk_verified ? 100 : 0)                        // ZK identity bonus
       - (sos_triggered × 20)                           // Safety penalty
       = capped at 1000
 ```
 
-### Cross-Platform Integration
+Score is recalculated **inside the Solana program** on every write — it cannot be manipulated by any platform, including Yatra.
 
-Third-party integrations can query a driver's reputation through the typed SDK layer:
+### Architecture
 
-```typescript
-import { YatraProtocol } from '@/lib/sdk';
-
-const rep = await new YatraProtocol().getDriverReputation(driverWallet);
-// {
-//   totalRides: 847,
-//   averageRating: 4.85,
-//   isZkVerified: true,
-//   onTimeRate: 0.93,
-//   loyaltyTier: 'gold',
-//   score: 892
-// }
+```
+┌─────────────────────────────────────────────────────────┐
+│                  TRRL ANCHOR PROGRAM                     │
+│         9BvgVETSbpoccubSqkTZUuqaTaZVwPXzvhDi4ies88HN   │
+│                                                         │
+│  RegistryAdmin PDA  ["registry_admin"]                  │
+│    admin: Pubkey  ← Yatra controls who can write        │
+│                                                         │
+│  PlatformEntry PDA  ["platform", platform_pubkey]       │
+│    name, is_active, total_updates                       │
+│    one per registered platform (Yatra, Pathao, ...)     │
+│                                                         │
+│  DriverRep PDA  ["driver_rep", driver_pubkey]           │
+│    score, trips, rating, zk_verified, last_platform     │
+│    writable only by registered + active platforms       │
+└─────────────────────────────────────────────────────────┘
 ```
 
-No API key. No permission. No agreement with Yatra. The data is on Solana — it is public, permissionless, and composable.
+### Cross-Platform Flow
+
+**Any platform reads — no auth, no agreement:**
+```bash
+GET https://yatra.app/api/reputation/{driver_wallet}
+```
+```json
+{
+  "wallet": "7xKp...mN3q",
+  "source": "YATRA_TRRL_V1_ONCHAIN",
+  "score": 847,
+  "completedTrips": 312,
+  "avgRating": 4.6,
+  "zkVerified": true,
+  "reputationPDA": "AbCd...XyZ",
+  "pdaExplorerUrl": "https://explorer.solana.com/address/AbCd...XyZ?cluster=devnet"
+}
+```
+
+**A platform writes — must be registered:**
+```typescript
+// One-time: Yatra admin registers Pathao's keypair
+await registerPlatform(connection, adminKeypair, pathaoPublicKey, 'Pathao');
+
+// Pathao submits rep updates with their own keypair — Anchor validates on-chain
+await updateDriverRepOnChain(connection, pathaoKeypair, driverWallet, { ... });
+```
+
+**Revoking a bad actor:**
+```typescript
+// Sets is_active = false on-chain — all future writes from that keypair rejected
+await deregisterPlatform(connection, adminKeypair, badPlatformPublicKey);
+```
 
 ### Why This Matters
 
-A driver in Butwal spends 5 years building a perfect rating. The operator closes. On every existing platform, that driver starts at zero. With TRRL, that driver's 1,247-trip history is on-chain. Any new platform reads it in 2 seconds. The driver's reputation is finally, for the first time, theirs.
+A driver in Butwal spends 5 years building a perfect rating on Yatra. They join Pathao — their full history is already there, readable from the same on-chain PDA via their wallet address. When Pathao submits its own trip data, both platforms' contributions merge into one portable score. The driver's reputation is finally, for the first time, theirs.
+
+### What Drivers Need to Do
+
+1. Get a Solana wallet (Phantom or Solflare) — once, ever
+2. Drive normally — score updates automatically after every trip and rating
+3. Share their wallet address when joining a new platform — that's it
 
 ---
 
@@ -361,10 +407,12 @@ yatra/
 │
 ├── lib/
 │   ├── solana/
-│   │   ├── connection.ts     # Solana RPC connection
+│   │   ├── connection.ts     # Solana RPC connection + server keypair
 │   │   ├── tripTicket.ts     # Token-2022 Soulbound NFT minting
 │   │   ├── tokenExtensions.ts # Token-2022 extension helpers
-│   │   ├── trrl.ts           # TRRL reputation SDK
+│   │   ├── trrl.ts           # TRRL Firebase reputation SDK (client-side)
+│   │   ├── trrlProgram.ts    # TRRL Anchor program client (server-side)
+│   │   ├── trrl_idl.json     # Auto-generated Anchor IDL
 │   │   └── escrow.ts         # Fare escrow operations
 │   ├── zk/
 │   │   ├── prover.ts         # Client-side Groth16 proof generation
@@ -392,6 +440,9 @@ yatra/
 ├── circuits/
 │   └── driverIdentity.circom # Groth16 ZK circuit (Poseidon + age check)
 │
+├── scripts/
+│   ├── bootstrap-trrl-registry.ts  # One-time: init registry + register Yatra
+│   └── verify-trrl-phase3.ts       # End-to-end Phase 3 verification
 ├── middleware.ts              # Cookie-based route guards
 ├── database.rules.json        # Firebase security rules
 └── package.json
@@ -447,11 +498,18 @@ yatra/
 - [x] DriverReputation tracking via TRRL integration
 - [x] Passenger loyalty tiers (Bronze/Silver/Gold)
 - [x] ZK verifier wired to `snarkjs.groth16.verify()`
+- [x] ZK salt randomised per proof (Groth16 commitment uniqueness)
 - [x] Fare escrow with GPS-verified release
 - [x] Transport office dashboard (Live map & Analytics)
 - [x] Driver Reputation Lookup UI for Transport Office
-- [x] Typed SDK query layer (`lib/sdk`) for third-party integration
-- [ ] SparrowSMS integration for real notifications
+- [x] SparrowSMS real SMS integration (Nepal)
+- [x] TRRL Phase 2 — on-chain `DriverRep` PDA via Anchor program (devnet)
+- [x] TRRL Phase 2 — public `GET /api/reputation/:wallet` cross-platform API
+- [x] TRRL Phase 2 — driver score card on passenger accepted screen
+- [x] TRRL Phase 3 — `PlatformRegistry` on-chain (multi-platform write access)
+- [x] TRRL Phase 3 — `register_platform` / `deregister_platform` instructions
+- [x] TRRL Phase 3 — unregistered keypairs rejected at Anchor account validation
+- [ ] TRRL Phase 3 — Pathao / InDrive integration (pending partner keypairs)
 - [ ] Mainnet deployment
 
 ---

@@ -8,6 +8,140 @@
   },
   "instructions": [
     {
+      "name": "deregister_platform",
+      "docs": [
+        "Revoke a platform's write access. Sets is_active = false.",
+        "Admin-only. PlatformEntry PDA is kept (audit trail)."
+      ],
+      "discriminator": [
+        73,
+        249,
+        144,
+        52,
+        107,
+        183,
+        6,
+        163
+      ],
+      "accounts": [
+        {
+          "name": "platform_entry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  116,
+                  102,
+                  111,
+                  114,
+                  109
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "platform_entry.platform",
+                "account": "PlatformEntry"
+              }
+            ]
+          }
+        },
+        {
+          "name": "registry_admin",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121,
+                  95,
+                  97,
+                  100,
+                  109,
+                  105,
+                  110
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin_signer",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "init_registry",
+      "docs": [
+        "One-time setup: create the RegistryAdmin PDA.",
+        "Caller becomes the admin — can register/deregister platforms.",
+        "Seeds: [\"registry_admin\"]"
+      ],
+      "discriminator": [
+        131,
+        22,
+        4,
+        103,
+        24,
+        94,
+        163,
+        239
+      ],
+      "accounts": [
+        {
+          "name": "registry_admin",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121,
+                  95,
+                  97,
+                  100,
+                  109,
+                  105,
+                  110
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "initialize_rep",
       "docs": [
         "Create a DriverRep PDA for a driver the first time they join.",
@@ -73,10 +207,100 @@
       ]
     },
     {
+      "name": "register_platform",
+      "docs": [
+        "Register a platform so its keypair can submit rep updates.",
+        "Admin-only. Creates a PlatformEntry PDA.",
+        "Seeds: [\"platform\", platform_pubkey]"
+      ],
+      "discriminator": [
+        115,
+        120,
+        8,
+        254,
+        177,
+        20,
+        8,
+        168
+      ],
+      "accounts": [
+        {
+          "name": "platform_entry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  116,
+                  102,
+                  111,
+                  114,
+                  109
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "platform"
+              }
+            ]
+          }
+        },
+        {
+          "name": "registry_admin",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121,
+                  95,
+                  97,
+                  100,
+                  109,
+                  105,
+                  110
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin_signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "platform",
+          "type": "pubkey"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ]
+    },
+    {
       "name": "update_rep",
       "docs": [
         "Update reputation after a trip completes or a rating is submitted.",
-        "Only the Yatra authority (server keypair) can call this."
+        "Caller must be a registered, active platform (validated via PlatformEntry PDA)."
       ],
       "discriminator": [
         222,
@@ -120,10 +344,37 @@
         {
           "name": "authority",
           "docs": [
-            "Must be the Yatra authority that initialized this account"
+            "Must be a registered, active platform keypair.",
+            "Anchor validates the PDA seeds — if `authority` is not the platform",
+            "pubkey that was registered, the seeds won't match and the tx is rejected."
           ],
           "writable": true,
           "signer": true
+        },
+        {
+          "name": "platform_entry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  116,
+                  102,
+                  111,
+                  114,
+                  109
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              }
+            ]
+          }
         }
       ],
       "args": [
@@ -151,6 +402,32 @@
         38,
         198
       ]
+    },
+    {
+      "name": "PlatformEntry",
+      "discriminator": [
+        115,
+        80,
+        156,
+        73,
+        4,
+        171,
+        92,
+        239
+      ]
+    },
+    {
+      "name": "RegistryAdmin",
+      "discriminator": [
+        35,
+        20,
+        141,
+        8,
+        84,
+        13,
+        37,
+        159
+      ]
     }
   ],
   "errors": [
@@ -166,8 +443,23 @@
     },
     {
       "code": 6002,
-      "name": "Unauthorized",
-      "msg": "Unauthorized: only the Yatra authority can update reputation"
+      "name": "NotAdmin",
+      "msg": "Caller is not the registry admin"
+    },
+    {
+      "code": 6003,
+      "name": "PlatformNotRegistered",
+      "msg": "Platform is not registered in the TRRL registry"
+    },
+    {
+      "code": 6004,
+      "name": "PlatformInactive",
+      "msg": "Platform has been deregistered and cannot submit updates"
+    },
+    {
+      "code": 6005,
+      "name": "RegistryAlreadyInitialized",
+      "msg": "Registry has already been initialized"
     }
   ],
   "types": [
@@ -240,10 +532,91 @@
             "type": "i64"
           },
           {
+            "name": "last_platform",
+            "docs": [
+              "Platform that last wrote to this record"
+            ],
+            "type": "pubkey"
+          },
+          {
             "name": "bump",
             "docs": [
               "Bump seed for the PDA"
             ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PlatformEntry",
+      "docs": [
+        "One PDA per registered platform.",
+        "Seeds: [\"platform\", platform_pubkey]"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "platform",
+            "docs": [
+              "The platform's signing keypair pubkey"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "name",
+            "docs": [
+              "Human-readable name, e.g. \"Yatra\", \"Pathao\""
+            ],
+            "type": "string"
+          },
+          {
+            "name": "is_active",
+            "docs": [
+              "False = deregistered, cannot submit rep updates"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "registered_at",
+            "docs": [
+              "When this platform was registered"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "total_updates",
+            "docs": [
+              "Total rep updates submitted by this platform"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RegistryAdmin",
+      "docs": [
+        "One-time singleton PDA that holds the admin authority.",
+        "Seeds: [\"registry_admin\"]"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "docs": [
+              "Pubkey allowed to register/deregister platforms"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
             "type": "u8"
           }
         ]

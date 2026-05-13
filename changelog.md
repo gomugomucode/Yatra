@@ -3,6 +3,34 @@
 All notable changes to this project are documented in this file.
 
 
+## [2026-05-13] - TRRL Phase 3 Multi-Platform Registry
+
+### ⛓️ TRRL Phase 3 — Platform Registry (Multi-Platform Write Access)
+
+- **New**: `RegistryAdmin` PDA (seeds: `["registry_admin"]`) — singleton that holds the admin authority. Admin is the only keypair that can register/deregister platforms. Deployed to devnet: `ESggUMq...`.
+- **New**: `PlatformEntry` PDA (seeds: `["platform", platform_pubkey]`) — one per registered platform. Stores name, `is_active`, `registered_at`, `total_updates`. Pathao, InDrive, Yatra each get their own entry.
+- **New**: `init_registry` instruction — one-time setup, caller becomes admin.
+- **New**: `register_platform(platform, name)` instruction — admin-only, creates a `PlatformEntry` PDA for the given platform keypair.
+- **New**: `deregister_platform` instruction — admin-only, sets `is_active = false`. The PDA is kept on-chain as an audit trail. Future `update_rep` calls from that keypair are rejected.
+- **Changed**: `update_rep` no longer accepts any arbitrary signer. Caller must pass a matching `PlatformEntry` PDA — Anchor validates via seed derivation. Unregistered keypairs are rejected at account validation before the instruction handler runs.
+- **New**: `last_platform: Pubkey` field added to `DriverRep` — records which platform wrote the last update. Visible in `readDriverRepOnChain` response.
+- **Deployed**: Program upgraded in-place at `9BvgVETSbpoccubSqkTZUuqaTaZVwPXzvhDi4ies88HN`. All existing `DriverRep` PDAs remain valid.
+- **Bootstrapped**: Registry initialized and Yatra registered as first platform on devnet. `scripts/bootstrap-trrl-registry.ts` documents the one-time setup.
+- **New**: `scripts/verify-trrl-phase3.ts` — end-to-end verification script. Confirms registry exists, Yatra PlatformEntry is active, `update_rep` succeeds with Yatra keypair, and correctly rejects an unregistered keypair.
+
+### 🔌 TypeScript Client Updates (`lib/solana/trrlProgram.ts`)
+
+- **New**: `getRegistryAdminPDA()` — derives the singleton registry PDA.
+- **New**: `getPlatformEntryPDA(platformPubkey)` — derives a platform's entry PDA.
+- **New**: `initRegistry(connection, adminKeypair)` — idempotent, skips if already initialized.
+- **New**: `registerPlatform(connection, adminKeypair, platformPubkey, name)` — idempotent.
+- **New**: `deregisterPlatform(connection, adminKeypair, platformPubkey)`.
+- **New**: `readPlatformEntry(connection, platformPubkey)` — public read, no auth. Any platform can verify a peer is legitimately registered.
+- **Changed**: `updateDriverRepOnChain` now passes `platformEntry` account to the program. Interface unchanged for callers — the two route handlers required no modification.
+- **Changed**: `readDriverRepOnChain` now returns `lastPlatform` field.
+
+---
+
 ## [2026-05-13] - TRRL On-Chain Reputation, Driver Card UI & Build Fixes
 
 ### ⛓️ TRRL Phase 2 — On-Chain Anchor Program
