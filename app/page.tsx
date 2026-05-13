@@ -22,7 +22,7 @@ const CYAN       = '#00D4AA';
 const CHARCOAL   = '#1A1A1A';
 const RUST       = '#C4501A';
 const WHITE      = '#FAFAFA';
-const DARK_GREEN = '#1A5E3A';
+const DARK_GREEN = '#0A3D1F';
 
 const PLAYFAIR = 'var(--font-playfair)';
 const MONO     = 'var(--font-jetbrains-mono)';
@@ -969,9 +969,9 @@ function TransformSection() {
           ))}
         </div>
 
-        <div className="h-full max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-3 md:gap-14 py-4 md:py-20">
+        <div className="h-full max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-4 md:gap-14 py-6 md:py-20">
           {/* ── LEFT: Phase text ── */}
-          <div className="w-full md:w-7/12 flex flex-col justify-center">
+          <div className="w-full md:w-7/12 flex-shrink-0 flex flex-col justify-center">
             <div
               className="mb-2 md:mb-8 inline-block"
               style={{ fontFamily: MONO, fontSize: '10px', letterSpacing: '0.22em', color: data.isTech ? CYAN : DARK_GREEN }}
@@ -988,13 +988,13 @@ function TransformSection() {
                 transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                 style={{
                   fontFamily: data.isTech ? MONO : PLAYFAIR,
-                  fontSize: data.isTech ? 'clamp(1.6rem, 3vw, 2.6rem)' : 'clamp(2rem, 4vw, 3.4rem)',
+                  fontSize: data.isTech ? 'clamp(1.4rem, 3vw, 2.6rem)' : 'clamp(1.8rem, 4vw, 3.4rem)',
                   fontWeight: 700,
                   lineHeight: data.isTech ? 1.15 : 0.95,
                   color: CHARCOAL,
                   letterSpacing: data.isTech ? '0.02em' : '-0.02em',
                   whiteSpace: 'pre-line',
-                  marginBottom: '1.25rem',
+                  marginBottom: '1rem',
                 }}
               >
                 {data.title}
@@ -1010,8 +1010,8 @@ function TransformSection() {
                 transition={{ duration: 0.4, delay: 0.1 }}
                 style={{
                   fontFamily: data.isTech ? MONO : 'inherit',
-                  fontSize: data.isTech ? '0.82rem' : '1rem',
-                  lineHeight: 1.75,
+                  fontSize: data.isTech ? '0.78rem' : '0.95rem',
+                  lineHeight: 1.7,
                   color: data.isTech ? CYAN : `${CHARCOAL}65`,
                   whiteSpace: 'pre-line',
                   letterSpacing: data.isTech ? '0.04em' : 'inherit',
@@ -1022,7 +1022,7 @@ function TransformSection() {
               </motion.p>
             </AnimatePresence>
 
-            <div className="mt-4 md:mt-12 flex gap-3">
+            <div className="mt-3 md:mt-12 flex gap-3">
               {(['FOLK', 'SHIFT', 'CODE', 'PROTOCOL'] as PhaseKey[]).map((p) => (
                 <div
                   key={p}
@@ -1039,17 +1039,15 @@ function TransformSection() {
           </div>
 
           {/* ── RIGHT: Frame sequence ── */}
-          <div className="w-full md:w-5/12 relative flex items-center justify-center">
-            <div className="relative w-full flex items-center justify-center">
-              <video
-                ref={videoRef}
-                src="/videos/bus.mp4"
-                muted
-                playsInline
-                preload="auto"
-                style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain' }}
-              />
-            </div>
+          <div className="w-full md:w-5/12 flex-1 min-h-0 relative flex items-center justify-center">
+            <video
+              ref={videoRef}
+              src="/videos/bus.mp4"
+              muted
+              playsInline
+              preload="auto"
+              style={{ display: 'block', width: '100%', height: 'auto', maxHeight: '100%', objectFit: 'contain' }}
+            />
           </div>
         </div>
       </motion.div>
@@ -1286,23 +1284,21 @@ function TaxiSection() {
           ))}
         </div>
 
-        <div className="h-full max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-3 md:gap-14 py-4 md:py-20">
+        <div className="h-full max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-4 md:gap-14 py-6 md:py-20">
           {/* ── LEFT: Frame sequence ── */}
-          <div className="w-full md:w-5/12 relative flex items-center justify-center">
-            <div className="relative w-full flex items-center justify-center">
-              <video
-                ref={videoRef}
-                src="/videos/taxi.mp4"
-                muted
-                playsInline
-                preload="auto"
-                style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain' }}
-              />
-            </div>
+          <div className="w-full md:w-5/12 flex-1 min-h-0 relative flex items-center justify-center">
+            <video
+              ref={videoRef}
+              src="/videos/taxi.mp4"
+              muted
+              playsInline
+              preload="auto"
+              style={{ display: 'block', width: '100%', height: 'auto', maxHeight: '100%', objectFit: 'contain' }}
+            />
           </div>
 
           {/* ── RIGHT: Phase text ── */}
-          <div className="w-full md:w-7/12 flex flex-col justify-center">
+          <div className="w-full md:w-7/12 flex-shrink-0 flex flex-col justify-center">
             <div
               className="mb-2 md:mb-8 inline-block"
               style={{ fontFamily: MONO, fontSize: '10px', letterSpacing: '0.22em', color: data.isTech ? CYAN : DARK_GREEN }}
@@ -1319,13 +1315,13 @@ function TaxiSection() {
                 transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                 style={{
                   fontFamily: data.isTech ? MONO : PLAYFAIR,
-                  fontSize: data.isTech ? 'clamp(1.6rem, 3vw, 2.6rem)' : 'clamp(2rem, 4vw, 3.4rem)',
+                  fontSize: data.isTech ? 'clamp(1.4rem, 3vw, 2.6rem)' : 'clamp(1.8rem, 4vw, 3.4rem)',
                   fontWeight: 700,
                   lineHeight: data.isTech ? 1.15 : 0.95,
                   color: CHARCOAL,
                   letterSpacing: data.isTech ? '0.02em' : '-0.02em',
                   whiteSpace: 'pre-line',
-                  marginBottom: '1.25rem',
+                  marginBottom: '1rem',
                 }}
               >
                 {data.title}
@@ -1341,8 +1337,8 @@ function TaxiSection() {
                 transition={{ duration: 0.4, delay: 0.1 }}
                 style={{
                   fontFamily: data.isTech ? MONO : 'inherit',
-                  fontSize: data.isTech ? '0.82rem' : '1rem',
-                  lineHeight: 1.75,
+                  fontSize: data.isTech ? '0.78rem' : '0.95rem',
+                  lineHeight: 1.7,
                   color: data.isTech ? CYAN : `${CHARCOAL}65`,
                   whiteSpace: 'pre-line',
                   letterSpacing: data.isTech ? '0.04em' : 'inherit',
@@ -1353,7 +1349,7 @@ function TaxiSection() {
               </motion.p>
             </AnimatePresence>
 
-            <div className="mt-4 md:mt-12 flex gap-3">
+            <div className="mt-3 md:mt-12 flex gap-3">
               {(['STREET', 'CONNECT', 'VERIFY', 'MESH'] as TaxiPhaseKey[]).map((p) => (
                 <div
                   key={p}
@@ -1880,29 +1876,51 @@ function DePINSection() {
           ))}
         </div>
 
-        {/* Bottom metric row */}
+        {/* Bottom provenance row */}
         <motion.div
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="mt-px grid grid-cols-3 gap-px"
+          className="mt-px grid grid-cols-1 md:grid-cols-3 gap-px"
           style={{ background: `${WHITE}08` }}
         >
-          {[
-            { value: '847',    label: 'ACTIVE BUSES'   },
-            { value: '12,431', label: 'ZK PROOFS TODAY' },
-            { value: '₨ 2.4M', label: 'DAILY VOLUME'   },
-          ].map((m) => (
-            <div key={m.label} className="p-8 text-center" style={{ background: '#0D0D0D' }}>
-              <div style={{ fontFamily: MONO, fontSize: 'clamp(1.5rem, 3vw, 2.5rem)', fontWeight: 700, color: WHITE, letterSpacing: '-0.02em' }}>
-                {m.value}
-              </div>
-              <div className="mt-1" style={{ fontFamily: MONO, fontSize: '9px', color: `${WHITE}35`, letterSpacing: '0.2em' }}>
-                {m.label}
-              </div>
+          {/* Program ID — links to Solana Explorer */}
+          <a
+            href="https://explorer.solana.com/address/9BvgVETSbpoccubSqkTZUuqaTaZVwPXzvhDi4ies88HN?cluster=devnet"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-8 text-center block group"
+            style={{ background: '#0D0D0D', textDecoration: 'none' }}
+          >
+            <div style={{ fontFamily: MONO, fontSize: 'clamp(0.8rem, 1.5vw, 1rem)', fontWeight: 700, color: CYAN, letterSpacing: '-0.01em', wordBreak: 'break-all' }}
+              className="group-hover:underline">
+              9BvgVETS…es88HN
             </div>
-          ))}
+            <div className="mt-1" style={{ fontFamily: MONO, fontSize: '9px', color: `${WHITE}35`, letterSpacing: '0.2em' }}>
+              PROGRAM ID · DEVNET
+            </div>
+          </a>
+
+          {/* Network */}
+          <div className="p-8 text-center" style={{ background: '#0D0D0D' }}>
+            <div style={{ fontFamily: MONO, fontSize: 'clamp(1.5rem, 3vw, 2.5rem)', fontWeight: 700, color: WHITE, letterSpacing: '-0.02em' }}>
+              Solana
+            </div>
+            <div className="mt-1" style={{ fontFamily: MONO, fontSize: '9px', color: `${WHITE}35`, letterSpacing: '0.2em' }}>
+              DEVNET · ANCHOR v0.30
+            </div>
+          </div>
+
+          {/* Deploy date */}
+          <div className="p-8 text-center" style={{ background: '#0D0D0D' }}>
+            <div style={{ fontFamily: MONO, fontSize: 'clamp(1.5rem, 3vw, 2.5rem)', fontWeight: 700, color: WHITE, letterSpacing: '-0.02em' }}>
+              2026-05-13
+            </div>
+            <div className="mt-1" style={{ fontFamily: MONO, fontSize: '9px', color: `${WHITE}35`, letterSpacing: '0.2em' }}>
+              DEPLOYED ON-CHAIN
+            </div>
+          </div>
         </motion.div>
       </div>
     </section>
@@ -1910,86 +1928,73 @@ function DePINSection() {
 }
 
 // ─── Reputation section ───────────────────────────────────────────────────────
-function HUDCard({ title, value, unit, status, delay = 0 }: {
-  title:  string;
-  value:  string;
-  unit:   string | null;
-  status: string;
-  delay?: number;
-}) {
-  const cardRef    = useRef<HTMLDivElement>(null);
-  const mouseX     = useMotionValue(0);
-  const mouseY     = useMotionValue(0);
-  const rotateX    = useSpring(useTransform(mouseY, [-0.5, 0.5],  [8, -8]),  { stiffness: 300, damping: 20 });
-  const rotateY    = useSpring(useTransform(mouseX, [-0.5, 0.5], [-8,  8]),  { stiffness: 300, damping: 20 });
 
-  const handleMove = (e: React.MouseEvent) => {
-    const rect = cardRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    mouseX.set((e.clientX - rect.left) / rect.width  - 0.5);
-    mouseY.set((e.clientY - rect.top)  / rect.height - 0.5);
-  };
-  const handleLeave = () => { mouseX.set(0); mouseY.set(0); };
+const SCORE_BARS = [
+  { label: 'COMPLETION RATE', max: 400, color: CYAN },
+  { label: 'PASSENGER RATING', max: 300, color: '#A78BFA' },
+  { label: 'PUNCTUALITY', max: 200, color: DARK_GREEN },
+  { label: 'ZK VERIFIED', max: 100, color: '#F59E0B' },
+];
 
+const DRIVER_STEPS = [
+  { n: '01', title: 'Get a Solana wallet', body: 'Download Phantom or Solflare once. That wallet address is your permanent identity across every platform — forever.' },
+  { n: '02', title: 'Drive normally on Yatra', body: 'Every completed trip and passenger rating writes to your on-chain PDA automatically. You never touch anything.' },
+  { n: '03', title: 'Share your wallet address', body: 'When joining InDrive, Pathao, or any TRRL platform, enter the same wallet. Your full history is already there.' },
+];
+
+const PLATFORM_STEPS = [
+  { n: '01', title: 'Send us your keypair pubkey', body: 'One message. We call registerPlatform() and your keypair is in the on-chain registry within minutes.' },
+  { n: '02', title: 'Read reputation on driver signup', body: 'One API call returns score, rating, trip count, ZK status. No API key. No agreement. Just a wallet address.' },
+  { n: '03', title: 'Submit your own trip data', body: 'After your own trips complete, submit updates with your platform keypair. Driver scores grow richer across platforms.' },
+];
+
+function ScoreBar({ label, max, color, delay }: { label: string; max: number; color: string; delay: number }) {
   return (
     <motion.div
-      ref={cardRef}
-      initial={{ opacity: 0, y: 32 }}
+      initial={{ opacity: 0, x: -16 }}
+      whileInView={{ opacity: 1, x: 0 }}
+      viewport={{ once: true, amount: 0.5 }}
+      transition={{ duration: 0.5, delay }}
+      className="space-y-1.5"
+    >
+      <div className="flex items-center justify-between">
+        <span style={{ fontFamily: MONO, fontSize: '8px', color: `${CHARCOAL}55`, letterSpacing: '0.18em' }}>{label}</span>
+        <span style={{ fontFamily: MONO, fontSize: '8px', color: `${CHARCOAL}40`, letterSpacing: '0.1em' }}>+{max}</span>
+      </div>
+      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: `${CHARCOAL}08` }}>
+        <motion.div
+          className="h-full rounded-full"
+          style={{ background: color }}
+          initial={{ width: 0 }}
+          whileInView={{ width: `${(max / 1000) * 100}%` }}
+          viewport={{ once: true, amount: 0.5 }}
+          transition={{ duration: 0.8, delay: delay + 0.2, ease: 'easeOut' }}
+        />
+      </div>
+    </motion.div>
+  );
+}
+
+function StepCard({ n, title, body, delay, accent }: { n: string; title: string; body: string; delay: number; accent: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.3 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 20, delay }}
-      style={{
-        rotateX,
-        rotateY,
-        transformStyle: 'preserve-3d',
-        perspective: 800,
-      }}
-      onMouseMove={handleMove}
-      onMouseLeave={handleLeave}
-      className="p-8 rounded-2xl relative overflow-hidden cursor-default"
-      whileHover={{ scale: 1.02 }}
+      transition={{ type: 'spring', stiffness: 280, damping: 22, delay }}
+      className="flex gap-4"
     >
-      {/* Card background */}
       <div
-        className="absolute inset-0 rounded-2xl"
-        style={{ background: WHITE, border: `1px solid ${CHARCOAL}10`, boxShadow: '0 4px 40px rgba(26,26,26,0.06)' }}
-      />
-
-      <div className="relative z-10">
-        {/* Title */}
-        <div className="mb-4" style={{ fontFamily: MONO, fontSize: '9px', color: `${CHARCOAL}50`, letterSpacing: '0.2em' }}>
+        className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center mt-0.5"
+        style={{ background: `${accent}12`, border: `1px solid ${accent}30` }}
+      >
+        <span style={{ fontFamily: MONO, fontSize: '9px', fontWeight: 700, color: accent }}>{n}</span>
+      </div>
+      <div>
+        <p style={{ fontFamily: MONO, fontSize: '11px', fontWeight: 700, color: CHARCOAL, letterSpacing: '0.04em', marginBottom: '6px' }}>
           {title}
-        </div>
-
-        {/* Value */}
-        <div
-          style={{
-            fontFamily: MONO,
-            fontSize: 'clamp(2rem, 4vw, 3.5rem)',
-            fontWeight: 700,
-            color: CHARCOAL,
-            lineHeight: 1,
-            letterSpacing: '-0.02em',
-          }}
-        >
-          {value}
-        </div>
-        {unit && (
-          <div className="mt-1" style={{ fontFamily: MONO, fontSize: '9px', color: `${CHARCOAL}35`, letterSpacing: '0.15em' }}>
-            {unit}
-          </div>
-        )}
-
-        {/* Status chip — signal cyan only here */}
-        <div
-          className="mt-6 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full"
-          style={{ background: `${CYAN}12`, border: `1px solid ${CYAN}35` }}
-        >
-          <span className="w-1.5 h-1.5 rounded-full" style={{ background: CYAN }} />
-          <span style={{ fontFamily: MONO, fontSize: '8px', color: CYAN, letterSpacing: '0.15em', fontWeight: 600 }}>
-            {status}
-          </span>
-        </div>
+        </p>
+        <p style={{ fontSize: '0.875rem', color: `${CHARCOAL}CC`, lineHeight: 1.65 }}>{body}</p>
       </div>
     </motion.div>
   );
@@ -1997,18 +2002,19 @@ function HUDCard({ title, value, unit, status, delay = 0 }: {
 
 function ReputationSection() {
   return (
-    <section id="reputation" className="py-32" style={{ background: WHITE }}>
+    <section id="reputation" className="py-24 md:py-32" style={{ background: WHITE }}>
       <div className="max-w-7xl mx-auto px-6">
-        {/* Header */}
+
+        {/* ── Header ── */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.3 }}
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-          className="mb-4"
+          className="mb-16 md:mb-20"
         >
           <div style={{ fontFamily: MONO, fontSize: '10px', color: DARK_GREEN, letterSpacing: '0.22em', marginBottom: '16px' }}>
-            TRUST LAYER
+            TRRL · TOKENIZED REPUTATION LAYER
           </div>
           <h2
             style={{
@@ -2022,37 +2028,147 @@ function ReputationSection() {
             }}
           >
             Reputation<br />
-            <em>is</em> currency.
+            <em>is</em> portable.
           </h2>
-          <p style={{ fontSize: '1.0625rem', color: `${CHARCOAL}60`, maxWidth: '500px', lineHeight: 1.7 }}>
-            Every driver builds a verifiable on-chain record. Every passenger travels with certainty.
-            No operator can falsify the ledger.
+          <p style={{ fontSize: '1.0625rem', color: `${CHARCOAL}60`, maxWidth: '520px', lineHeight: 1.7 }}>
+            A driver's score lives on Solana — not inside any single app.
+            Build it on Yatra. Carry it to InDrive, Pathao, or anywhere that speaks the protocol.
           </p>
         </motion.div>
 
-        {/* Cards */}
-        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ perspective: '1000px' }}>
-          <HUDCard
-            title="DRIVER_REPUTATION_SCORE"
-            value="98.4"
-            unit="/ 100 · LIFETIME"
-            status="VERIFIED"
-            delay={0}
-          />
-          <HUDCard
-            title="ZK_PROOF_STATUS"
-            value="VALID"
-            unit={null}
-            status="LIVE · GROTH16"
-            delay={0.08}
-          />
-          <HUDCard
-            title="ROUTES_COMPLETED"
-            value="1,247"
-            unit="VERIFIED ON-CHAIN"
-            status="ACTIVE NODE"
-            delay={0.16}
-          />
+        {/* ── Score formula + two tracks ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
+
+          {/* Score breakdown */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ type: 'spring', stiffness: 280, damping: 22 }}
+            className="rounded-2xl p-7 relative overflow-hidden"
+            style={{ background: CHARCOAL, border: `1px solid ${CHARCOAL}` }}
+          >
+            {/* Score display */}
+            <div style={{ fontFamily: MONO, fontSize: '9px', color: `${WHITE}40`, letterSpacing: '0.2em', marginBottom: '12px' }}>
+              DRIVER_REP_SCORE
+            </div>
+            <div style={{ fontFamily: MONO, fontSize: 'clamp(3rem, 5vw, 4rem)', fontWeight: 700, color: WHITE, lineHeight: 1, letterSpacing: '-0.03em', marginBottom: '4px' }}>
+              847
+            </div>
+            <div style={{ fontFamily: MONO, fontSize: '9px', color: `${WHITE}35`, letterSpacing: '0.15em', marginBottom: '24px' }}>
+              / 1000 · ON-CHAIN
+            </div>
+
+            {/* Score bars */}
+            <div className="space-y-3.5">
+              {SCORE_BARS.map((bar, i) => (
+                <ScoreBar key={bar.label} {...bar} delay={i * 0.08} />
+              ))}
+            </div>
+
+            {/* ZK badge */}
+            <div
+              className="mt-6 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+              style={{ background: `${CYAN}15`, border: `1px solid ${CYAN}30` }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: CYAN }} />
+              <span style={{ fontFamily: MONO, fontSize: '8px', color: CYAN, letterSpacing: '0.15em', fontWeight: 600 }}>
+                ZK_VERIFIED · GROTH16
+              </span>
+            </div>
+          </motion.div>
+
+          {/* Driver track */}
+          <div className="space-y-2">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ duration: 0.4 }}
+              className="mb-7"
+            >
+              <div style={{ fontFamily: MONO, fontSize: '9px', color: DARK_GREEN, letterSpacing: '0.22em', marginBottom: '8px' }}>
+                FOR DRIVERS
+              </div>
+              <p style={{ fontFamily: PLAYFAIR, fontSize: 'clamp(1.3rem, 2.5vw, 1.8rem)', fontWeight: 700, color: CHARCOAL, lineHeight: 1.1, letterSpacing: '-0.01em' }}>
+                Build once.<br />Carry everywhere.
+              </p>
+            </motion.div>
+            <div className="space-y-6">
+              {DRIVER_STEPS.map((s, i) => (
+                <StepCard key={s.n} {...s} delay={i * 0.1} accent={CYAN} />
+              ))}
+            </div>
+
+            {/* Driver wallet pill */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.4 }}
+              className="mt-7 flex items-center gap-2 px-3 py-2 rounded-xl w-fit"
+              style={{ background: `${CHARCOAL}05`, border: `1px solid ${CHARCOAL}10` }}
+            >
+              <span style={{ fontFamily: MONO, fontSize: '8px', color: `${CHARCOAL}40`, letterSpacing: '0.1em' }}>WALLET</span>
+              <span style={{ fontFamily: MONO, fontSize: '9px', color: CHARCOAL, letterSpacing: '0.04em' }}>7xKp…mN3q</span>
+              <span
+                className="px-1.5 py-0.5 rounded text-xs"
+                style={{ fontFamily: MONO, fontSize: '7px', background: `${CYAN}15`, color: CYAN, letterSpacing: '0.1em' }}
+              >
+                PORTABLE ID
+              </span>
+            </motion.div>
+          </div>
+
+          {/* Platform track */}
+          <div className="space-y-2">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+              className="mb-7"
+            >
+              <div style={{ fontFamily: MONO, fontSize: '9px', color: '#A78BFA', letterSpacing: '0.22em', marginBottom: '8px' }}>
+                FOR PLATFORMS
+              </div>
+              <p style={{ fontFamily: PLAYFAIR, fontSize: 'clamp(1.3rem, 2.5vw, 1.8rem)', fontWeight: 700, color: CHARCOAL, lineHeight: 1.1, letterSpacing: '-0.01em' }}>
+                Read in 3 lines.<br />Write in one tx.
+              </p>
+            </motion.div>
+            <div className="space-y-6">
+              {PLATFORM_STEPS.map((s, i) => (
+                <StepCard key={s.n} {...s} delay={i * 0.1 + 0.05} accent="#A78BFA" />
+              ))}
+            </div>
+
+            {/* API snippet */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.45 }}
+              className="mt-7 rounded-xl p-4 overflow-x-auto"
+              style={{ background: '#0D0D0D', border: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              <div style={{ fontFamily: MONO, fontSize: '9px', color: '#6B7280', letterSpacing: '0.12em', marginBottom: '8px' }}>
+                ANY PLATFORM · READ REPUTATION
+              </div>
+              <pre style={{ fontFamily: MONO, fontSize: '11px', lineHeight: 1.7, margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                <span style={{ color: '#6B7280' }}>GET </span>
+                <span style={{ color: '#34D399' }}>yatra.app/api/</span>
+                <span style={{ color: WHITE }}>reputation/</span>
+                <span style={{ color: '#A78BFA' }}>{'{'}</span>
+                <span style={{ color: CYAN }}>wallet</span>
+                <span style={{ color: '#A78BFA' }}>{'}'}</span>
+                {'\n'}
+                <span style={{ color: '#6B7280' }}>{'//'} returns score, trips, zkVerified</span>
+                {'\n'}
+                <span style={{ color: '#6B7280' }}>{'//'} no API key · no agreement</span>
+              </pre>
+            </motion.div>
+          </div>
+
         </div>
       </div>
     </section>
@@ -2167,7 +2283,7 @@ function Footer() {
         </div>
         <div className="flex items-center gap-8">
           <a
-            href="https://x.com"
+            href="https://x.com/TeamAparichit"
             target="_blank"
             rel="noopener noreferrer"
             style={{ fontFamily: MONO, fontSize: '9px', color: `${WHITE}30`, letterSpacing: '0.2em', textDecoration: 'none', transition: 'color 0.2s' }}
