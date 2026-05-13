@@ -807,6 +807,7 @@ function TransformSection() {
     let displayV      = 0;
     let prevScrollV   = 0;
     let lastTime      = 0;
+    let lastScrollAt  = 0;
     let vidAutoPlaying = false;
     const AUTO_SPEED  = 1 / (5 * 1000);
 
@@ -827,7 +828,7 @@ function TransformSection() {
         panel.style.top      = '0';
         panel.style.bottom   = '';
         // Reset when above section so auto restarts on re-entry
-        displayV = 0; prevScrollV = 0;
+        displayV = 0; prevScrollV = 0; lastScrollAt = 0;
         if (vidAutoPlaying) { videoRef.current?.pause(); vidAutoPlaying = false; }
       } else if (scrollY >= sectionTop + maxScroll) {
         panel.style.position = 'absolute';
@@ -841,7 +842,9 @@ function TransformSection() {
 
       const scrollV     = maxScroll > 0 ? Math.max(0, Math.min(1, (scrollY - sectionTop) / maxScroll)) : 0;
       const inRange     = scrollY > sectionTop && scrollY < sectionTop + maxScroll;
-      const isScrolling = Math.abs(scrollV - prevScrollV) > 0.0002;
+      // 200ms hysteresis prevents isScrolling from flickering off during deceleration
+      if (Math.abs(scrollV - prevScrollV) > 0.0002) lastScrollAt = time;
+      const isScrolling = lastScrollAt > 0 && (time - lastScrollAt) < 200;
 
       if (isScrolling) {
         displayV = scrollV;
@@ -866,9 +869,8 @@ function TransformSection() {
       } else if (inRange && displayV < 0.999) {
         if (!vidAutoPlaying && vid) {
           if (vid.readyState >= 3) {
-            // Enough data buffered — native playback gives 60fps smooth rendering
+            // Enough data buffered — native playback gives smooth rendering (no seek before play on mobile)
             vid.playbackRate = 0.96;
-            vid.currentTime  = displayV * VIDEO_DURATION;
             vid.play().catch(() => { vidAutoPlaying = false; });
             vidAutoPlaying = true;
           } else if (vid.readyState >= 2) {
@@ -943,6 +945,7 @@ function TransformSection() {
           height: '100vh',
           overflow: 'hidden',
           backgroundColor: bgColor,
+          willChange: 'transform',
         }}
       >
         {/* Progress rail */}
@@ -1130,6 +1133,7 @@ function TaxiSection() {
     let displayV      = 0;
     let prevScrollV   = 0;
     let lastTime      = 0;
+    let lastScrollAt  = 0;
     let vidAutoPlaying = false;
     const AUTO_SPEED  = 1 / (5 * 1000);
 
@@ -1148,7 +1152,7 @@ function TaxiSection() {
         panel.style.position = 'absolute';
         panel.style.top      = '0';
         panel.style.bottom   = '';
-        displayV = 0; prevScrollV = 0;
+        displayV = 0; prevScrollV = 0; lastScrollAt = 0;
         if (vidAutoPlaying) { videoRef.current?.pause(); vidAutoPlaying = false; }
       } else if (scrollY >= sectionTop + maxScroll) {
         panel.style.position = 'absolute';
@@ -1162,7 +1166,8 @@ function TaxiSection() {
 
       const scrollV     = maxScroll > 0 ? Math.max(0, Math.min(1, (scrollY - sectionTop) / maxScroll)) : 0;
       const inRange     = scrollY > sectionTop && scrollY < sectionTop + maxScroll;
-      const isScrolling = Math.abs(scrollV - prevScrollV) > 0.0002;
+      if (Math.abs(scrollV - prevScrollV) > 0.0002) lastScrollAt = time;
+      const isScrolling = lastScrollAt > 0 && (time - lastScrollAt) < 200;
 
       if (isScrolling) {
         displayV = scrollV;
@@ -1186,7 +1191,6 @@ function TaxiSection() {
         if (!vidAutoPlaying && vid) {
           if (vid.readyState >= 3) {
             vid.playbackRate = 0.96;
-            vid.currentTime  = displayV * VIDEO_DURATION;
             vid.play().catch(() => { vidAutoPlaying = false; });
             vidAutoPlaying = true;
           } else if (vid.readyState >= 2) {
@@ -1258,6 +1262,7 @@ function TaxiSection() {
           height: '100vh',
           overflow: 'hidden',
           backgroundColor: bgColor,
+          willChange: 'transform',
         }}
       >
         {/* Progress rail */}
@@ -1468,6 +1473,7 @@ function BikeAutoSection() {
     let displayV        = 0;
     let prevScrollV     = 0;
     let lastTime        = 0;
+    let lastScrollAt    = 0;
     let bikeDesktopPlay = false;
     let autoDesktopPlay = false;
     const AUTO_SPEED    = 1 / (5 * 1000);
@@ -1487,7 +1493,7 @@ function BikeAutoSection() {
         panel.style.position = 'absolute';
         panel.style.top      = '0';
         panel.style.bottom   = '';
-        displayV = 0; prevScrollV = 0;
+        displayV = 0; prevScrollV = 0; lastScrollAt = 0;
         if (bikeDesktopPlay) { bikeVideoRef.current?.pause(); bikeDesktopPlay = false; }
         if (autoDesktopPlay) { autoVideoRef.current?.pause(); autoDesktopPlay = false; }
       } else if (scrollY >= sectionTop + maxScroll) {
@@ -1502,7 +1508,8 @@ function BikeAutoSection() {
 
       const scrollV     = maxScroll > 0 ? Math.max(0, Math.min(1, (scrollY - sectionTop) / maxScroll)) : 0;
       const inRange     = scrollY > sectionTop && scrollY < sectionTop + maxScroll;
-      const isScrolling = Math.abs(scrollV - prevScrollV) > 0.0002;
+      if (Math.abs(scrollV - prevScrollV) > 0.0002) lastScrollAt = time;
+      const isScrolling = lastScrollAt > 0 && (time - lastScrollAt) < 200;
 
       if (isScrolling) {
         displayV = scrollV;
@@ -1533,12 +1540,10 @@ function BikeAutoSection() {
         seekFrame(bikeD, displayV * VIDEO_DURATION);
         seekFrame(autoD, displayV * VIDEO_DURATION);
       } else if (canAutoPlay) {
-        // Auto-play: play() BEFORE currentTime to avoid AbortError (seek-while-paused race)
         if (!bikeDesktopPlay && bikeD) {
           if (bikeD.readyState >= 3) {
             bikeD.playbackRate = 0.96;
             bikeD.play().catch(() => { bikeDesktopPlay = false; });
-            bikeD.currentTime = displayV * VIDEO_DURATION;
             bikeDesktopPlay = true;
           } else if (bikeD.readyState >= 2) { seekFrame(bikeD, displayV * VIDEO_DURATION); }
         }
@@ -1546,7 +1551,6 @@ function BikeAutoSection() {
           if (autoD.readyState >= 3) {
             autoD.playbackRate = 0.96;
             autoD.play().catch(() => { autoDesktopPlay = false; });
-            autoD.currentTime = displayV * VIDEO_DURATION;
             autoDesktopPlay = true;
           } else if (autoD.readyState >= 2) { seekFrame(autoD, displayV * VIDEO_DURATION); }
         }
@@ -1641,7 +1645,7 @@ function BikeAutoSection() {
       <motion.div
         ref={panelRef}
         className="hidden md:block"
-        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100vh', overflow: 'hidden', background: WHITE }}
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100vh', overflow: 'hidden', background: WHITE, willChange: 'transform' }}
       >
         <div className="h-full max-w-7xl mx-auto px-6 flex flex-wrap md:flex-nowrap md:flex-row items-center gap-2 md:gap-8 py-3 md:py-16">
 
@@ -1751,7 +1755,7 @@ function BikeAutoSection() {
       <div
         ref={mobilePanelRef}
         className="md:hidden"
-        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100vh', overflow: 'hidden', background: WHITE }}
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100vh', overflow: 'hidden', background: WHITE, willChange: 'transform' }}
       >
         {/* Bike layout — visible during first half of scroll */}
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px 8px', gap: '12px', opacity: mobileView === 'bike' ? 1 : 0, transition: 'opacity 0.4s ease', pointerEvents: mobileView === 'bike' ? 'auto' : 'none' }}>
@@ -2314,8 +2318,9 @@ export default function Home() {
   const [ready, setReady] = useState(false);
   const lenisRef = useRef<Lenis | null>(null);
 
-  // Lenis smooth scroll
+  // Lenis smooth scroll — desktop only; mobile has native momentum scroll
   useEffect(() => {
+    if (window.matchMedia('(pointer: coarse)').matches) return;
     const lenis = new Lenis({
       lerp: 0.08,
       smoothWheel: true,
