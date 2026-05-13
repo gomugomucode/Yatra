@@ -18,11 +18,14 @@ import {
   History,
   UserRound,
   BookOpen,
+  Star,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import MapWrapper from '@/components/map/MapWrapper';
 import { subscribeToBuses, subscribeToBookings, subscribeToBusLocation, subscribeToTrip, updateTripStatus, publishTripLocation, cleanupTripLocation, submitTripRating } from '@/lib/firebaseDb';
+import { subscribeToDriverReputation, DriverRepData } from '@/lib/solana/trrl';
 import TripRatingModal from '@/components/shared/TripRatingModal';
 import { isWithinRadius } from '@/lib/utils/geofencing';
 import { canAccommodateBooking } from '@/lib/seatManagement';
@@ -97,6 +100,7 @@ export default function PassengerDashboard() {
   const [activeTab, setActiveTab] = useState<PassengerTab>('book');
   const [ratingTripId, setRatingTripId] = useState<string | null>(null);
   const [ratingDriverName, setRatingDriverName] = useState<string>('');
+  const [driverRepData, setDriverRepData] = useState<DriverRepData | null>(null);
   const hasLocationErrorRef = useRef(false);
   const lastTripRequestAtRef = useRef<Record<string, number>>({});
   const [busLocations, setBusLocations] = useState<Record<string, {
@@ -129,6 +133,15 @@ export default function PassengerDashboard() {
     setShowRideHereAlert(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTripId]);
+
+  // Subscribe to hailed driver's reputation (shown on accepted screen)
+  useEffect(() => {
+    if (!hailedDriverId) {
+      setDriverRepData(null);
+      return;
+    }
+    return subscribeToDriverReputation(hailedDriverId, setDriverRepData);
+  }, [hailedDriverId]);
 
   // Get user's current location
   useEffect(() => {
@@ -1316,22 +1329,83 @@ export default function PassengerDashboard() {
               </div>
 
               {selectedBus && (
-                <div className="flex items-center gap-3 pt-1" style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-base" style={{ background: 'white', border: '1px solid #E2E8F0' }}>
-                    {selectedBus.emoji}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold truncate" style={{ color: '#0F172A' }}>{selectedBus.driverName}</p>
-                    <p className="text-xs" style={{ color: '#64748B' }}>{selectedBus.busNumber} · {selectedBus.vehicleType}</p>
-                  </div>
-                  {requestStatus === 'requesting' && (
-                    <button
-                      className="text-xs px-3 py-1.5 rounded-lg font-bold transition-all"
-                      style={{ color: '#DC2626' }}
-                      onClick={handleCancelRequest}
+                <div className="space-y-2 pt-1" style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                  {/* Driver identity row */}
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-base shrink-0"
+                      style={{ background: 'white', border: '1px solid #E2E8F0' }}
                     >
-                      Cancel
-                    </button>
+                      {selectedBus.driverImage
+                        ? <img src={selectedBus.driverImage} alt="driver" className="w-full h-full object-cover" />
+                        : selectedBus.emoji}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-bold truncate" style={{ color: '#0F172A' }}>{selectedBus.driverName}</p>
+                        {driverRepData?.zkVerified && (
+                          <ShieldCheck className="w-3.5 h-3.5 shrink-0" style={{ color: '#10B981' }} />
+                        )}
+                      </div>
+                      <p className="text-xs" style={{ color: '#64748B' }}>{selectedBus.busNumber} · {selectedBus.vehicleType}</p>
+                    </div>
+                    {requestStatus === 'requesting' && (
+                      <button
+                        className="text-xs px-3 py-1.5 rounded-lg font-bold transition-all shrink-0"
+                        style={{ color: '#DC2626' }}
+                        onClick={handleCancelRequest}
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Reputation row — only shown once driver has accepted */}
+                  {['accepted', 'on-trip'].includes(requestStatus) && (
+                    <div className="flex items-center gap-3 flex-wrap">
+                      {/* Star rating */}
+                      <div className="flex items-center gap-1">
+                        <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                        <span className="text-xs font-bold" style={{ color: '#0F172A' }}>
+                          {driverRepData
+                            ? (driverRepData.avgRatingX100 / 100).toFixed(1)
+                            : '—'}
+                        </span>
+                      </div>
+                      <span style={{ color: '#CBD5E1' }}>·</span>
+                      {/* Trip count */}
+                      <span className="text-xs font-semibold" style={{ color: '#475569' }}>
+                        {driverRepData ? `${driverRepData.completedTrips} trips` : '—'}
+                      </span>
+                      <span style={{ color: '#CBD5E1' }}>·</span>
+                      {/* TRRL score */}
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-semibold" style={{ color: '#475569' }}>TRRL</span>
+                        <span
+                          className="text-xs font-black px-1.5 py-0.5 rounded-md"
+                          style={{
+                            background: driverRepData && (driverRepData.score ?? 500) >= 700
+                              ? '#DCFCE7' : driverRepData && (driverRepData.score ?? 500) >= 400
+                              ? '#FEF9C3' : '#FEE2E2',
+                            color: driverRepData && (driverRepData.score ?? 500) >= 700
+                              ? '#15803D' : driverRepData && (driverRepData.score ?? 500) >= 400
+                              ? '#854D0E' : '#B91C1C',
+                          }}
+                        >
+                          {driverRepData ? `${driverRepData.score ?? 500}/1000` : '—'}
+                        </span>
+                      </div>
+                      {/* ZK badge */}
+                      {driverRepData?.zkVerified && (
+                        <>
+                          <span style={{ color: '#CBD5E1' }}>·</span>
+                          <div className="flex items-center gap-1">
+                            <ShieldCheck className="w-3 h-3" style={{ color: '#10B981' }} />
+                            <span className="text-xs font-semibold" style={{ color: '#10B981' }}>Verified</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   )}
                 </div>
               )}

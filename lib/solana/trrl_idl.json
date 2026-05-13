@@ -1,0 +1,292 @@
+{
+  "address": "9BvgVETSbpoccubSqkTZUuqaTaZVwPXzvhDi4ies88HN",
+  "metadata": {
+    "name": "trrl",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "initialize_rep",
+      "docs": [
+        "Create a DriverRep PDA for a driver the first time they join.",
+        "Seeds: [\"driver_rep\", driver_pubkey]"
+      ],
+      "discriminator": [
+        128,
+        191,
+        13,
+        110,
+        185,
+        51,
+        52,
+        249
+      ],
+      "accounts": [
+        {
+          "name": "driver_rep",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  114,
+                  105,
+                  118,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  112
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "driver"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "docs": [
+            "The Yatra server keypair — pays for account creation and is the",
+            "only authority allowed to write reputation data."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "driver",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "update_rep",
+      "docs": [
+        "Update reputation after a trip completes or a rating is submitted.",
+        "Only the Yatra authority (server keypair) can call this."
+      ],
+      "discriminator": [
+        222,
+        79,
+        105,
+        126,
+        112,
+        225,
+        72,
+        42
+      ],
+      "accounts": [
+        {
+          "name": "driver_rep",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  114,
+                  105,
+                  118,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  112
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "driver_rep.driver",
+                "account": "DriverRep"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "docs": [
+            "Must be the Yatra authority that initialized this account"
+          ],
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "UpdateRepParams"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "DriverRep",
+      "discriminator": [
+        43,
+        135,
+        170,
+        214,
+        224,
+        189,
+        38,
+        198
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidScore",
+      "msg": "Score must be between 0 and 1000"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidRating",
+      "msg": "Rating must be between 0 and 500"
+    },
+    {
+      "code": 6002,
+      "name": "Unauthorized",
+      "msg": "Unauthorized: only the Yatra authority can update reputation"
+    }
+  ],
+  "types": [
+    {
+      "name": "DriverRep",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "driver",
+            "docs": [
+              "The driver's Solana public key — this is the portable identity"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "score",
+            "docs": [
+              "Composite score 0–1000"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "total_trips",
+            "docs": [
+              "All trips ever accepted"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "completed_trips",
+            "docs": [
+              "Trips that reached completion"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "avg_rating_x100",
+            "docs": [
+              "avgRating * 100 — stored as integer to avoid floats (485 = 4.85★)"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "on_time_arrivals",
+            "docs": [
+              "Trips where driver arrived within the ETA window"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "zk_verified",
+            "docs": [
+              "ZK civic identity verified via Groth16 proof"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "sos_triggered",
+            "docs": [
+              "SOS events triggered — each costs 20 score points"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "last_updated",
+            "docs": [
+              "Unix timestamp of last update"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "Bump seed for the PDA"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UpdateRepParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "total_trips",
+            "type": "u32"
+          },
+          {
+            "name": "completed_trips",
+            "type": "u32"
+          },
+          {
+            "name": "avg_rating_x100",
+            "type": "u16"
+          },
+          {
+            "name": "on_time_arrivals",
+            "type": "u32"
+          },
+          {
+            "name": "zk_verified",
+            "type": "bool"
+          },
+          {
+            "name": "sos_triggered",
+            "type": "u16"
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "SEED",
+      "type": "string",
+      "value": "\"anchor\""
+    }
+  ]
+}

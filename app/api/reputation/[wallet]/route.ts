@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebaseAdmin';
 import { PublicKey } from '@solana/web3.js';
+import { getConnection } from '@/lib/solana/connection';
+import { readDriverRepOnChain } from '@/lib/solana/trrlProgram';
 import { checkRateLimit } from '@/lib/utils/rateLimit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const DEVNET_EXPLORER = 'https://explorer.solana.com/tx';
+const PDA_EXPLORER = 'https://explorer.solana.com/address';
 
 /**
  * GET /api/reputation/:wallet
@@ -15,8 +18,10 @@ const DEVNET_EXPLORER = 'https://explorer.solana.com/tx';
  * Any platform (Pathao, InDrive, etc.) can call this with a driver's
  * Solana wallet address and receive their TRRL reputation score.
  *
- * The `lastSolanaTx` field links to a real devnet Memo transaction so
- * callers can independently verify the score was anchored on-chain.
+ * Data priority:
+ *   1. On-chain TRRL PDA (authoritative — tamper-proof, trust-minimized)
+ *   2. Firebase (fallback if PDA not yet initialized, also supplies
+ *      metadata fields like lastSolanaTx and zkCommitment)
  */
 export async function GET(
     request: Request,
@@ -38,60 +43,75 @@ export async function GET(
     }
 
     try {
-        const adminDb = getAdminDb();
+        // 1. Try on-chain PDA first (authoritative source)
+        const connection = getConnection();
+        const [onChain, firebaseSnap] = await Promise.allSettled([
+            readDriverRepOnChain(connection, wallet),
+            getAdminDb()
+                .ref('reputation/drivers')
+                .orderByChild('driverPubkey')
+                .equalTo(wallet)
+                .limitToFirst(1)
+                .once('value'),
+        ]);
 
-        // Query reputation index by driverPubkey (indexed in database.rules.json)
-        const snap = await adminDb
-            .ref('reputation/drivers')
-            .orderByChild('driverPubkey')
-            .equalTo(wallet)
-            .limitToFirst(1)
-            .once('value');
+        const chainData = onChain.status === 'fulfilled' ? onChain.value : null;
 
-        if (!snap.exists()) {
+        // Firebase fallback — also used for metadata fields not stored on-chain
+        const fbSnap = firebaseSnap.status === 'fulfilled' ? firebaseSnap.value : null;
+        const fbRecords = fbSnap?.exists() ? (fbSnap.val() as Record<string, any>) : null;
+        const fbRep = fbRecords ? Object.values(fbRecords)[0] : null;
+
+        if (!chainData && !fbRep) {
             return NextResponse.json({ error: 'No reputation record found for this wallet' }, { status: 404 });
         }
 
-        // Firebase returns an object keyed by driverId — grab the first (and only) value
-        const records = snap.val() as Record<string, any>;
-        const rep = Object.values(records)[0];
+        // 2. Merge: on-chain wins for score/stats; Firebase supplies metadata
+        const { PublicKey: PK } = await import('@solana/web3.js');
+        const { getDriverRepPDA } = await import('@/lib/solana/trrlProgram');
+        const pdaAddress = getDriverRepPDA(wallet).toBase58();
 
-        const completedTrips = Number(rep.completedTrips ?? 0);
-        const onTimeArrivals = Number(rep.onTimeArrivals ?? 0);
-        const avgRatingX100 = Number(rep.avgRatingX100 ?? 500);
+        const lastSolanaTx = fbRep?.lastSolanaTx || null;
 
         const response = {
             // Identity
-            wallet: rep.driverPubkey,
-            source: 'YATRA_TRRL_V1',
+            wallet,
+            source: chainData ? 'YATRA_TRRL_V1_ONCHAIN' : 'YATRA_TRRL_V1_FIREBASE',
 
-            // Score (0–1000)
-            score: Number(rep.score ?? 500),
+            // Score (0–1000) — on-chain is authoritative
+            score: chainData?.score ?? Number(fbRep?.score ?? 500),
 
-            // Trip stats
-            totalTrips: Number(rep.totalTrips ?? 0),
-            completedTrips,
-            avgRating: parseFloat((avgRatingX100 / 100).toFixed(2)),
-            onTimePct: Math.round((onTimeArrivals / Math.max(completedTrips, 1)) * 100),
+            // Trip stats — on-chain is authoritative
+            totalTrips: chainData?.totalTrips ?? Number(fbRep?.totalTrips ?? 0),
+            completedTrips: chainData?.completedTrips ?? Number(fbRep?.completedTrips ?? 0),
+            avgRating: chainData?.avgRating
+                ?? parseFloat((Number(fbRep?.avgRatingX100 ?? 500) / 100).toFixed(2)),
+            onTimePct: chainData?.onTimePct ?? (() => {
+                const completed = Number(fbRep?.completedTrips ?? 0);
+                const onTime = Number(fbRep?.onTimeArrivals ?? 0);
+                return Math.round((onTime / Math.max(completed, 1)) * 100);
+            })(),
 
             // Trust signals
-            zkVerified: Boolean(rep.zkVerified),
-            zkCommitment: rep.zkCommitment || null,
+            zkVerified: chainData?.zkVerified ?? Boolean(fbRep?.zkVerified),
+            zkCommitment: fbRep?.zkCommitment || null,
 
-            // On-chain proof — callers can verify this independently
-            lastSolanaTx: rep.lastSolanaTx || null,
-            explorerUrl: rep.lastSolanaTx
-                ? `${DEVNET_EXPLORER}/${rep.lastSolanaTx}?cluster=devnet`
+            // On-chain PDA address — any platform can fetch this directly
+            reputationPDA: pdaAddress,
+            pdaExplorerUrl: `${PDA_EXPLORER}/${pdaAddress}?cluster=devnet`,
+
+            // Last write transaction
+            lastSolanaTx,
+            explorerUrl: lastSolanaTx
+                ? `${DEVNET_EXPLORER}/${lastSolanaTx}?cluster=devnet`
                 : null,
 
-            verifiedAt: rep.verifiedAt
-                ? new Date(rep.verifiedAt).toISOString()
-                : null,
+            verifiedAt: chainData?.lastUpdated
+                ?? (fbRep?.verifiedAt ? new Date(fbRep.verifiedAt).toISOString() : null),
         };
 
         return NextResponse.json(response, {
             headers: {
-                // Allow any platform to call this from their frontend too
                 'Access-Control-Allow-Origin': '*',
                 'Cache-Control': 's-maxage=60, stale-while-revalidate=120',
             },

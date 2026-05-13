@@ -2,16 +2,9 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getFirebaseAdminAuth, getAdminDb } from '@/lib/firebaseAdmin';
 import { getConnection, getServerKeypair } from '@/lib/solana/connection';
-import {
-    Transaction,
-    TransactionInstruction,
-    PublicKey,
-    sendAndConfirmTransaction,
-} from '@solana/web3.js';
+import { updateDriverRepOnChain } from '@/lib/solana/trrlProgram';
 
 export const runtime = 'nodejs';
-
-const MEMO_PROGRAM_ID = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
 
 interface RatingRequestBody {
     tripId: string;
@@ -122,52 +115,28 @@ export async function POST(request: Request) {
                         return rep;
                     });
 
-                    // 3. Post-transaction Solana anchoring (non-blocking or handled separately if needed)
-                    // We'll read the updated value for the memo
+                    // 3. Write updated reputation to on-chain TRRL PDA (non-blocking)
                     const finalSnap = await repRef.get();
                     const finalRep = finalSnap.val();
-
-                    const memo = JSON.stringify({
-                        type: 'YATRA_REP_V2',
-                        driver: driverWallet,
-                        score: finalRep.score,
-                        trips: finalRep.completedTrips,
-                        zk: finalRep.zkVerified,
-                        ts: Date.now(),
-                    });
 
                     const connection = getConnection();
                     const serverKeypair = getServerKeypair();
 
-                    const [reputationPDA] = PublicKey.findProgramAddressSync(
-                        [Buffer.from('yatra_rep'), Buffer.from(driverId.slice(0, 32))],
-                        MEMO_PROGRAM_ID
+                    updateDriverRepOnChain(
+                        connection, serverKeypair, driverWallet,
+                        {
+                            totalTrips:     Number(finalRep.totalTrips     ?? 0),
+                            completedTrips: Number(finalRep.completedTrips ?? 0),
+                            avgRatingX100:  Number(finalRep.avgRatingX100  ?? 500),
+                            onTimeArrivals: Number(finalRep.onTimeArrivals ?? 0),
+                            zkVerified:     Boolean(finalRep.zkVerified),
+                            sosTriggered:   Number(finalRep.sosTriggered   ?? 0),
+                        }
+                    ).then(({ signature, pda }) =>
+                        repRef.update({ lastSolanaTx: signature, reputationPDA: pda, verifiedAt: Date.now() })
+                    ).catch((err: any) =>
+                        console.error('[ratings] TRRL PDA update failed (non-blocking):', err.message)
                     );
-
-                    const tx = new Transaction().add(
-                        new TransactionInstruction({
-                            keys: [{ pubkey: serverKeypair.publicKey, isSigner: true, isWritable: false }],
-                            programId: MEMO_PROGRAM_ID,
-                            data: Buffer.from(memo, 'utf-8'),
-                        })
-                    );
-
-                    const { blockhash } = await connection.getLatestBlockhash('confirmed');
-                    tx.recentBlockhash = blockhash;
-                    tx.feePayer = serverKeypair.publicKey;
-
-                    const signature = await sendAndConfirmTransaction(
-                        connection,
-                        tx,
-                        [serverKeypair],
-                        { commitment: 'confirmed' }
-                    );
-
-                    await repRef.update({
-                        lastSolanaTx: signature,
-                        reputationPDA: reputationPDA.toBase58(),
-                        verifiedAt: Date.now()
-                    });
                 }
             }
         }

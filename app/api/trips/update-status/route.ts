@@ -2,17 +2,10 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getFirebaseAdminAuth, getAdminDb } from '@/lib/firebaseAdmin';
 import { getConnection, getServerKeypair } from '@/lib/solana/connection';
-import {
-    Transaction,
-    TransactionInstruction,
-    PublicKey,
-    sendAndConfirmTransaction,
-} from '@solana/web3.js';
+import { updateDriverRepOnChain } from '@/lib/solana/trrlProgram';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
-
-const MEMO_PROGRAM_ID = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
 
 interface UpdateStatusBody {
     tripId: string;
@@ -172,56 +165,33 @@ export async function POST(request: Request) {
                     return rep;
                 });
 
-                // 7. Anchor trip completion on Solana via Memo (non-blocking)
+                // 7. Write reputation to on-chain TRRL PDA (non-blocking)
                 if (status === 'completed') {
-                    try {
-                        const repSnap = await adminDb.ref(`reputation/drivers/${driverId}`).get();
+                    // Fire-and-forget — trip completion response is not held up by Solana
+                    adminDb.ref(`reputation/drivers/${driverId}`).get().then((repSnap) => {
                         const rep = repSnap.val() || {};
-                        const driverWallet = finalTripData.driverWalletAddress || rep.driverPubkey || driverId;
-
-                        const [reputationPDA] = PublicKey.findProgramAddressSync(
-                            [Buffer.from('yatra_rep'), Buffer.from(driverId.slice(0, 32))],
-                            MEMO_PROGRAM_ID
-                        );
-
-                        const memo = JSON.stringify({
-                            app: 'YATRA',
-                            type: 'TRIP_COMPLETED',
-                            tripId,
-                            driver: driverWallet,
-                            score: rep.score ?? 500,
-                            trips: rep.completedTrips ?? 0,
-                            zk: rep.zkVerified ?? false,
-                            ts: Date.now(),
-                        });
+                        const driverWallet = finalTripData.driverWalletAddress || rep.driverPubkey;
+                        if (!driverWallet) return;
 
                         const connection = getConnection();
                         const serverKeypair = getServerKeypair();
 
-                        const tx = new Transaction().add(
-                            new TransactionInstruction({
-                                keys: [{ pubkey: serverKeypair.publicKey, isSigner: true, isWritable: false }],
-                                programId: MEMO_PROGRAM_ID,
-                                data: Buffer.from(memo, 'utf-8'),
-                            })
+                        return updateDriverRepOnChain(
+                            connection, serverKeypair, driverWallet,
+                            {
+                                totalTrips:     Number(rep.totalTrips     ?? 0),
+                                completedTrips: Number(rep.completedTrips ?? 0),
+                                avgRatingX100:  Number(rep.avgRatingX100  ?? 500),
+                                onTimeArrivals: Number(rep.onTimeArrivals ?? 0),
+                                zkVerified:     Boolean(rep.zkVerified),
+                                sosTriggered:   Number(rep.sosTriggered   ?? 0),
+                            }
+                        ).then(({ signature, pda }) =>
+                            adminDb.ref(`reputation/drivers/${driverId}`).update({ lastSolanaTx: signature, reputationPDA: pda })
                         );
-
-                        const { blockhash } = await connection.getLatestBlockhash('confirmed');
-                        tx.recentBlockhash = blockhash;
-                        tx.feePayer = serverKeypair.publicKey;
-
-                        const signature = await sendAndConfirmTransaction(
-                            connection, tx, [serverKeypair], { commitment: 'confirmed' }
-                        );
-
-                        await adminDb.ref(`reputation/drivers/${driverId}`).update({
-                            lastSolanaTx: signature,
-                            reputationPDA: reputationPDA.toBase58(),
-                        });
-                    } catch (memoErr: any) {
-                        console.error('[update-status] Reputation Memo anchor failed:', memoErr.message);
-                        // Non-blocking: trip status update still succeeds
-                    }
+                    }).catch((pdaErr: any) =>
+                        console.error('[update-status] TRRL PDA update failed:', pdaErr.message)
+                    );
                 }
             }
         }

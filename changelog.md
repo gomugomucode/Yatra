@@ -3,6 +3,52 @@
 All notable changes to this project are documented in this file.
 
 
+## [2026-05-13] - TRRL On-Chain Reputation, Driver Card UI & Build Fixes
+
+### ⛓️ TRRL Phase 2 — On-Chain Anchor Program
+
+- **New**: Built and deployed a full Anchor program (`/trrl`) to Solana devnet at `9BvgVETSbpoccubSqkTZUuqaTaZVwPXzvhDi4ies88HN`.
+- **New**: `DriverRep` PDA (seeds: `["driver_rep", driver_pubkey]`) stores score, totalTrips, completedTrips, avgRatingX100, onTimeArrivals, zkVerified, sosTriggered, lastUpdated on-chain. Score is recalculated inside the program on every write — same formula as Firebase.
+- **New**: `initialize_rep` instruction creates the PDA with score=500 default on first write.
+- **New**: `update_rep` instruction — only the Yatra server keypair can call this, ensuring no external party can tamper with scores.
+- **New**: `lib/solana/trrlProgram.ts` — TypeScript client with `getDriverRepPDA`, `initializeDriverRep` (idempotent), `updateDriverRepOnChain` (auto-inits then updates), `readDriverRepOnChain` (read-only, no auth).
+- **New**: `lib/solana/trrl_idl.json` — Anchor IDL generated from `anchor build`, consumed by the TS client.
+
+### 🔌 TRRL Wiring into Ride Flow
+
+- **New**: `app/api/trips/update-status/route.ts` now calls `updateDriverRepOnChain` fire-and-forget on trip completion. Response is not blocked — if Solana fails it logs and continues.
+- **New**: `app/api/ratings/submit/route.ts` now calls `updateDriverRepOnChain` fire-and-forget after every passenger rating. Firebase rating save always succeeds; on-chain sync is best-effort.
+- **Fix**: Both routes previously `await`ed the Solana call synchronously, adding 2–5s latency to every trip completion and rating submission. Converted to `.then().catch()` pattern so the API responds immediately.
+- **Fix**: `ratings/submit` Solana call was inside the main try/catch — a Solana timeout would return HTTP 500 even though the rating was already saved. Now isolated with its own error handler.
+- **Fix**: Removed orphaned `MEMO_PROGRAM_ID = new PublicKey(...)` line in `ratings/submit/route.ts` that referenced `PublicKey` without importing it, causing a TypeScript build error.
+
+### 🌐 Public Reputation API
+
+- **New**: `GET /api/reputation/[wallet]` — public, no auth, CORS open. Any platform (Pathao, InDrive, Uber) can query a driver's TRRL score by Solana wallet address.
+- **New**: Queries on-chain PDA and Firebase in parallel (`Promise.allSettled`). On-chain wins for score/stats (tamper-proof); Firebase supplies metadata (`zkCommitment`, `lastSolanaTx`).
+- **New**: Response includes `reputationPDA`, `pdaExplorerUrl` — callers can independently verify the score on Solana Explorer without trusting Yatra.
+- **New**: `source` field: `YATRA_TRRL_V1_ONCHAIN` when PDA is available, `YATRA_TRRL_V1_FIREBASE` as fallback.
+- **New**: Rate limited to 60 req/IP/min, 60s CDN cache.
+- **New**: Added `.indexOn: ["driverPubkey"]` to `database.rules.json` for efficient Firebase query on wallet address.
+
+### 🪪 Passenger — Driver Card on Accepted Screen
+
+- **New**: When a driver accepts a ride, the passenger now sees the driver's full reputation card:
+  - Star rating (rolling average from all passenger ratings)
+  - Completed trip count
+  - TRRL score badge (color-coded: green ≥700, yellow ≥400, red <400)
+  - ZK Verified shield icon (inline next to name and in reputation row)
+  - Driver photo if available, emoji fallback
+- **New**: Reputation subscribes live via Firebase (`reputation/drivers/{driverId}`) — updates in real time if score changes mid-ride.
+- **New**: Reputation row only appears after `accepted` / `on-trip` status, not during the `requesting` phase.
+
+### 🔧 Build Fixes
+
+- **Fix**: `Wallet` named export from `@coral-xyz/anchor` is only registered at runtime via a CJS `exports.Wallet = ...` inside `if (!isBrowser)` — Turbopack's static analysis rejects it. Fixed by importing directly from `@coral-xyz/anchor/dist/esm/nodewallet.js`.
+- **Fix**: `NodeWallet` is also not re-exported from the anchor package root in ESM. Same direct-file import approach resolves both.
+
+---
+
 ## [2026-05-13] - ZK, Solana Anchoring, Escrow, SMS & Wallet Connect Fixes
 
 ### 🔐 ZK Identity
@@ -81,5 +127,5 @@ All notable changes to this project are documented in this file.
 
 ## [Next Steps]
 - [ ] Integrate passenger loyalty tiers into the TRRL system.
-- [ ] Implement on-chain PDA storage for driver reputation (Phase 2).
+- [x] Implement on-chain PDA storage for driver reputation (Phase 2). ✓ Done 2026-05-13
 - [ ] Add automated integration tests for the new transaction rollback logic.
