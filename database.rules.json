@@ -81,6 +81,7 @@
     "reputation": {
       ".read": "auth != null",
       "drivers": {
+        ".indexOn": ["driverPubkey"],
         "$driverId": {
           ".write": "auth != null && (auth.uid === $driverId || root.child('users').child(auth.uid).child('role').val() === 'admin')"
         }
