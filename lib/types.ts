@@ -60,6 +60,11 @@ export interface Driver extends User {
   route: string;
   isApproved: boolean;
   rating?: number;
+  trustScore?: number;
+  pathFidelity?: number;
+  hardBrakes?: number;
+  routeDeviations?: number;
+  hasQualityStreak?: boolean;
   verificationBadge?: {
     mintAddress: string;
     txSignature: string;
