@@ -8,6 +8,8 @@ import {
     LAMPORTS_PER_SOL,
     TransactionInstruction
 } from '@solana/web3.js';
+import * as anchor from '@coral-xyz/anchor';
+import { YatraTrrlIDL } from './yatra_trrl_idl';
 
 /**
  * Yatra Escrow System (Digital Payments)
@@ -28,6 +30,15 @@ export interface EscrowState {
     amountLamports: number;
     status: 'locked' | 'released' | 'reclaimed';
     createdAt: number;
+}
+
+export interface TripTelemetry {
+    isCompleted: boolean;
+    fidelityX100: number;
+    arrivalDeltaS: number;
+    hardBrakes: number;
+    deviations: number;
+    sosTriggered: number;
 }
 
 /**
@@ -137,7 +148,8 @@ export async function releaseEscrow(
     serverKeypair: Keypair,
     tripId: string,
     driverWallet: string,
-    amountLamports: number
+    amountLamports: number,
+    telemetry?: TripTelemetry
 ) {
     const driverPubkey = new PublicKey(driverWallet);
     
@@ -148,6 +160,31 @@ export async function releaseEscrow(
             lamports: amountLamports,
         })
     );
+
+    // Hybrid TRRL Update
+    if (telemetry) {
+        try {
+            const provider = new anchor.AnchorProvider(connection, new anchor.Wallet(serverKeypair), {});
+            YatraTrrlIDL.address = 'TrrL111111111111111111111111111111111111111';
+            const program = new anchor.Program(YatraTrrlIDL as anchor.Idl, provider);
+            
+            const [driverRepPda] = PublicKey.findProgramAddressSync(
+                [Buffer.from('driver_rep'), driverPubkey.toBuffer()],
+                program.programId
+            );
+
+            const updateRepIx = await program.methods.updateRep(telemetry).accounts({
+                driverRep: driverRepPda,
+                authority: serverKeypair.publicKey,
+                driver: driverPubkey
+            }).instruction();
+
+            transaction.add(updateRepIx);
+            console.log('[Escrow] Appended TRRL update instruction to escrow release.');
+        } catch (e: any) {
+            console.error('[Escrow] Failed to construct TRRL update instruction:', e.message);
+        }
+    }
 
     return executeWithRetry(async () => {
         const signature = await sendAndConfirmTransaction(
