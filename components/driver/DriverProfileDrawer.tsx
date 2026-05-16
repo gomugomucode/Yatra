@@ -50,6 +50,10 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
   const [completedTrips, setCompletedTrips] = useState<number>(0);
   const [totalEarnings, setTotalEarnings] = useState<number>(0);
   const [completionRate, setCompletionRate] = useState<number>(0);
+  const [pathFidelity, setPathFidelity] = useState<number>(100);
+  const [hardBrakes, setHardBrakes] = useState<number>(0);
+  const [routeDeviations, setRouteDeviations] = useState<number>(0);
+  const [hasQualityStreak, setHasQualityStreak] = useState<boolean>(false);
   const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
 
   const isControlled = controlledOpen !== undefined && onOpenChange !== undefined;
@@ -71,9 +75,14 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
     const unsubRep = onValue(repRef, (snap) => {
       if (snap.exists()) {
         const data = snap.val();
-        setReputationScore(data.score || 0);
+        const score = data.score || 0;
+        setReputationScore(score);
         setTotalTrips(data.totalTrips || 0);
         setCompletedTrips(data.completedTrips || 0);
+        setPathFidelity((data.lastFidelityX100 || 10000) / 100); 
+        setHardBrakes(data.hardBrakes || 0);
+        setRouteDeviations(data.deviations || 0);
+        setHasQualityStreak(score >= 950);
       }
     });
 
@@ -173,7 +182,19 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
                 {initial}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-xl text-foreground tracking-tight">{displayName}</p>
+                <p className="font-bold text-xl text-foreground tracking-tight flex items-center gap-2">
+                  {displayName}
+                  {hasQualityStreak && (
+                    <motion.span 
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="text-orange-500 text-lg"
+                      title="Quality Streak"
+                    >
+                      🔥
+                    </motion.span>
+                  )}
+                </p>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-black text-emerald-700 tracking-widest uppercase">
                     DRIVER
@@ -212,31 +233,89 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
           </div>
 
           {/* TRRL Performance Dashboard */}
-          <div className="p-6 border-b border-border">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
-              <Award className="w-3.5 h-3.5" />
-              Reputation & Performance
+          <div className="p-6 border-b border-border bg-[#0a0a0a] text-white shadow-inner">
+            <h3 className="text-xs font-black uppercase tracking-widest text-neutral-400 mb-6 flex items-center gap-2">
+              <Award className="w-4 h-4 text-emerald-500" />
+              Execution-Derived Reputation
             </h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl bg-surface-soft border border-border p-4 flex flex-col justify-center relative overflow-hidden group hover:border-yellow-500 transition-colors">
-                <div className="absolute -right-4 -top-4 w-16 h-16 bg-yellow-500/5 rounded-full blur-xl group-hover:bg-yellow-500/10 transition-all"></div>
-                <div className="flex items-center gap-2 mb-1 relative z-10">
-                  <Star className="w-4 h-4 text-yellow-600" />
-                  <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">TRRL Score</span>
+            
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1.5">Trust Score</span>
+                <div className="flex items-end gap-1">
+                  <span className="text-5xl font-black tracking-tighter text-white">{reputationScore}</span>
+                  <span className="text-xl font-bold text-neutral-600 mb-1.5">/1000</span>
                 </div>
-                <div className="text-2xl font-black text-foreground relative z-10">{reputationScore}<span className="text-sm text-muted-foreground font-bold">/1000</span></div>
               </div>
-              <div className="rounded-xl bg-surface-soft border border-border p-4 flex flex-col justify-center relative overflow-hidden group hover:border-cyan-500 transition-colors">
-                <div className="absolute -right-4 -top-4 w-16 h-16 bg-cyan-500/5 rounded-full blur-xl group-hover:bg-cyan-500/10 transition-all"></div>
-                <div className="flex items-center gap-2 mb-1 relative z-10">
-                  <Activity className="w-4 h-4 text-cyan-600" />
-                  <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Completion</span>
+              <div className="relative w-24 h-24 flex items-center justify-center">
+                <svg className="w-full h-full transform -rotate-90 drop-shadow-md">
+                  <circle cx="48" cy="48" r="42" fill="transparent" stroke="#1f1f1f" strokeWidth="8" />
+                  <motion.circle 
+                    cx="48" cy="48" r="42" fill="transparent" 
+                    stroke={reputationScore >= 900 ? "#10b981" : reputationScore >= 600 ? "#f59e0b" : "#ef4444"} 
+                    strokeLinecap="round"
+                    strokeWidth="8" 
+                    strokeDasharray={264} 
+                    strokeDashoffset={264 - (264 * reputationScore) / 1000}
+                    initial={{ strokeDashoffset: 264 }}
+                    animate={{ strokeDashoffset: 264 - (264 * reputationScore) / 1000 }}
+                    transition={{ duration: 1.5, ease: "easeOut", delay: 0.2 }}
+                  />
+                </svg>
+                <Star className="absolute w-7 h-7 text-neutral-300" />
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              <div>
+                <div className="flex justify-between text-[10px] font-black text-neutral-400 mb-2 uppercase tracking-widest">
+                  <span>Path Fidelity</span>
+                  <span className="text-white">{pathFidelity}%</span>
                 </div>
-                <div className="text-2xl font-black text-foreground relative z-10">
-                  {totalTrips > 0 ? Math.round((completedTrips / totalTrips) * 100) : 0}%
+                <div className="h-1.5 w-full bg-neutral-800 rounded-full overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-cyan-500" 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${pathFidelity}%` }}
+                    transition={{ duration: 1, delay: 0.4 }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between text-[10px] font-black text-neutral-400 mb-2 uppercase tracking-widest">
+                  <span>Completion Rate</span>
+                  <span className="text-white">{totalTrips > 0 ? Math.round((completedTrips / totalTrips) * 100) : 0}%</span>
+                </div>
+                <div className="h-1.5 w-full bg-neutral-800 rounded-full overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-emerald-500" 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${totalTrips > 0 ? (completedTrips / totalTrips) * 100 : 0}%` }}
+                    transition={{ duration: 1, delay: 0.6 }}
+                  />
                 </div>
               </div>
             </div>
+
+            {(hardBrakes > 0 || routeDeviations > 0) && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.8 }}
+                className="mt-8 p-4 rounded-xl bg-red-950/20 border border-red-900/40 flex items-start gap-3 backdrop-blur-sm"
+              >
+                <div className="mt-1 w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
+                <div>
+                  <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-1.5">Anomaly Detected</p>
+                  <p className="text-xs text-red-300/80 font-medium">
+                    {hardBrakes > 0 && `${hardBrakes} Hard Brake${hardBrakes > 1 ? 's' : ''}`}
+                    {hardBrakes > 0 && routeDeviations > 0 && ' • '}
+                    {routeDeviations > 0 && `${routeDeviations} Route Deviation${routeDeviations > 1 ? 's' : ''}`}
+                  </p>
+                </div>
+              </motion.div>
+            )}
           </div>
 
           {/* Recent Trips Slider */}
