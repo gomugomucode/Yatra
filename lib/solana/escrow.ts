@@ -8,7 +8,7 @@ import {
     LAMPORTS_PER_SOL,
     TransactionInstruction
 } from '@solana/web3.js';
-import * as anchor from '@coral-xyz/anchor';
+import { AnchorProvider, Program, Idl } from '@coral-xyz/anchor';
 import { YatraTrrlIDL } from './yatra_trrl_idl';
 
 /**
@@ -178,9 +178,9 @@ export async function releaseEscrow(
                     });
                 }
             };
-            const provider = new anchor.AnchorProvider(connection, serverWallet as any, {});
+            const provider = new AnchorProvider(connection, serverWallet as any, {});
             YatraTrrlIDL.address = 'TrrL111111111111111111111111111111111111111';
-            const program = new anchor.Program(YatraTrrlIDL as anchor.Idl, provider);
+            const program = new Program(YatraTrrlIDL as Idl, provider);
             
             const [driverRepPda] = PublicKey.findProgramAddressSync(
                 [Buffer.from('driver_rep'), driverPubkey.toBuffer()],
