@@ -7,7 +7,7 @@ describe("yatra_trrl", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
 
-  const program = anchor.workspace.YatraTrrl as Program<YatraTrrl>;
+  const program: any = anchor.workspace.YatraTrrl;
   const provider = anchor.getProvider() as anchor.AnchorProvider;
   
   // Create a new keypair for the driver
