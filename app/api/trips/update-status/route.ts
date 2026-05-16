@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getFirebaseAdminAuth, getAdminDb } from '@/lib/firebaseAdmin';
 import { getConnection, getServerKeypair } from '@/lib/solana/connection';
-import { updateDriverRepOnChain } from '@/lib/solana/trrlProgram';
+import { releaseEscrow } from '@/lib/solana/escrow';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -165,7 +165,6 @@ export async function POST(request: Request) {
                     return rep;
                 });
 
-                // 7. Write reputation to on-chain TRRL PDA (non-blocking)
                 if (status === 'completed') {
                     // Fire-and-forget — trip completion response is not held up by Solana
                     adminDb.ref(`reputation/drivers/${driverId}`).get().then((repSnap) => {
@@ -176,21 +175,34 @@ export async function POST(request: Request) {
                         const connection = getConnection();
                         const serverKeypair = getServerKeypair();
 
-                        return updateDriverRepOnChain(
-                            connection, serverKeypair, driverWallet,
-                            {
-                                totalTrips:     Number(rep.totalTrips     ?? 0),
-                                completedTrips: Number(rep.completedTrips ?? 0),
-                                avgRatingX100:  Number(rep.avgRatingX100  ?? 500),
-                                onTimeArrivals: Number(rep.onTimeArrivals ?? 0),
-                                zkVerified:     Boolean(rep.zkVerified),
-                                sosTriggered:   Number(rep.sosTriggered   ?? 0),
-                            }
-                        ).then(({ signature, pda }) =>
-                            adminDb.ref(`reputation/drivers/${driverId}`).update({ lastSolanaTx: signature, reputationPDA: pda })
+                        // Hybrid TRRL Mock Telemetry Data for Escrow + PDA update
+                        const mockTelemetry = {
+                            isCompleted: true,
+                            fidelityX100: finalTripData.fidelityX100 ?? 9800, // 98%
+                            arrivalDeltaS: finalTripData.arrivalDeltaS ?? 12, // 12s late
+                            hardBrakes: finalTripData.hardBrakes ?? 0,
+                            deviations: finalTripData.deviations ?? 0,
+                            sosTriggered: finalTripData.sosTriggered ?? 0,
+                        };
+
+                        const amountLamports = finalTripData.amountLamports || 500000;
+
+                        return releaseEscrow(
+                            connection, 
+                            serverKeypair, 
+                            tripId, 
+                            driverWallet, 
+                            amountLamports, 
+                            mockTelemetry
+                        ).then((signature) =>
+                            adminDb.ref(`reputation/drivers/${driverId}`).update({ 
+                                lastSolanaTx: signature, 
+                                escrowStatus: 'released',
+                                lastFidelityX100: mockTelemetry.fidelityX100 
+                            })
                         );
-                    }).catch((pdaErr: any) =>
-                        console.error('[update-status] TRRL PDA update failed:', pdaErr.message)
+                    }).catch((err: any) =>
+                        console.error('[update-status] Hybrid Escrow+TRRL update failed:', err.message)
                     );
                 }
             }
