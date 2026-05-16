@@ -164,7 +164,21 @@ export async function releaseEscrow(
     // Hybrid TRRL Update
     if (telemetry) {
         try {
-            const provider = new anchor.AnchorProvider(connection, new anchor.Wallet(serverKeypair), {});
+            // Minimal Wallet implementation to avoid @coral-xyz/anchor NodeWallet export issues in Next.js edge/server build
+            const serverWallet = {
+                publicKey: serverKeypair.publicKey,
+                signTransaction: async (tx: Transaction) => {
+                    tx.partialSign(serverKeypair);
+                    return tx;
+                },
+                signAllTransactions: async (txs: Transaction[]) => {
+                    return txs.map((t) => {
+                        t.partialSign(serverKeypair);
+                        return t;
+                    });
+                }
+            };
+            const provider = new anchor.AnchorProvider(connection, serverWallet as any, {});
             YatraTrrlIDL.address = 'TrrL111111111111111111111111111111111111111';
             const program = new anchor.Program(YatraTrrlIDL as anchor.Idl, provider);
             
