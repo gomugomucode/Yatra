@@ -233,23 +233,23 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
           </div>
 
           {/* TRRL Performance Dashboard */}
-          <div className="p-6 border-b border-border bg-[#0a0a0a] text-white shadow-inner">
-            <h3 className="text-xs font-black uppercase tracking-widest text-neutral-400 mb-6 flex items-center gap-2">
+          <div className="p-6 border-b border-border bg-surface-soft text-foreground shadow-inner">
+            <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-6 flex items-center gap-2">
               <Award className="w-4 h-4 text-emerald-500" />
               Execution-Derived Reputation
             </h3>
             
             <div className="flex items-center justify-between mb-8">
               <div className="flex flex-col">
-                <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1.5">Trust Score</span>
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Trust Score</span>
                 <div className="flex items-end gap-1">
-                  <span className="text-5xl font-black tracking-tighter text-white">{reputationScore}</span>
-                  <span className="text-xl font-bold text-neutral-600 mb-1.5">/1000</span>
+                  <span className="text-5xl font-black tracking-tighter text-foreground">{reputationScore}</span>
+                  <span className="text-xl font-bold text-muted-foreground/70 mb-1.5">/1000</span>
                 </div>
               </div>
               <div className="relative w-24 h-24 flex items-center justify-center">
                 <svg className="w-full h-full transform -rotate-90 drop-shadow-md">
-                  <circle cx="48" cy="48" r="42" fill="transparent" stroke="#1f1f1f" strokeWidth="8" />
+                  <circle cx="48" cy="48" r="42" fill="transparent" className="stroke-border" strokeWidth="8" />
                   <motion.circle 
                     cx="48" cy="48" r="42" fill="transparent" 
                     stroke={reputationScore >= 900 ? "#10b981" : reputationScore >= 600 ? "#f59e0b" : "#ef4444"} 
@@ -262,17 +262,17 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
                     transition={{ duration: 1.5, ease: "easeOut", delay: 0.2 }}
                   />
                 </svg>
-                <Star className="absolute w-7 h-7 text-neutral-300" />
+                <Star className="absolute w-7 h-7 text-muted-foreground" />
               </div>
             </div>
 
             <div className="space-y-5">
               <div>
-                <div className="flex justify-between text-[10px] font-black text-neutral-400 mb-2 uppercase tracking-widest">
+                <div className="flex justify-between text-[10px] font-black text-muted-foreground mb-2 uppercase tracking-widest">
                   <span>Path Fidelity</span>
-                  <span className="text-white">{pathFidelity}%</span>
+                  <span className="text-foreground">{pathFidelity}%</span>
                 </div>
-                <div className="h-1.5 w-full bg-neutral-800 rounded-full overflow-hidden">
+                <div className="h-1.5 w-full bg-border/50 rounded-full overflow-hidden">
                   <motion.div 
                     className="h-full bg-cyan-500" 
                     initial={{ width: 0 }}
@@ -283,11 +283,11 @@ export function DriverProfileDrawer({ open: controlledOpen, onOpenChange }: Driv
               </div>
 
               <div>
-                <div className="flex justify-between text-[10px] font-black text-neutral-400 mb-2 uppercase tracking-widest">
+                <div className="flex justify-between text-[10px] font-black text-muted-foreground mb-2 uppercase tracking-widest">
                   <span>Completion Rate</span>
-                  <span className="text-white">{totalTrips > 0 ? Math.round((completedTrips / totalTrips) * 100) : 0}%</span>
+                  <span className="text-foreground">{totalTrips > 0 ? Math.round((completedTrips / totalTrips) * 100) : 0}%</span>
                 </div>
-                <div className="h-1.5 w-full bg-neutral-800 rounded-full overflow-hidden">
+                <div className="h-1.5 w-full bg-border/50 rounded-full overflow-hidden">
                   <motion.div 
                     className="h-full bg-emerald-500" 
                     initial={{ width: 0 }}
